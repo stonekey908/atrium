@@ -13,7 +13,8 @@ import ReactDOM from "react-dom/client";
 // first, then fall back to the bare names + system stacks.
 import "@fontsource-variable/source-serif-4/opsz.css";
 import "@fontsource-variable/source-serif-4/opsz-italic.css";
-import "@fontsource-variable/inter-tight/wght.css";
+import "@fontsource-variable/inter/wght.css";
+import "@fontsource-variable/inter/wght-italic.css";
 import "@fontsource-variable/jetbrains-mono/wght.css";
 
 import App from "./App";

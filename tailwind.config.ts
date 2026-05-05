@@ -111,8 +111,8 @@ export default {
           "serif",
         ],
         sans: [
-          '"Inter Tight Variable"',
-          '"Inter Tight"',
+          '"Inter Variable"',
+          '"Inter"',
           "ui-sans-serif",
           "system-ui",
           "-apple-system",

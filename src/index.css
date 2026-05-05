@@ -55,6 +55,10 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Body type matches v5 mockup: 14px / 1.5 line-height, slight negative tracking */
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
     font-feature-settings:
       "rlig" 1,
       "calt" 1;

@@ -1,3 +1,5 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
 /**
  * TitleBar — Atrium's 36px chrome bar above the AppShell.
  *
@@ -11,35 +13,54 @@
  * keeps the real traffic lights at top-left and hides the OS title text. We pad
  * the bar's left edge by 76px so our breadcrumb doesn't collide with them.
  *
- * Drag: `data-tauri-drag-region` on the root makes the whole bar a drag handle;
- * children that should NOT drag (the pills) opt out via `data-tauri-drag-region="false"`.
+ * Drag: we wire a manual `mousedown` → `getCurrentWindow().startDragging()`
+ * handler. `data-tauri-drag-region` works in most cases but proved flaky with
+ * `titleBarStyle: "Overlay"` on macOS, so the manual call is the source of
+ * truth. Children opt out via the `noDrag` helper.
  *
  * Scope (T-005 / STO-2096): static. Real branch / session / model / token data
  * lands in T-008 (git status) and Wave 1 (CLI bridge → context budget).
  */
 export function TitleBar() {
+  const onDragStart = (e: React.MouseEvent) => {
+    // Only primary-button drags; ignore right-click + middle-click.
+    if (e.buttons !== 1) return;
+    // Skip if the user clicked an interactive child (button, link, input).
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-no-drag]")) return;
+    void getCurrentWindow().startDragging();
+  };
+
   return (
     <header
       data-tauri-drag-region
-      className="flex h-9 shrink-0 select-none items-center gap-2 border-b border-border bg-background pr-3 text-sm"
+      onMouseDown={onDragStart}
+      className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-background pr-3 text-sm"
       style={{ paddingLeft: 76 }}
     >
       {/* Breadcrumb — workspace / branch / session */}
-      <div data-tauri-drag-region className="flex min-w-0 items-center gap-2">
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-muted" aria-hidden>
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-muted"
+          aria-hidden
+        >
           <span className="block h-1.5 w-1.5 rounded-full bg-foreground" />
         </span>
         <span className="text-foreground">Stonekey</span>
-        <span className="text-muted-foreground" aria-hidden>/</span>
+        <span className="text-muted-foreground" aria-hidden>
+          /
+        </span>
         <BranchChip name="feat/wave-0-visual-layer" />
-        <span className="text-muted-foreground" aria-hidden>·</span>
+        <span className="text-muted-foreground" aria-hidden>
+          ·
+        </span>
         <span className="truncate text-muted-foreground">T-005 title bar</span>
       </div>
 
-      <div data-tauri-drag-region className="flex-1" />
+      <div className="flex-1" />
 
-      {/* Pills — opt out of drag so they're clickable */}
-      <div className="flex items-center gap-2" data-tauri-drag-region="false">
+      {/* Pills opt out of drag so they remain clickable when wired up later. */}
+      <div className="flex items-center gap-2" data-no-drag data-tauri-drag-region="false">
         <Pill dotClassName="bg-emerald" label="Claude Opus 4.7" />
         <Pill label="14,820 / 200k" mono />
       </div>
