@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+*.log
+npm-debug.log*
+.pnpm-debug.log*
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Env (commit only the example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS / misc
+Thumbs.db
+
+# Repo-specific — historical handoff archive, not part of source
+files.zip
