@@ -4,28 +4,24 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * TitleBar — Atrium's 36px chrome bar above the AppShell.
  *
  * Layout (left → right):
- *   [ macOS traffic lights (OS-rendered, overlay) ]
- *   workspace · `/` · branch chip · `·` · session title
+ *   [ traffic lights ]  workspace · `/` · branch chip · `·` · session title
  *   ────────────── flex spacer ──────────────
  *   [ model pill ]  [ context-budget pill ]
  *
- * macOS: `titleBarStyle: "Overlay"` + `hiddenTitle: true` (set in tauri.conf.json)
- * keeps the real traffic lights at top-left and hides the OS title text. We pad
- * the bar's left edge by 76px so our breadcrumb doesn't collide with them.
+ * Window is borderless (`decorations: false` in tauri.conf.json), so we render
+ * our own macOS-style traffic lights wired to `close / minimize / toggleMaximize`
+ * via the Tauri 2 window API.
  *
- * Drag: we wire a manual `mousedown` → `getCurrentWindow().startDragging()`
- * handler. `data-tauri-drag-region` works in most cases but proved flaky with
- * `titleBarStyle: "Overlay"` on macOS, so the manual call is the source of
- * truth. Children opt out via the `noDrag` helper.
+ * Drag: a manual `mousedown` → `getCurrentWindow().startDragging()` handler on
+ * the bar. Children that should not drag (the traffic lights, the pills) opt
+ * out via `data-no-drag`.
  *
- * Scope (T-005 / STO-2096): static. Real branch / session / model / token data
- * lands in T-008 (git status) and Wave 1 (CLI bridge → context budget).
+ * Scope (T-005 / STO-2096): static breadcrumb + pills. Real branch / session /
+ * model / token data lands in T-008 (git status) and Wave 1 (CLI bridge).
  */
 export function TitleBar() {
   const onDragStart = (e: React.MouseEvent) => {
-    // Primary button only — ignore right-click + middle-click.
     if (e.button !== 0) return;
-    // Skip if the user clicked an interactive child (pills, buttons, links).
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
     void getCurrentWindow().startDragging();
@@ -33,12 +29,11 @@ export function TitleBar() {
 
   return (
     <header
-      data-tauri-drag-region
       onMouseDown={onDragStart}
-      className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-background pr-3 text-sm"
-      style={{ paddingLeft: 76 }}
+      className="flex h-9 shrink-0 items-center gap-3 border-b border-border bg-background pl-3 pr-3 text-sm"
     >
-      {/* Breadcrumb — workspace / branch / session */}
+      <TrafficLights />
+
       <div className="flex min-w-0 items-center gap-2">
         <span
           className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-muted"
@@ -59,8 +54,7 @@ export function TitleBar() {
 
       <div className="flex-1" />
 
-      {/* Pills opt out of drag so they remain clickable when wired up later. */}
-      <div className="flex items-center gap-2" data-no-drag data-tauri-drag-region="false">
+      <div className="flex items-center gap-2" data-no-drag>
         <Pill dotClassName="bg-emerald" label="Claude Opus 4.7" />
         <Pill label="14,820 / 200k" mono />
       </div>
@@ -69,17 +63,98 @@ export function TitleBar() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Reusable pieces — kept in this file for now; promote to shared
- * primitives when a second consumer shows up. */
+/* Traffic lights — borderless-window window controls.                 */
+/* ------------------------------------------------------------------ */
+
+function TrafficLights() {
+  const win = () => getCurrentWindow();
+  return (
+    <div
+      data-no-drag
+      className="group/lights flex items-center gap-2 pl-1"
+      aria-label="Window controls"
+    >
+      <TrafficLight
+        title="Close"
+        className="bg-[#FF5F57] hover:brightness-95"
+        onClick={() => void win().close()}
+      >
+        <CloseGlyph />
+      </TrafficLight>
+      <TrafficLight
+        title="Minimize"
+        className="bg-[#FFBD2E] hover:brightness-95"
+        onClick={() => void win().minimize()}
+      >
+        <MinimizeGlyph />
+      </TrafficLight>
+      <TrafficLight
+        title="Toggle maximize"
+        className="bg-[#28C940] hover:brightness-95"
+        onClick={() => void win().toggleMaximize()}
+      >
+        <MaximizeGlyph />
+      </TrafficLight>
+    </div>
+  );
+}
+
+function TrafficLight({
+  title,
+  className,
+  onClick,
+  children,
+}: {
+  title: string;
+  className: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`relative flex h-3 w-3 items-center justify-center rounded-full text-[#00000088] transition ${className}`}
+    >
+      {/* Glyphs are hidden until the user hovers any traffic light (parent group). */}
+      <span className="opacity-0 group-hover/lights:opacity-100 transition">{children}</span>
+    </button>
+  );
+}
+
+function CloseGlyph() {
+  return (
+    <svg width="7" height="7" viewBox="0 0 8 8" stroke="currentColor" strokeWidth="1.2">
+      <line x1="1.5" y1="1.5" x2="6.5" y2="6.5" />
+      <line x1="6.5" y1="1.5" x2="1.5" y2="6.5" />
+    </svg>
+  );
+}
+function MinimizeGlyph() {
+  return (
+    <svg width="7" height="7" viewBox="0 0 8 8" stroke="currentColor" strokeWidth="1.2">
+      <line x1="1.5" y1="4" x2="6.5" y2="4" />
+    </svg>
+  );
+}
+function MaximizeGlyph() {
+  return (
+    <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor">
+      <path d="M1.4 1.4 L1.4 5 L5 1.4 Z M6.6 6.6 L6.6 3 L3 6.6 Z" />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Reusable pieces (Pill, BranchChip) — promote when reused.           */
 /* ------------------------------------------------------------------ */
 
 type PillProps = {
-  /** Optional left-side dot. Pass a Tailwind colour class (e.g. `bg-emerald`). */
   dotClassName?: string;
   label: string;
-  /** Render the label in mono. */
   mono?: boolean;
-  /** Optional shortcut text rendered in muted mono after the label. */
   shortcut?: string;
 };
 

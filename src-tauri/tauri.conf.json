@@ -15,8 +15,7 @@
         "title": "Atrium",
         "width": 1280,
         "height": 820,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "decorations": false
       }
     ],
     "security": {
