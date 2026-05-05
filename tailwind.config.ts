@@ -95,9 +95,13 @@ export default {
         "stage-uat-bg": "hsl(var(--amber-soft) / <alpha-value>)",
       },
       fontFamily: {
-        // Serif italic display is a load-bearing aesthetic choice — wave headers,
-        // major page titles. T-003 will bundle Source Serif 4 woff2.
+        // Variable woff2 packages name their @font-face with the "Variable"
+        // suffix (e.g. "Source Serif 4 Variable") to disambiguate from the
+        // static-weight @fontsource releases. Lead with the suffixed name so
+        // the local woff2 wins; bare names + ui-serif/sans/monospace are the
+        // fallback chain if @fontsource fails to load.
         serif: [
+          '"Source Serif 4 Variable"',
           '"Source Serif 4"',
           "ui-serif",
           "Georgia",
@@ -106,16 +110,16 @@ export default {
           "Times",
           "serif",
         ],
-        // Body. Inter Tight (tighter tracking variant of Inter) per project spec.
         sans: [
+          '"Inter Tight Variable"',
           '"Inter Tight"',
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
           "sans-serif",
         ],
-        // Code, IDs, mono pills.
         mono: [
+          '"JetBrains Mono Variable"',
           '"JetBrains Mono"',
           "ui-monospace",
           "SFMono-Regular",
