@@ -23,9 +23,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  */
 export function TitleBar() {
   const onDragStart = (e: React.MouseEvent) => {
-    // Only primary-button drags; ignore right-click + middle-click.
-    if (e.buttons !== 1) return;
-    // Skip if the user clicked an interactive child (button, link, input).
+    // Primary button only — ignore right-click + middle-click.
+    if (e.button !== 0) return;
+    // Skip if the user clicked an interactive child (pills, buttons, links).
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
     void getCurrentWindow().startDragging();
