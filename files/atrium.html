@@ -1,0 +1,2867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atrium — A refined wrapper for Claude Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-elev: #ffffff;
+    --bg-sunk: #f3efe9;
+    --bg-hover: #efeae2;
+    --ink: #1a1a1a;
+    --ink-2: #4a4a4a;
+    --ink-3: #8a8a8a;
+    --ink-4: #b8b8b8;
+    --line: #e8e2d8;
+    --line-2: #ddd6c8;
+    --green: #10A37F;
+    --green-soft: #e8f5f0;
+    --amber: #b8860b;
+    --amber-soft: #fdf6e3;
+    --red: #c73e3a;
+    --red-soft: #fdeae8;
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'Inter Tight', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(26,26,26,0.04);
+    --shadow-md: 0 4px 12px rgba(26,26,26,0.06), 0 1px 3px rgba(26,26,26,0.04);
+    --shadow-lg: 0 12px 32px rgba(26,26,26,0.08), 0 4px 8px rgba(26,26,26,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Window chrome ---------- */
+  .window {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 36px 1fr;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+
+  .traffic {
+    display: flex;
+    gap: 8px;
+    margin-right: 16px;
+  }
+  .traffic span {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-block;
+  }
+  .traffic span:nth-child(1) { background: #ff5f57; }
+  .traffic span:nth-child(2) { background: #febc2e; }
+  .traffic span:nth-child(3) { background: #28c840; }
+
+  .crumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .crumb svg { color: var(--ink-3); }
+  .crumb .sep { color: var(--ink-4); }
+  .crumb .branch {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px;
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+
+  .titlebar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    -webkit-app-region: no-drag;
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px;
+    color: var(--ink-2);
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(16,163,127,0.15);
+  }
+
+  /* ---------- Main grid ---------- */
+  .main {
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ---------- Left rail ---------- */
+  .rail {
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .rail-section {
+    padding: 14px 12px 6px;
+  }
+  .rail-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0 8px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .rail-label button {
+    background: none; border: none; color: var(--ink-3);
+    cursor: pointer; padding: 2px;
+    border-radius: 4px;
+  }
+  .rail-label button:hover { background: var(--bg-hover); color: var(--ink-2); }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    color: var(--ink-2);
+    cursor: pointer;
+    margin-bottom: 1px;
+    transition: background 0.12s;
+  }
+  .nav-item:hover { background: var(--bg-hover); }
+  .nav-item.active {
+    background: var(--bg-elev);
+    color: var(--ink);
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--line);
+  }
+  .nav-item .nav-icon {
+    color: var(--ink-3);
+    flex-shrink: 0;
+  }
+  .nav-item.active .nav-icon { color: var(--green); }
+  .nav-item .nav-meta {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ink-4);
+    font-family: var(--mono);
+  }
+
+  .session-item {
+    padding: 8px 10px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+  }
+  .session-item:hover { background: var(--bg-hover); }
+  .session-item.active {
+    background: var(--bg-elev);
+    border-color: var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .session-title {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .session-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .session-status {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--ink-4);
+  }
+  .session-status.running { background: var(--green); animation: pulse 2s infinite; }
+  .session-status.waiting { background: var(--amber); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .rail-bottom {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .user-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+  }
+  .user-card:hover { background: var(--bg-hover); }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10A37F 0%, #0a7a5e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 12.5px; font-weight: 500; color: var(--ink); }
+  .user-plan { font-size: 11px; color: var(--ink-3); }
+
+  /* ---------- Conversation pane ---------- */
+  .conversation {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .conv-header {
+    padding: 14px 28px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .conv-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+  }
+  .conv-title em {
+    color: var(--ink-3);
+    font-weight: 400;
+  }
+  .conv-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+  .icon-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .icon-btn:hover {
+    background: var(--bg-elev);
+    border-color: var(--line);
+    color: var(--ink-2);
+  }
+
+  .conv-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 140px;
+  }
+
+  .turn { margin-bottom: 28px; }
+  .turn-meta {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+  .turn-meta .role {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .turn-meta .role.assistant { color: var(--green); }
+  .turn-meta .dot { color: var(--ink-4); }
+
+  .turn-body {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .turn-body p { margin-bottom: 10px; }
+  .turn-body code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--bg-sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+
+  /* User message bubble (subtle, not chat-bubbly) */
+  .user-msg {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ink-3);
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  /* Tool call card */
+  .tool-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    margin: 12px 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .tool-head {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunk);
+    cursor: pointer;
+  }
+  .tool-icon {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-2);
+    flex-shrink: 0;
+  }
+  .tool-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .tool-arg {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .tool-status {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .tool-status.ok {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .tool-status.run {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+  .tool-body {
+    padding: 0;
+  }
+
+  /* Diff view */
+  .diff-header {
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .diff-header .file { font-weight: 600; color: var(--ink); }
+  .diff-stats { margin-left: auto; display: flex; gap: 8px; font-size: 11px; }
+  .diff-stats .add { color: var(--green); }
+  .diff-stats .rem { color: var(--red); }
+
+  .diff-body {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .diff-line {
+    display: grid;
+    grid-template-columns: 36px 36px 1fr;
+    column-gap: 0;
+  }
+  .diff-line .ln {
+    text-align: right;
+    padding: 0 8px;
+    color: var(--ink-4);
+    font-size: 10.5px;
+    user-select: none;
+    border-right: 1px solid var(--line);
+  }
+  .diff-line .code {
+    padding: 0 12px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .diff-line.add { background: rgba(16,163,127,0.06); }
+  .diff-line.add .code { color: #0a7a5e; }
+  .diff-line.add .code::before { content: '+ '; color: var(--green); }
+  .diff-line.rem { background: rgba(199,62,58,0.06); }
+  .diff-line.rem .code { color: #a8302d; }
+  .diff-line.rem .code::before { content: '− '; color: var(--red); }
+  .diff-line.ctx .code::before { content: '  '; }
+
+  /* Permission card */
+  .permission {
+    background: var(--bg-elev);
+    border: 1px solid var(--amber);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    margin: 14px 0;
+    box-shadow: 0 0 0 4px var(--amber-soft);
+  }
+  .perm-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .perm-title {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .perm-icon {
+    width: 28px; height: 28px;
+    background: var(--amber-soft);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+  }
+  .perm-detail {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .perm-cmd {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    color: var(--ink);
+    margin: 8px 0 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .perm-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 7px 14px;
+    border-radius: var(--r-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+  }
+  .btn:hover { background: var(--bg-hover); }
+  .btn.primary {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .btn.primary:hover { background: #2a2a2a; }
+  .btn.danger {
+    color: var(--red);
+    border-color: rgba(199,62,58,0.2);
+  }
+  .btn.danger:hover { background: var(--red-soft); }
+  .btn.ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ink-3);
+  }
+  .btn.ghost:hover { background: var(--bg-hover); color: var(--ink-2); }
+
+  /* Screenshot inline */
+  .screenshot {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin: 10px 0;
+    background: var(--bg-sunk);
+    box-shadow: var(--shadow-sm);
+  }
+  .screenshot-head {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .screenshot-img {
+    height: 140px;
+    background: linear-gradient(135deg, #f0ebe2 0%, #e5dfd2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-4);
+    font-size: 11px;
+    position: relative;
+  }
+  .screenshot-img::before {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%),
+      repeating-linear-gradient(45deg, transparent 0 8px, rgba(0,0,0,0.02) 8px 9px);
+    border-radius: 4px;
+  }
+
+  /* ---------- Composer ---------- */
+  .composer-wrap {
+    position: absolute;
+    bottom: 16px;
+    left: 28px;
+    right: 28px;
+    z-index: 10;
+  }
+  .composer {
+    background: var(--bg-elev);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 12px 14px 8px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.15s;
+  }
+  .composer:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 4px rgba(16,163,127,0.08), var(--shadow-md);
+  }
+  .composer-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    resize: none;
+    min-height: 22px;
+    line-height: 1.5;
+  }
+  .composer-input::placeholder { color: var(--ink-4); }
+  .composer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .composer-btn {
+    background: transparent;
+    border: none;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-3);
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .composer-btn:hover { background: var(--bg-hover); color: var(--ink-2); }
+
+  .mode-pill {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-select {
+    display: flex;
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 2px;
+    font-size: 11px;
+  }
+  .mode-select span {
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: var(--ink-3);
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .mode-select span.on {
+    background: var(--bg-elev);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .send-btn {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .send-btn:hover { background: var(--green); }
+
+  /* ---------- Right rail ---------- */
+  .rrail {
+    background: var(--bg-sunk);
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .rrail-tabs {
+    display: flex;
+    padding: 8px 8px 0;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .rrail-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px 10px;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .rrail-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--green);
+  }
+  .rrail-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+  }
+
+  .panel-section { margin-bottom: 22px; }
+  .panel-title {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* MCP cards */
+  .mcp-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .mcp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mcp-logo {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-weight: 600;
+    color: var(--ink-2);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .mcp-info { flex: 1; min-width: 0; }
+  .mcp-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .mcp-meta { font-size: 11px; color: var(--ink-3); }
+
+  /* Toggle */
+  .toggle {
+    width: 30px; height: 18px;
+    background: var(--line-2);
+    border-radius: 9px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.18s;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 2px; left: 2px;
+    transition: transform 0.18s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .toggle.on { background: var(--green); }
+  .toggle.on::after { transform: translateX(12px); }
+
+  /* File tree */
+  .file-tree { font-size: 12.5px; }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--ink-2);
+  }
+  .file-row:hover { background: var(--bg-hover); }
+  .file-row.touched {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .file-row .indent { width: 12px; flex-shrink: 0; }
+  .file-row .file-icon { color: var(--ink-3); }
+  .file-row.touched .file-icon { color: var(--green); }
+  .file-row .file-badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+  }
+
+  /* Settings */
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .setting-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+
+  /* Terminal pill */
+  .term-pill {
+    position: absolute;
+    bottom: 100px;
+    right: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 10px;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 16px;
+    font-size: 12px;
+    font-family: var(--mono);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    z-index: 5;
+    transition: transform 0.15s;
+  }
+  .term-pill:hover { transform: translateY(-1px); }
+  .term-pill .term-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* Annotations */
+  .annotation {
+    position: fixed;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .annotation-line {
+    stroke: var(--green);
+    stroke-width: 1.2;
+    fill: none;
+    stroke-dasharray: 3 3;
+  }
+  .annotation-label {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10.5px;
+    font-weight: 500;
+    font-family: var(--mono);
+    white-space: nowrap;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-2);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+  /* Cover page */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(16,163,127,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(184,134,11,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .cover-mark {
+    font-family: var(--serif);
+    font-size: 120px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  .cover-tag {
+    font-size: 14px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .cover-sub {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--ink-2);
+    font-style: italic;
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.4;
+    margin-top: 12px;
+  }
+  .cover-meta {
+    position: absolute;
+    bottom: 32px;
+    display: flex;
+    gap: 32px;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .scroll-hint {
+    position: absolute;
+    bottom: 80px;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: bob 2s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+
+  /* Page divider */
+  .page-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-2), transparent);
+    margin: 0;
+  }
+
+  /* Detail pages */
+  .detail-page {
+    min-height: 100vh;
+    padding: 80px 80px 100px;
+    background: var(--bg);
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .detail-side {
+    position: sticky;
+    top: 80px;
+  }
+  .detail-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .detail-title {
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .detail-title em {
+    font-style: italic;
+    color: var(--green);
+  }
+  .detail-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin-bottom: 24px;
+  }
+  .detail-list {
+    list-style: none;
+  }
+  .detail-list li {
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-2);
+    display: flex;
+    gap: 10px;
+  }
+  .detail-list li::before {
+    content: '→';
+    color: var(--green);
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  /* Settings page mock */
+  .settings-mock {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .settings-head {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .settings-head h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .settings-head span {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .settings-tabs {
+    display: flex;
+    padding: 0 24px;
+    gap: 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunk);
+  }
+  .settings-tabs span {
+    padding: 10px 0;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-weight: 500;
+  }
+  .settings-tabs span.on {
+    color: var(--ink);
+    border-bottom-color: var(--green);
+  }
+  .settings-body { padding: 20px 24px; }
+  .settings-group {
+    margin-bottom: 28px;
+  }
+  .settings-group:last-child { margin-bottom: 0; }
+  .settings-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .settings-group-desc {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-bottom: 14px;
+    font-style: italic;
+    font-family: var(--serif);
+  }
+  .settings-field {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .settings-field:last-child { border-bottom: none; }
+  .settings-field-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .settings-field-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .input-mock {
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .select-mock {
+    background: var(--bg);
+    border: 1px solid var(--line-2);
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  /* Slash command palette mock */
+  .palette {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    max-width: 540px;
+    margin: 0 auto;
+  }
+  .palette-input {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .palette-input::before {
+    content: '/';
+    color: var(--green);
+    font-weight: 700;
+  }
+  .palette-results {
+    padding: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .palette-row {
+    padding: 9px 12px;
+    border-radius: var(--r-sm);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .palette-row.active { background: var(--bg-sunk); }
+  .palette-row .cmd {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    font-weight: 600;
+    min-width: 100px;
+  }
+  .palette-row .desc {
+    font-size: 12.5px;
+    color: var(--ink-3);
+  }
+  .palette-row .shortcut {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-4);
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 60px 80px 80px;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    text-align: center;
+  }
+  .footer-mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 28px;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+  }
+  .footer-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Icons via inline SVG, sized */
+  svg.i { width: 14px; height: 14px; flex-shrink: 0; }
+  svg.i-sm { width: 12px; height: 12px; flex-shrink: 0; }
+  svg.i-lg { width: 16px; height: 16px; flex-shrink: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- ============== COVER ============== -->
+<section class="cover">
+  <div class="cover-tag">Atrium · v0.1 mockup</div>
+  <h1 class="cover-mark">Atrium</h1>
+  <p class="cover-sub">A native, refined wrapper for Claude&nbsp;Code.<br>The power of the terminal, none of its noise.</p>
+  <div class="scroll-hint">Scroll to explore ↓</div>
+  <div class="cover-meta">
+    <span>↳ Concept by Nick</span>
+    <span>↳ SwiftUI · shadcn · Tauri</span>
+    <span>↳ macOS / Windows</span>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== MAIN APP MOCKUP ============== -->
+<section class="window">
+  <!-- Title bar -->
+  <div class="titlebar">
+    <div class="traffic"><span></span><span></span><span></span></div>
+    <div class="crumb">
+      <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>
+      <span>cursor-for-pms</span>
+      <span class="sep">/</span>
+      <span class="branch">
+        <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v6a3 3 0 003 3h6"/></svg>
+        feat/socratic-canvas
+      </span>
+      <span class="sep">·</span>
+      <span style="color: var(--ink-3);">Refactor diff renderer</span>
+    </div>
+    <div class="titlebar-right">
+      <div class="status-pill"><span class="status-dot"></span>Claude Opus 4.7</div>
+      <div class="status-pill" style="color: var(--ink-3);">·</div>
+      <div class="status-pill">14,820 / 200k</div>
+    </div>
+  </div>
+
+  <!-- Main 3-column -->
+  <div class="main">
+
+    <!-- LEFT RAIL -->
+    <aside class="rail">
+      <div class="rail-section">
+        <div class="rail-label">Workspace</div>
+        <div class="nav-item">
+          <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Projects</span>
+          <span class="nav-meta">12</span>
+        </div>
+        <div class="nav-item active">
+          <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <span>Sessions</span>
+          <span class="nav-meta">4</span>
+        </div>
+        <div class="nav-item">
+          <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg>
+          <span>Skills</span>
+          <span class="nav-meta">7</span>
+        </div>
+        <div class="nav-item">
+          <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>History</span>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <div class="rail-label">
+          <span>Active sessions</span>
+          <button>+</button>
+        </div>
+        <div class="session-item active">
+          <div class="session-title">Refactor diff renderer</div>
+          <div class="session-meta">
+            <span class="session-status running"></span>
+            <span>cursor-for-pms</span>
+            <span>·</span>
+            <span>2m</span>
+          </div>
+        </div>
+        <div class="session-item">
+          <div class="session-title">Add Linear MCP export</div>
+          <div class="session-meta">
+            <span class="session-status waiting"></span>
+            <span>cursor-for-pms</span>
+            <span>·</span>
+            <span>awaiting</span>
+          </div>
+        </div>
+        <div class="session-item">
+          <div class="session-title">Lookout — VAPID push setup</div>
+          <div class="session-meta">
+            <span class="session-status"></span>
+            <span>lookout</span>
+            <span>·</span>
+            <span>idle 1h</span>
+          </div>
+        </div>
+        <div class="session-item">
+          <div class="session-title">Gemma · Wave 0.5 design tokens</div>
+          <div class="session-meta">
+            <span class="session-status"></span>
+            <span>gemma-agent</span>
+            <span>·</span>
+            <span>idle 4h</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-bottom">
+        <div class="user-card">
+          <div class="avatar">N</div>
+          <div class="user-info">
+            <div class="user-name">Nick</div>
+            <div class="user-plan">Max · 200k</div>
+          </div>
+          <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--ink-3);"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONVERSATION -->
+    <main class="conversation">
+      <div class="conv-header">
+        <div>
+          <div class="conv-title">Refactor diff renderer <em>— inline previews instead of unified output</em></div>
+        </div>
+        <div class="conv-actions">
+          <button class="icon-btn" title="Share"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51L8.59 10.49"/></svg></button>
+          <button class="icon-btn" title="Branch"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v6a3 3 0 003 3h6"/></svg></button>
+          <button class="icon-btn" title="More"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+      </div>
+
+      <div class="conv-scroll">
+
+        <!-- USER TURN with screenshot -->
+        <div class="turn">
+          <div class="turn-meta">
+            <span class="role">Nick</span>
+            <span class="dot">·</span>
+            <span>2 minutes ago</span>
+          </div>
+          <div class="user-msg">
+            The diff in <code>DiffRenderer.tsx</code> is too dense — see the screenshot. Can we add line-number gutters and softer red/green so it reads more like GitHub? Match the warmth of the rest of the app.
+            <div class="screenshot">
+              <div class="screenshot-head">
+                <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                Screenshot · pasted · 1284×740
+              </div>
+              <div class="screenshot-img">current diff renderer · saturated red/green, no gutters</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ASSISTANT TURN -->
+        <div class="turn">
+          <div class="turn-meta">
+            <span class="role assistant">Claude</span>
+            <span class="dot">·</span>
+            <span>thinking · 4.2s</span>
+            <span class="dot">·</span>
+            <span>Opus 4.7</span>
+          </div>
+          <div class="turn-body">
+            <p>Got it — three changes to make this match the rest of the app:</p>
+            <p>1. Soften the diff colours from full saturation to warm-tinted backgrounds (~6% alpha). 2. Add a 36px line-number gutter with monospace numerals and a subtle right-border. 3. Replace the <code>+</code>/<code>-</code> markers with thinner glyphs (<code>+</code> / <code>−</code>) in the accent colour rather than baked into the text.</p>
+            <p>Let me read the current file first, then propose the diff.</p>
+
+            <!-- Tool call: read -->
+            <div class="tool-card">
+              <div class="tool-head">
+                <div class="tool-icon">
+                  <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+                </div>
+                <span class="tool-name">read_file</span>
+                <span class="tool-arg">src/components/DiffRenderer.tsx</span>
+                <span class="tool-status ok">142 lines</span>
+              </div>
+            </div>
+
+            <p>Now the edit. I'll write it inline so you can see the change in context:</p>
+
+            <!-- Tool call: edit with diff -->
+            <div class="tool-card">
+              <div class="tool-head">
+                <div class="tool-icon" style="color: var(--green);">
+                  <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <span class="tool-name">str_replace</span>
+                <span class="tool-arg">DiffRenderer.tsx · "diff-line .code"</span>
+                <span class="tool-status ok">applied</span>
+              </div>
+              <div class="tool-body">
+                <div class="diff-header">
+                  <span class="file">src/components/DiffRenderer.tsx</span>
+                  <span class="diff-stats">
+                    <span class="add">+12</span>
+                    <span class="rem">−4</span>
+                  </span>
+                </div>
+                <div class="diff-body">
+                  <div class="diff-line ctx"><span class="ln">47</span><span class="ln">47</span><span class="code">.diff-line {</span></div>
+                  <div class="diff-line rem"><span class="ln">48</span><span class="ln"></span><span class="code">  display: flex;</span></div>
+                  <div class="diff-line rem"><span class="ln">49</span><span class="ln"></span><span class="code">  font-family: monospace;</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">48</span><span class="code">  display: grid;</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">49</span><span class="code">  grid-template-columns: 36px 36px 1fr;</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">50</span><span class="code">  font-family: var(--mono);</span></div>
+                  <div class="diff-line ctx"><span class="ln">50</span><span class="ln">51</span><span class="code">}</span></div>
+                  <div class="diff-line ctx"><span class="ln">51</span><span class="ln">52</span><span class="code"></span></div>
+                  <div class="diff-line rem"><span class="ln">52</span><span class="ln"></span><span class="code">.diff-line.add { background: #d4f4dd; }</span></div>
+                  <div class="diff-line rem"><span class="ln">53</span><span class="ln"></span><span class="code">.diff-line.rem { background: #fbd5d4; }</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">53</span><span class="code">.diff-line.add { background: rgba(16,163,127,0.06); }</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">54</span><span class="code">.diff-line.add .code { color: #0a7a5e; }</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">55</span><span class="code">.diff-line.rem { background: rgba(199,62,58,0.06); }</span></div>
+                  <div class="diff-line add"><span class="ln"></span><span class="ln">56</span><span class="code">.diff-line.rem .code { color: #a8302d; }</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PERMISSION CARD -->
+            <div class="permission">
+              <div class="perm-head">
+                <div class="perm-icon">
+                  <svg class="i-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                </div>
+                <div>
+                  <div class="perm-title">Run Vitest on changed file?</div>
+                  <div class="perm-detail">Claude wants to verify the refactor before continuing.</div>
+                </div>
+              </div>
+              <div class="perm-cmd">npx vitest run src/components/DiffRenderer.test.tsx --reporter=dot</div>
+              <div class="perm-actions">
+                <button class="btn primary">Allow once</button>
+                <button class="btn">Allow for session</button>
+                <button class="btn">Always allow <code style="background: var(--bg-sunk); padding: 0 4px; border-radius: 3px; font-size: 10px;">vitest run</code></button>
+                <button class="btn danger">Deny</button>
+                <button class="btn ghost" style="margin-left: auto;">Edit command</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Terminal pill -->
+      <div class="term-pill">
+        <span class="term-dot"></span>
+        <span>Terminal</span>
+        <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+      </div>
+
+      <!-- COMPOSER -->
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea class="composer-input" placeholder="Reply, paste a screenshot, or type / for commands…" rows="1">Looks great — also bump the row height to 1.65 line-height and let me see how it renders.</textarea>
+          <div class="composer-toolbar">
+            <button class="composer-btn" title="Attach"><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></button>
+            <button class="composer-btn" title="Screenshot"><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+            <button class="composer-btn" title="Mention file"><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94"/></svg></button>
+            <button class="composer-btn" title="Slash command" style="font-family: var(--mono); font-size: 13px; font-weight: 600;">/</button>
+            <div class="mode-pill">
+              <div class="mode-select">
+                <span>Ask</span>
+                <span class="on">Edit</span>
+                <span>Plan</span>
+                <span>Auto</span>
+              </div>
+              <button class="send-btn" title="Send · ⌘⏎">
+                <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT RAIL -->
+    <aside class="rrail">
+      <div class="rrail-tabs">
+        <div class="rrail-tab">
+          <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          Files
+        </div>
+        <div class="rrail-tab active">
+          <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          MCP
+        </div>
+        <div class="rrail-tab">
+          <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Context
+        </div>
+      </div>
+
+      <div class="rrail-content">
+
+        <div class="panel-section">
+          <div class="panel-title">
+            <span>Connected · 3 of 5</span>
+            <span style="color: var(--green); font-weight: 500;">+ add</span>
+          </div>
+
+          <div class="mcp-card">
+            <div class="mcp-row">
+              <div class="mcp-logo" style="background: #5e6ad2; color: white; border-color: #5e6ad2;">L</div>
+              <div class="mcp-info">
+                <div class="mcp-name">Linear</div>
+                <div class="mcp-meta">12 tools · last used 4m ago</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+
+          <div class="mcp-card">
+            <div class="mcp-row">
+              <div class="mcp-logo" style="background: #1a1a1a; color: white; border-color: #1a1a1a; font-style: italic;">N</div>
+              <div class="mcp-info">
+                <div class="mcp-name">Notion</div>
+                <div class="mcp-meta">8 tools · idle</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+
+          <div class="mcp-card">
+            <div class="mcp-row">
+              <div class="mcp-logo" style="background: #ea4335; color: white; border-color: #ea4335;">G</div>
+              <div class="mcp-info">
+                <div class="mcp-name">Gmail</div>
+                <div class="mcp-meta">6 tools · idle</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+
+          <div class="mcp-card">
+            <div class="mcp-row">
+              <div class="mcp-logo">F</div>
+              <div class="mcp-info">
+                <div class="mcp-name">Firebase</div>
+                <div class="mcp-meta">disconnected</div>
+              </div>
+              <div class="toggle"></div>
+            </div>
+          </div>
+
+          <div class="mcp-card">
+            <div class="mcp-row">
+              <div class="mcp-logo">P</div>
+              <div class="mcp-info">
+                <div class="mcp-name">Playwright</div>
+                <div class="mcp-meta">paused this session</div>
+              </div>
+              <div class="toggle"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title"><span>Skills loaded</span></div>
+          <div style="font-size: 12.5px; color: var(--ink-2); line-height: 1.7;">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+              <span style="width: 6px; height: 6px; background: var(--green); border-radius: 50%;"></span>
+              frontend-design
+              <span style="margin-left: auto; color: var(--ink-4); font-family: var(--mono); font-size: 10.5px;">auto</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+              <span style="width: 6px; height: 6px; background: var(--green); border-radius: 50%;"></span>
+              docx
+              <span style="margin-left: auto; color: var(--ink-4); font-family: var(--mono); font-size: 10.5px;">auto</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; color: var(--ink-3);">
+              <span style="width: 6px; height: 6px; background: var(--ink-4); border-radius: 50%;"></span>
+              pptx · pdf · xlsx · 4 more
+              <span style="margin-left: auto; color: var(--ink-4); font-family: var(--mono); font-size: 10.5px;">on demand</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title"><span>Session settings</span></div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Approval mode</div>
+              <div class="setting-desc">Currently: edit-only auto, ask for shell</div>
+            </div>
+            <div class="select-mock">
+              <span>Edit</span>
+              <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Reasoning</div>
+              <div class="setting-desc">Higher = more careful, slower</div>
+            </div>
+            <div class="select-mock">
+              <span>Medium</span>
+              <svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Auto-test on edit</div>
+              <div class="setting-desc">Run vitest after each file save</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Worktree isolation</div>
+              <div class="setting-desc">Branch per session</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== DETAIL: CALLOUTS ============== -->
+<section class="detail-page">
+  <div class="detail-side">
+    <div class="detail-num">01 · ANATOMY</div>
+    <h2 class="detail-title">Three columns. <em>Zero terminal.</em></h2>
+    <p class="detail-desc">The PTY is still running underneath — it's just not the surface anymore. The conversation is the hero. Everything else collapses, expands, or disappears.</p>
+    <ul class="detail-list">
+      <li>Sessions list with live status dots — running, waiting, idle</li>
+      <li>Conversation pane with editorial-grade typography (Source Serif 4 for titles)</li>
+      <li>Right rail tabs into Files, MCP servers, or Context — never hidden in JSON</li>
+      <li>Terminal lives behind a pill in the corner. One click reveals it as a drawer.</li>
+      <li>Composer mirrors Claude Code's modes (Ask · Edit · Plan · Auto) but as a real segmented control</li>
+    </ul>
+  </div>
+
+  <div>
+    <!-- Slash command palette -->
+    <div style="margin-bottom: 40px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px;">⌘K · Slash command palette</div>
+      <div class="palette">
+        <div class="palette-input">model opus<span style="color: var(--ink-4);">|</span></div>
+        <div class="palette-results">
+          <div class="palette-row active">
+            <span class="cmd">/model</span>
+            <span class="desc">Switch model — Opus 4.7, Sonnet 4.6, Haiku 4.5</span>
+            <span class="shortcut">⏎</span>
+          </div>
+          <div class="palette-row">
+            <span class="cmd">/clear</span>
+            <span class="desc">Clear context, keep session</span>
+            <span class="shortcut">⌘L</span>
+          </div>
+          <div class="palette-row">
+            <span class="cmd">/compact</span>
+            <span class="desc">Summarise & compact context window</span>
+          </div>
+          <div class="palette-row">
+            <span class="cmd">/branch</span>
+            <span class="desc">Fork from this turn into a new session</span>
+            <span class="shortcut">⌘⇧B</span>
+          </div>
+          <div class="palette-row">
+            <span class="cmd">/mcp</span>
+            <span class="desc">Toggle MCP servers for this session</span>
+          </div>
+          <div class="palette-row">
+            <span class="cmd">/cli</span>
+            <span class="desc">Drop into the underlying claude CLI</span>
+            <span class="shortcut">⌘⇧T</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="detail-list">
+      <li><strong>⌘K</strong> opens the palette · same surface for slash commands, file mentions, model switch, MCP toggles</li>
+      <li><strong>⌘⏎</strong> sends · <strong>esc</strong> cancels in flight · <strong>⌘⇧T</strong> reveals terminal</li>
+      <li>Paste a screenshot directly into the composer — no file picker, no path</li>
+      <li><strong>@</strong> mentions a file, <strong>#</strong> mentions a session, <strong>/</strong> runs a command</li>
+    </ul>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== DETAIL: SETTINGS ============== -->
+<section class="detail-page">
+  <div class="detail-side">
+    <div class="detail-num">02 · SETTINGS</div>
+    <h2 class="detail-title">No more <em>~/.claude/</em> JSON.</h2>
+    <p class="detail-desc">Every Claude Code config that today lives in dotfiles or environment variables gets a real, searchable, typed settings surface. Per-project overrides inherit from globals. Diff what you've changed at a glance.</p>
+    <ul class="detail-list">
+      <li>Global → workspace → project → session inheritance, visualised</li>
+      <li>System prompt editor with version history and per-project overrides</li>
+      <li>MCP server registry — one-click connect, auth status, tool inventory</li>
+      <li>Approval rules with regex preview — "always allow <code>npm test*</code>" etc.</li>
+      <li>Skill library with auto-load conditions per project</li>
+    </ul>
+  </div>
+
+  <div>
+    <div class="settings-mock">
+      <div class="settings-head">
+        <h3>Settings</h3>
+        <span>cursor-for-pms · workspace</span>
+      </div>
+      <div class="settings-tabs">
+        <span>General</span>
+        <span class="on">Model & Prompt</span>
+        <span>Permissions</span>
+        <span>MCP</span>
+        <span>Skills</span>
+        <span>Hooks</span>
+        <span>Hotkeys</span>
+        <span>Appearance</span>
+      </div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <div class="settings-group-title">Default model</div>
+          <div class="settings-group-desc">— Used for new sessions in this workspace.</div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Primary model</div>
+              <div class="settings-field-desc">Inherits from global · Opus 4.7</div>
+            </div>
+            <div class="select-mock"><span>Claude Opus 4.7</span><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Fast model (small tasks)</div>
+              <div class="settings-field-desc">For autocomplete, summarisation, file ops</div>
+            </div>
+            <div class="select-mock"><span>Claude Haiku 4.5</span><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Reasoning effort</div>
+              <div class="settings-field-desc">Auto · Low · Medium · High · Max</div>
+            </div>
+            <div class="select-mock"><span>Medium</span><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">System prompt</div>
+          <div class="settings-group-desc">— CLAUDE.md is auto-loaded. Add overrides below.</div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Project CLAUDE.md</div>
+              <div class="settings-field-desc">Detected at /cursor-for-pms/CLAUDE.md · 312 lines</div>
+            </div>
+            <div class="select-mock" style="color: var(--green);"><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span>Active</span></div>
+          </div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Workspace addendum</div>
+              <div class="settings-field-desc">Prepended to every session in this workspace</div>
+            </div>
+            <div class="input-mock" style="font-family: var(--serif); font-style: italic;">"Use shadcn primitives where possible…" — 2 lines</div>
+          </div>
+          <div class="settings-field">
+            <div>
+              <div class="settings-field-label">Persona</div>
+              <div class="settings-field-desc">Shared across all workspaces</div>
+            </div>
+            <div class="input-mock">nick.persona.md · 18 lines</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== DETAIL: PHILOSOPHY ============== -->
+<section class="detail-page" style="grid-template-columns: 1fr; max-width: 760px; margin: 0 auto; padding: 100px 40px;">
+  <div>
+    <div class="detail-num">03 · PRINCIPLES</div>
+    <h2 class="detail-title" style="font-size: 48px; margin-bottom: 32px;">What makes Atrium <em>different.</em></h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px 60px; margin-top: 40px;">
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">I.</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">The terminal is a <em style="color: var(--green);">drawer</em>, not a surface.</h3>
+        <p style="font-size: 14px; color: var(--ink-2); line-height: 1.65;">The PTY runs underneath. You can drop into it any time with ⌘⇧T. But you almost never have to — diffs render properly, permissions are modals, and tool calls collapse into cards. Cursor for PMs, but for code.</p>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">II.</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Settings are <em style="color: var(--green);">first-class.</em></h3>
+        <p style="font-size: 14px; color: var(--ink-2); line-height: 1.65;">Every config that today lives in <code>~/.claude/</code> dotfiles gets a typed, searchable surface. Global → workspace → project → session inheritance, visualised. No more grep-and-pray.</p>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">III.</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">It wraps, <em style="color: var(--green);">never replaces.</em></h3>
+        <p style="font-size: 14px; color: var(--ink-2); line-height: 1.65;">Spawns the real <code>claude</code> CLI underneath. Your CLAUDE.md, skills, MCP servers, slash commands, hooks — all keep working. Atrium is the chrome, not the engine.</p>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">IV.</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Lookout is the <em style="color: var(--green);">remote.</em></h3>
+        <p style="font-size: 14px; color: var(--ink-2); line-height: 1.65;">When you're at your desk, Atrium is the surface. When you're not, Lookout watches the same sessions from your phone. Same hook plumbing, same SQLite permission queue, same SSE bus. Siblings, not competitors.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+<div class="page-divider"></div>
+
+<!-- ============== SECTION INTRO: MORE SCREENS ============== -->
+<section style="padding: 100px 80px 40px; max-width: 1200px; margin: 0 auto; text-align: center;">
+  <div style="font-family: var(--mono); font-size: 11px; color: var(--green); letter-spacing: 0.1em; margin-bottom: 16px;">PART TWO</div>
+  <h2 style="font-family: var(--serif); font-size: 56px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 20px;">The <em style="color: var(--green); font-style: italic;">rest</em> of the surface.</h2>
+  <p style="font-size: 16px; color: var(--ink-2); max-width: 580px; margin: 0 auto; line-height: 1.6;">Eight more views — from first-launch to history search, from the terminal drawer to the dark theme. This is what the product actually looks like end-to-end.</p>
+</section>
+
+<!-- ============== 04 · TERMINAL DRAWER OPEN ============== -->
+<section style="padding: 60px 80px; max-width: 1280px; margin: 0 auto;">
+  <div style="display: grid; grid-template-columns: 280px 1fr; gap: 60px; align-items: start;">
+    <div style="position: sticky; top: 80px;">
+      <div class="detail-num">04 · TERMINAL</div>
+      <h2 class="detail-title">When you <em>do</em> need it.</h2>
+      <p class="detail-desc">Hit &#8984;&#8679;T or click the pill — the terminal slides up from below as a drawer. The conversation stays visible above it. Both panes scroll independently. ESC or click outside to dismiss.</p>
+      <ul class="detail-list">
+        <li>Real PTY · xterm.js renderer · full ANSI support</li>
+        <li>Same session as the conversation above &mdash; they share state</li>
+        <li>Drag the divider to resize · double-click to maximise</li>
+        <li>Tab between multiple shells if you spawn them</li>
+      </ul>
+    </div>
+
+    <div class="window" style="height: 720px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--line-2);">
+      <div class="titlebar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="crumb">
+          <span style="color: var(--ink);">cursor-for-pms</span>
+          <span class="sep">/</span>
+          <span class="branch">feat/socratic-canvas</span>
+          <span class="sep">·</span>
+          <span style="color: var(--ink-3);">Refactor diff renderer</span>
+        </div>
+        <div class="titlebar-right">
+          <div class="status-pill"><span class="status-dot"></span>Opus 4.7</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-rows: 1fr 320px; height: calc(100% - 36px);">
+        <div style="overflow-y: auto; padding: 24px 32px; background: var(--bg);">
+          <div class="turn">
+            <div class="turn-meta">
+              <span class="role assistant">Claude</span>
+              <span class="dot">·</span>
+              <span>just now</span>
+            </div>
+            <div class="turn-body">
+              <p>Tests pass. Want me to commit and push? I'd suggest:</p>
+              <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; margin: 10px 0; font-family: var(--mono); font-size: 12.5px; color: var(--ink-2);">
+                refactor(diff): warm tones, line gutters, softer markers
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #1a1a1a; border-top: 1px solid var(--line-2); display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; padding: 8px 12px 0 12px; gap: 4px;">
+            <div style="display: flex; gap: 0; flex: 1;">
+              <div style="background: #2a2a2a; padding: 6px 14px; border-radius: 6px 6px 0 0; font-size: 11.5px; color: #e8e2d8; font-family: var(--mono); display: flex; align-items: center; gap: 8px;">
+                <span style="width: 5px; height: 5px; background: var(--green); border-radius: 50%;"></span>
+                zsh &mdash; cursor-for-pms
+                <span style="color: #6a6a6a;">&times;</span>
+              </div>
+              <div style="padding: 6px 14px; font-size: 11.5px; color: #8a8a8a; font-family: var(--mono); display: flex; align-items: center; gap: 8px;">
+                <span style="width: 5px; height: 5px; background: #6a6a6a; border-radius: 50%;"></span>
+                node
+                <span style="color: #6a6a6a;">&times;</span>
+              </div>
+              <div style="padding: 6px 10px; font-size: 13px; color: #8a8a8a; font-family: var(--mono); cursor: pointer;">+</div>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button style="background: transparent; border: none; color: #8a8a8a; padding: 4px 8px; cursor: pointer; font-size: 12px;">&#10530;</button>
+              <button style="background: transparent; border: none; color: #8a8a8a; padding: 4px 8px; cursor: pointer; font-size: 14px;">&times;</button>
+            </div>
+          </div>
+
+          <div style="flex: 1; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #e8e2d8; overflow-y: auto;">
+            <div style="color: #6a6a6a;">~/projects/cursor-for-pms <span style="color: #c5a572;">feat/socratic-canvas</span></div>
+            <div><span style="color: var(--green);">&rsaquo;</span> npx vitest run src/components/DiffRenderer.test.tsx --reporter=dot</div>
+            <div style="color: #8a8a8a; margin-top: 4px;">RUN  v1.6.0 /Users/nick/projects/cursor-for-pms</div>
+            <div style="margin-top: 6px;"><span style="color: var(--green);">&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;</span></div>
+            <div style="margin-top: 6px;"><span style="color: #8a8a8a;">Test Files</span>  <span style="color: var(--green);">1 passed</span> <span style="color: #6a6a6a;">(1)</span></div>
+            <div><span style="color: #8a8a8a;">     Tests</span>  <span style="color: var(--green);">15 passed</span> <span style="color: #6a6a6a;">(15)</span></div>
+            <div><span style="color: #8a8a8a;">  Duration</span>  <span style="color: #c5a572;">412ms</span></div>
+            <div style="margin-top: 12px;"><span style="color: #6a6a6a;">~/projects/cursor-for-pms <span style="color: #c5a572;">feat/socratic-canvas</span></span></div>
+            <div><span style="color: var(--green);">&rsaquo;</span> git diff --stat</div>
+            <div style="color: #e8e2d8; margin-top: 4px;"> src/components/DiffRenderer.tsx | <span style="color: var(--green);">12 +</span><span style="color: #c73e3a;">---</span></div>
+            <div style="color: #8a8a8a;"> 1 file changed, 12 insertions(+), 4 deletions(-)</div>
+            <div style="margin-top: 12px;"><span style="color: #6a6a6a;">~/projects/cursor-for-pms <span style="color: #c5a572;">feat/socratic-canvas</span></span></div>
+            <div><span style="color: var(--green);">&rsaquo;</span> <span style="background: #e8e2d8; color: #1a1a1a; padding: 0 1px;">&#9608;</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== 05 · PLAN MODE ============== -->
+<section style="padding: 80px 80px; max-width: 1280px; margin: 0 auto;">
+  <div style="display: grid; grid-template-columns: 1fr 280px; gap: 60px; align-items: start;">
+    <div class="window" style="height: 680px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--line-2);">
+      <div class="titlebar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="crumb">
+          <span style="color: var(--ink);">cursor-for-pms</span>
+          <span class="sep">/</span>
+          <span class="branch">feat/socratic-canvas</span>
+          <span class="sep">·</span>
+          <span style="color: var(--green); font-weight: 500;">Plan mode</span>
+        </div>
+        <div class="titlebar-right">
+          <div class="status-pill"><span class="status-dot" style="background: #c5a572; box-shadow: 0 0 0 3px rgba(197,165,114,0.2);"></span>Planning</div>
+        </div>
+      </div>
+
+      <div style="height: calc(100% - 36px); padding: 32px 48px; overflow-y: auto;">
+        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+          <h2 style="font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.01em;">Implementation plan</h2>
+          <span style="font-size: 12px; color: var(--ink-3); font-family: var(--mono);">draft &middot; 11 steps &middot; ~14 min</span>
+        </div>
+        <p style="font-size: 14px; color: var(--ink-2); margin-bottom: 28px; line-height: 1.6; max-width: 680px; font-family: var(--serif); font-style: italic;">Add real-time canvas rendering to Cursor for PMs so spec changes appear inline as the Socratic interview progresses. No code will be written until you approve.</p>
+
+        <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;">
+
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--green); width: 28px; padding-top: 2px;">01</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: var(--ink); margin-bottom: 2px;">Read existing canvas implementation in <code style="font-family: var(--mono); font-size: 12px; background: var(--bg-sunk); padding: 1px 5px; border-radius: 3px;">src/canvas/SpecCanvas.tsx</code></div>
+              <div style="font-size: 12px; color: var(--ink-3);">No edits &middot; ~30s</div>
+            </div>
+            <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono); padding: 2px 8px; background: var(--bg-sunk); border-radius: 10px;">read</div>
+          </div>
+
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--green); width: 28px; padding-top: 2px;">02</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: var(--ink); margin-bottom: 2px;">Trace the SSE event flow from interview turn to canvas update</div>
+              <div style="font-size: 12px; color: var(--ink-3);">Reads <code style="font-family: var(--mono); font-size: 12px;">interview.ts</code>, <code style="font-family: var(--mono); font-size: 12px;">canvas-store.ts</code>, and the SSE handler &middot; ~1m</div>
+            </div>
+            <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono); padding: 2px 8px; background: var(--bg-sunk); border-radius: 10px;">trace</div>
+          </div>
+
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); width: 28px; padding-top: 2px;">03</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: var(--ink); margin-bottom: 2px;">Add <code style="font-family: var(--mono); font-size: 12px;">canvasPatch</code> event type to the SSE schema</div>
+              <div style="font-size: 12px; color: var(--ink-3);">Edits <code style="font-family: var(--mono); font-size: 12px;">events.ts</code> &middot; adds JSON-patch shape for partial spec updates &middot; ~2m</div>
+            </div>
+            <div style="font-size: 11px; color: var(--amber); font-family: var(--mono); padding: 2px 8px; background: var(--amber-soft); border-radius: 10px;">edit</div>
+          </div>
+
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); width: 28px; padding-top: 2px;">04</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: var(--ink); margin-bottom: 2px;">Wire interview agent to emit patches mid-stream</div>
+              <div style="font-size: 12px; color: var(--ink-3);">Modifies the agent loop in <code style="font-family: var(--mono); font-size: 12px;">interview.ts</code> &middot; debounce at 200ms &middot; ~3m</div>
+            </div>
+            <div style="font-size: 11px; color: var(--amber); font-family: var(--mono); padding: 2px 8px; background: var(--amber-soft); border-radius: 10px;">edit</div>
+          </div>
+
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); width: 28px; padding-top: 2px;">05</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 500; color: var(--ink); margin-bottom: 2px;">Apply patches to canvas store with optimistic updates</div>
+              <div style="font-size: 12px; color: var(--ink-3);">Edits <code style="font-family: var(--mono); font-size: 12px;">canvas-store.ts</code> &middot; uses Immer for structural sharing &middot; ~2m</div>
+            </div>
+            <div style="font-size: 11px; color: var(--amber); font-family: var(--mono); padding: 2px 8px; background: var(--amber-soft); border-radius: 10px;">edit</div>
+          </div>
+
+          <div style="padding: 14px 18px; display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-4); width: 28px; padding-top: 2px;">&hellip;</div>
+            <div style="flex: 1;">
+              <div style="font-size: 13.5px; color: var(--ink-3); margin-bottom: 2px; font-style: italic;">+ 6 more steps &mdash; animation, tests, edge cases, docs</div>
+              <div style="font-size: 12px; color: var(--ink-4);">click to expand</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="margin-top: 24px; padding: 16px 20px; background: var(--green-soft); border: 1px solid var(--green); border-radius: var(--r-md); display: flex; align-items: center; gap: 14px;">
+          <svg style="width: 20px; height: 20px; color: var(--green);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          <div style="flex: 1;">
+            <div style="font-size: 13.5px; font-weight: 500; color: var(--ink);">Approve plan and execute autonomously?</div>
+            <div style="font-size: 12px; color: var(--ink-2); margin-top: 2px;">Claude will pause at each <span style="color: var(--amber); font-weight: 500;">edit</span> step for your review.</div>
+          </div>
+          <button class="btn">Edit plan</button>
+          <button class="btn primary">Execute</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="position: sticky; top: 80px;">
+      <div class="detail-num">05 &middot; PLAN MODE</div>
+      <h2 class="detail-title">Think <em>before</em> you act.</h2>
+      <p class="detail-desc">Plan mode is read-only. Claude maps out the work as numbered steps with file targets and time estimates &mdash; but writes nothing until you approve. Useful for unfamiliar codebases and high-stakes refactors.</p>
+      <ul class="detail-list">
+        <li>Read-only by default &middot; no edits, no shell, no commits</li>
+        <li>Each step typed: <code>read</code>, <code>trace</code>, <code>edit</code>, <code>test</code>, <code>commit</code></li>
+        <li>Edit individual steps inline &middot; drag to reorder &middot; delete to skip</li>
+        <li>Once approved, execution streams into the conversation pane</li>
+      </ul>
+    </div>
+  </div>
+</section>
+<div class="page-divider"></div>
+
+<!-- ============== 06 · MCP MARKETPLACE ============== -->
+<section style="padding: 80px 80px; max-width: 1280px; margin: 0 auto;">
+  <div style="display: grid; grid-template-columns: 280px 1fr; gap: 60px; align-items: start;">
+    <div style="position: sticky; top: 80px;">
+      <div class="detail-num">06 &middot; MCP</div>
+      <h2 class="detail-title">A marketplace, <em>not a JSON file.</em></h2>
+      <p class="detail-desc">Browse, search, and connect MCP servers without ever editing a config. Auth flows happen in-app. Tool inventories are visible before you connect. Your choices sync across machines.</p>
+      <ul class="detail-list">
+        <li>One-click OAuth &middot; no copy-pasting tokens into dotfiles</li>
+        <li>Per-server tool inventory and rate limit visibility</li>
+        <li>Workspace vs global scope &middot; share a config with your team</li>
+        <li>"Bring your own" custom MCPs from URL or local binary</li>
+      </ul>
+    </div>
+
+    <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-md); overflow: hidden;">
+      <div style="padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 16px;">
+        <div>
+          <div style="font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: -0.01em;">MCP Servers</div>
+          <div style="font-size: 12px; color: var(--ink-3); margin-top: 2px;">3 connected &middot; 47 available</div>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+          <div style="background: var(--bg-sunk); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 12px; font-size: 12.5px; color: var(--ink-3); display: flex; align-items: center; gap: 8px; min-width: 240px;">
+            <svg style="width: 13px; height: 13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span>Search 47 servers&hellip;</span>
+          </div>
+          <button class="btn primary" style="padding: 6px 14px;">+ Custom</button>
+        </div>
+      </div>
+
+      <div style="padding: 12px 24px; border-bottom: 1px solid var(--line); display: flex; gap: 6px; flex-wrap: wrap; background: var(--bg-sunk);">
+        <span style="background: var(--ink); color: var(--bg); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; font-weight: 500;">All &middot; 47</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Project mgmt &middot; 8</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Comms &middot; 6</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Code &middot; 12</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Data &middot; 9</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Browser &middot; 4</span>
+        <span style="background: var(--bg-elev); border: 1px solid var(--line); padding: 4px 12px; border-radius: 12px; font-size: 11.5px; color: var(--ink-2);">Custom &middot; 8</span>
+      </div>
+
+      <div style="padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
+        <div style="border: 1px solid var(--green); background: var(--green-soft); border-radius: var(--r-md); padding: 14px; position: relative;">
+          <div style="position: absolute; top: 12px; right: 12px; font-size: 10.5px; color: var(--green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Connected</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #5e6ad2; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">L</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Linear</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Issues, projects, cycles</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">12 tools &middot; OAuth &middot; stonekey workspace</div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn ghost" style="padding: 4px 10px; font-size: 11.5px;">Configure</button>
+            <button class="btn ghost" style="padding: 4px 10px; font-size: 11.5px; color: var(--red);">Disconnect</button>
+          </div>
+        </div>
+
+        <div style="border: 1px solid var(--green); background: var(--green-soft); border-radius: var(--r-md); padding: 14px; position: relative;">
+          <div style="position: absolute; top: 12px; right: 12px; font-size: 10.5px; color: var(--green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Connected</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #1a1a1a; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 700; font-style: italic;">N</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Notion</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Pages, databases, search</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">14 tools &middot; OAuth &middot; personal</div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn ghost" style="padding: 4px 10px; font-size: 11.5px;">Configure</button>
+            <button class="btn ghost" style="padding: 4px 10px; font-size: 11.5px; color: var(--red);">Disconnect</button>
+          </div>
+        </div>
+
+        <div style="border: 1px solid var(--line); background: var(--bg-elev); border-radius: var(--r-md); padding: 14px; position: relative;">
+          <div style="position: absolute; top: 12px; right: 12px; font-size: 10.5px; color: var(--ink-3); font-weight: 500;">&starf; Popular</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #1a1a1a; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">G</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">GitHub</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Repos, PRs, issues, actions</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">18 tools &middot; OAuth &middot; official</div>
+          <button class="btn primary" style="padding: 5px 14px; font-size: 12px;">Connect</button>
+        </div>
+
+        <div style="border: 1px solid var(--line); background: var(--bg-elev); border-radius: var(--r-md); padding: 14px;">
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #4a154b; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">#</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Slack</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Channels, DMs, search</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">9 tools &middot; OAuth &middot; official</div>
+          <button class="btn primary" style="padding: 5px 14px; font-size: 12px;">Connect</button>
+        </div>
+
+        <div style="border: 1px solid var(--line); background: var(--bg-elev); border-radius: var(--r-md); padding: 14px;">
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #2ead33; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">&#9654;</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Playwright</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Browser automation, screenshots</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">11 tools &middot; local &middot; runs Chromium</div>
+          <button class="btn primary" style="padding: 5px 14px; font-size: 12px;">Install</button>
+        </div>
+
+        <div style="border: 1px solid var(--line); background: var(--bg-elev); border-radius: var(--r-md); padding: 14px;">
+          <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; background: #336791; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">&#9923;</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Postgres</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">Read-only DB queries</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2); line-height: 1.5; margin-bottom: 12px;">5 tools &middot; connection string</div>
+          <button class="btn" style="padding: 5px 14px; font-size: 12px;">Configure</button>
+        </div>
+
+      </div>
+
+      <div style="padding: 14px 24px; border-top: 1px solid var(--line); background: var(--bg-sunk); display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 12px; color: var(--ink-3);">Showing 6 of 47 &mdash; <span style="color: var(--green); cursor: pointer; font-weight: 500;">Show all &rarr;</span></div>
+        <div style="font-size: 11.5px; color: var(--ink-3); font-family: var(--mono);">Synced from registry &middot; 2m ago</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== 07 · HISTORY ============== -->
+<section style="padding: 80px 80px; max-width: 1280px; margin: 0 auto;">
+  <div style="display: grid; grid-template-columns: 1fr 280px; gap: 60px; align-items: start;">
+
+    <div class="window" style="height: 700px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--line-2);">
+      <div class="titlebar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="crumb">
+          <svg style="width: 13px; height: 13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span style="color: var(--ink);">History</span>
+          <span class="sep">/</span>
+          <span style="color: var(--ink-3);">All workspaces</span>
+        </div>
+        <div class="titlebar-right">
+          <div style="background: var(--bg-sunk); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 10px; font-size: 11.5px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; min-width: 220px;">
+            <svg style="width: 11px; height: 11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span>Search transcripts&hellip;</span>
+            <span style="margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-4);">&#8984;K</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 240px 1fr; height: calc(100% - 36px);">
+        <div style="border-right: 1px solid var(--line); padding: 16px 12px; overflow-y: auto;">
+          <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 0 8px 6px;">Workspace</div>
+          <div class="nav-item active" style="font-size: 12.5px;">
+            <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+            All
+            <span class="nav-meta">142</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <span style="width: 10px; height: 10px; background: #5e6ad2; border-radius: 3px;"></span>
+            cursor-for-pms
+            <span class="nav-meta">38</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <span style="width: 10px; height: 10px; background: #c5a572; border-radius: 3px;"></span>
+            lookout
+            <span class="nav-meta">24</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <span style="width: 10px; height: 10px; background: var(--green); border-radius: 3px;"></span>
+            gemma-agent
+            <span class="nav-meta">31</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <span style="width: 10px; height: 10px; background: #c73e3a; border-radius: 3px;"></span>
+            careguide
+            <span class="nav-meta">28</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <span style="width: 10px; height: 10px; background: #8a8a8a; border-radius: 3px;"></span>
+            archived
+            <span class="nav-meta">21</span>
+          </div>
+
+          <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 16px 8px 6px;">Filters</div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Starred
+            <span class="nav-meta">9</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Last 24h
+            <span class="nav-meta">12</span>
+          </div>
+          <div class="nav-item" style="font-size: 12.5px;">
+            <svg class="i nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            Has unresolved
+            <span class="nav-meta">3</span>
+          </div>
+        </div>
+
+        <div style="overflow-y: auto;">
+          <div style="padding: 14px 24px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); background: var(--bg-sunk); border-bottom: 1px solid var(--line);">Today</div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="width: 8px; height: 8px; background: var(--green); border-radius: 2px;"></span>
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">Refactor diff renderer</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">cursor-for-pms</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--green); background: var(--green-soft); padding: 1px 6px; border-radius: 8px;">&#9679; running</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Looks great &mdash; also bump the row height to 1.65 line-height and let me see how it renders."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>2m ago</div>
+              <div style="margin-top: 2px;">14 turns</div>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="width: 8px; height: 8px; background: #c5a572; border-radius: 2px;"></span>
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">Add Linear MCP export</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">cursor-for-pms</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--amber); background: var(--amber-soft); padding: 1px 6px; border-radius: 8px;">&#9675; awaiting</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Permission requested: write to Linear API. Approve to continue with ticket creation."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>23m ago</div>
+              <div style="margin-top: 2px;">8 turns</div>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <svg style="width: 12px; height: 12px; color: var(--amber);" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">VAPID push setup for permission notifications</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">lookout</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Pushed working VAPID flow with ntfy fallback. 47 lines added, 3 files."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>1h ago</div>
+              <div style="margin-top: 2px;">22 turns</div>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">Wave 0.5 design tokens &mdash; palette + spacing</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">gemma-agent</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Locked in 8pt scale with 1.25 modular type ramp. Token JSON in repo."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>4h ago</div>
+              <div style="margin-top: 2px;">31 turns</div>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); background: var(--bg-sunk); border-bottom: 1px solid var(--line); border-top: 1px solid var(--line);">Yesterday</div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <svg style="width: 12px; height: 12px; color: var(--amber);" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">Multi-model QC pipeline &mdash; Generate &rarr; Validate &rarr; Judge</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">careguide</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Cross-model judge eliminates self-preference bias. REQ-145 documented."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>1d ago</div>
+              <div style="margin-top: 2px;">54 turns</div>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="font-size: 14px; font-weight: 500; color: var(--ink);">Cursor for PMs &mdash; competitive analysis</span>
+                <span style="font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: var(--bg-sunk); padding: 1px 6px; border-radius: 8px;">cursor-for-pms</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--ink-2); font-family: var(--serif); font-style: italic; line-height: 1.5;">"Productboard, Linear AI, Notion AI all checked. Socratic interview is the wedge."</div>
+            </div>
+            <div style="text-align: right; color: var(--ink-3); font-size: 11.5px; font-family: var(--mono);">
+              <div>1d ago</div>
+              <div style="margin-top: 2px;">19 turns</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div style="position: sticky; top: 80px;">
+      <div class="detail-num">07 &middot; HISTORY</div>
+      <h2 class="detail-title">Every session, <em>searchable.</em></h2>
+      <p class="detail-desc">Full-text search across every transcript you've ever had. Filter by workspace, status, date, or starred. The first sentence of the latest turn shows in the preview &mdash; enough to remember what it was about without opening it.</p>
+      <ul class="detail-list">
+        <li>Full-text search via SQLite FTS5 &mdash; millisecond latency</li>
+        <li>Group by day &middot; keyboard navigable &middot; J/K to move</li>
+        <li>Star sessions to keep them out of auto-archive</li>
+        <li>Export any session as Markdown, share, or fork from any turn</li>
+      </ul>
+    </div>
+  </div>
+</section>
+<div class="page-divider"></div>
+
+<!-- ============== 08 · DARK THEME ============== -->
+<section style="padding: 80px 80px; background: #0d0d0d; color: #e8e2d8;">
+  <div style="max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 280px 1fr; gap: 60px; align-items: start;">
+    <div style="position: sticky; top: 80px;">
+      <div style="font-family: var(--mono); font-size: 11px; color: var(--green); letter-spacing: 0.1em; margin-bottom: 12px;">08 &middot; DARK</div>
+      <h2 style="font-family: var(--serif); font-size: 38px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; color: #e8e2d8; margin-bottom: 16px;">Same soul. <em style="color: var(--green); font-style: italic;">Less light.</em></h2>
+      <p style="font-size: 14px; line-height: 1.6; color: #a8a8a8; margin-bottom: 24px;">Dark mode isn't just inverted colours. The greens shift toward emerald, the warm cream becomes warm graphite, and the serif headings stay &mdash; they read better on dark backgrounds than most teams realise.</p>
+      <ul style="list-style: none;">
+        <li style="padding: 10px 0; border-top: 1px solid #2a2a2a; font-size: 13px; color: #a8a8a8; display: flex; gap: 10px;">
+          <span style="color: var(--green); font-family: var(--mono);">&rarr;</span>
+          Background <code style="font-family: var(--mono); font-size: 11px; background: #1a1a1a; padding: 1px 5px; border-radius: 3px; color: #e8e2d8;">#0d0d0d</code> &middot; elevated <code style="font-family: var(--mono); font-size: 11px; background: #1a1a1a; padding: 1px 5px; border-radius: 3px; color: #e8e2d8;">#1a1a1a</code>
+        </li>
+        <li style="padding: 10px 0; border-top: 1px solid #2a2a2a; font-size: 13px; color: #a8a8a8; display: flex; gap: 10px;">
+          <span style="color: var(--green); font-family: var(--mono);">&rarr;</span>
+          Auto-switches with system &middot; or manual override
+        </li>
+        <li style="padding: 10px 0; border-top: 1px solid #2a2a2a; font-size: 13px; color: #a8a8a8; display: flex; gap: 10px;">
+          <span style="color: var(--green); font-family: var(--mono);">&rarr;</span>
+          Diffs use desaturated greens/reds for night-time reading
+        </li>
+      </ul>
+    </div>
+
+    <div style="background: #0d0d0d; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); border: 1px solid #2a2a2a; height: 600px; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; padding: 0 14px; height: 36px; background: #0d0d0d; border-bottom: 1px solid #1a1a1a;">
+        <div class="traffic" style="margin-right: 16px;"><span></span><span></span><span></span></div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #a8a8a8; font-weight: 500;">
+          <span style="color: #e8e2d8;">cursor-for-pms</span>
+          <span style="color: #6a6a6a;">/</span>
+          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; font-family: var(--mono); font-size: 11px; color: #c5a572;">feat/socratic-canvas</span>
+          <span style="color: #6a6a6a;">&middot;</span>
+          <span style="color: #8a8a8a;">Refactor diff renderer</span>
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: #a8a8a8;">
+          <div style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(16,163,127,0.2);"></span>Opus 4.7</div>
+        </div>
+      </div>
+
+      <div style="flex: 1; padding: 24px 32px; overflow-y: auto;">
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11.5px; color: #6a6a6a;">
+            <span style="font-weight: 600; color: var(--green);">Claude</span>
+            <span>&middot;</span>
+            <span>just now</span>
+          </div>
+          <div style="font-size: 14.5px; line-height: 1.65; color: #e8e2d8;">
+            <p style="margin-bottom: 10px;">Updated. Diffs now use desaturated tones that read cleanly at night. Here's the result:</p>
+
+            <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; margin: 12px 0; overflow: hidden;">
+              <div style="padding: 8px 14px; font-family: var(--mono); font-size: 11.5px; color: #a8a8a8; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 10px; background: #0d0d0d;">
+                <span style="font-weight: 600; color: #e8e2d8;">DiffRenderer.tsx</span>
+                <span style="margin-left: auto; display: flex; gap: 8px; font-size: 11px;">
+                  <span style="color: #4ec9b0;">+12</span>
+                  <span style="color: #d77670;">&minus;4</span>
+                </span>
+              </div>
+              <div style="font-family: var(--mono); font-size: 12px; line-height: 1.6;">
+                <div style="display: grid; grid-template-columns: 36px 36px 1fr;">
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">47</span>
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">47</span>
+                  <span style="padding: 0 12px; color: #c8c8c8;">  .diff-line {</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 36px 36px 1fr; background: rgba(215,118,112,0.08);">
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">48</span>
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;"></span>
+                  <span style="padding: 0 12px; color: #d77670;">&minus;   display: flex;</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 36px 36px 1fr; background: rgba(78,201,176,0.08);">
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;"></span>
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">48</span>
+                  <span style="padding: 0 12px; color: #4ec9b0;">+   display: grid;</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 36px 36px 1fr; background: rgba(78,201,176,0.08);">
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;"></span>
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">49</span>
+                  <span style="padding: 0 12px; color: #4ec9b0;">+   grid-template-columns: 36px 36px 1fr;</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 36px 36px 1fr;">
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">49</span>
+                  <span style="text-align: right; padding: 0 8px; color: #4a4a4a; font-size: 10.5px; border-right: 1px solid #2a2a2a;">50</span>
+                  <span style="padding: 0 12px; color: #c8c8c8;">  }</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 12px 32px 24px;">
+        <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 12px 14px;">
+          <div style="font-size: 14px; color: #6a6a6a;">Reply, paste a screenshot, or type / for commands&hellip;</div>
+          <div style="display: flex; align-items: center; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2a2a2a;">
+            <button style="background: transparent; border: none; width: 26px; height: 26px; color: #6a6a6a; cursor: pointer;">&#128206;</button>
+            <button style="background: transparent; border: none; width: 26px; height: 26px; color: #6a6a6a; cursor: pointer;">&#128247;</button>
+            <button style="background: transparent; border: none; width: 26px; height: 26px; color: #6a6a6a; cursor: pointer; font-family: var(--mono);">/</button>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+              <div style="display: flex; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px; padding: 2px; font-size: 11px;">
+                <span style="padding: 3px 8px; color: #6a6a6a;">Ask</span>
+                <span style="padding: 3px 8px; background: #2a2a2a; color: #e8e2d8; border-radius: 4px;">Edit</span>
+                <span style="padding: 3px 8px; color: #6a6a6a;">Plan</span>
+                <span style="padding: 3px 8px; color: #6a6a6a;">Auto</span>
+              </div>
+              <button style="background: var(--green); color: #0d0d0d; border: none; width: 28px; height: 28px; border-radius: 6px;">&rarr;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-divider"></div>
+
+<!-- ============== 09 · ONBOARDING ============== -->
+<section style="padding: 100px 80px; background: var(--bg);">
+  <div style="max-width: 1280px; margin: 0 auto;">
+
+    <div style="text-align: center; margin-bottom: 60px;">
+      <div class="detail-num">09 &middot; FIRST RUN</div>
+      <h2 style="font-family: var(--serif); font-size: 48px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 16px;">From <em style="color: var(--green); font-style: italic;">install</em> to first session.</h2>
+      <p style="font-size: 16px; color: var(--ink-2); max-width: 580px; margin: 0 auto; line-height: 1.6;">Five minutes, four screens. We auto-detect an existing Claude Code install and migrate everything in.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">STEP 01</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Welcome.</h3>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px;">Detect existing Claude Code install. Offer to import CLAUDE.md, MCP servers, slash commands, and approval rules.</p>
+        <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 40px 32px; box-shadow: var(--shadow-md); height: 380px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+          <div style="font-family: var(--serif); font-size: 56px; font-weight: 500; font-style: italic; letter-spacing: -0.03em; color: var(--ink); margin-bottom: 12px;">Atrium</div>
+          <p style="font-family: var(--serif); font-size: 16px; color: var(--ink-2); font-style: italic; max-width: 320px; line-height: 1.5; margin-bottom: 24px;">A native, refined wrapper for Claude Code.</p>
+          <div style="background: var(--green-soft); border: 1px solid var(--green); border-radius: var(--r-md); padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; max-width: 380px;">
+            <svg style="width: 18px; height: 18px; color: var(--green);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            <div style="text-align: left;">
+              <div style="font-size: 12.5px; font-weight: 500; color: var(--ink);">Claude Code detected</div>
+              <div style="font-size: 11.5px; color: var(--ink-3);">v2.4.1 &middot; 8 MCP servers &middot; 4 workspaces</div>
+            </div>
+          </div>
+          <button class="btn primary" style="padding: 10px 24px;">Import &amp; continue &rarr;</button>
+          <div style="font-size: 11px; color: var(--ink-3); margin-top: 12px;">Or start from scratch</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">STEP 02</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Sign in to Anthropic.</h3>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px;">If Claude Code is already authenticated, we use that token. Otherwise, OAuth in the browser.</p>
+        <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 40px 32px; box-shadow: var(--shadow-md); height: 380px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="text-align: center; margin-bottom: 28px;">
+            <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 6px;">Connect to Anthropic</h3>
+            <p style="font-size: 12.5px; color: var(--ink-3);">Choose how you'd like to authenticate</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="background: var(--bg-sunk); border: 1px solid var(--green); padding: 14px 16px; border-radius: var(--r-md); display: flex; align-items: center; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: var(--green); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white;">
+                <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/></svg>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500; color: var(--ink);">Use existing Claude session</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">nick@stonekey.io &middot; Max plan</div>
+              </div>
+              <span style="font-family: var(--mono); font-size: 10.5px; color: var(--green); font-weight: 600;">RECOMMENDED</span>
+            </div>
+            <div style="background: var(--bg); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--r-md); display: flex; align-items: center; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: var(--bg-sunk); border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--ink-2); font-weight: 600;">A</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500; color: var(--ink);">Sign in with Anthropic</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">OAuth &middot; opens in browser</div>
+              </div>
+            </div>
+            <div style="background: var(--bg); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--r-md); display: flex; align-items: center; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: var(--bg-sunk); border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--ink-2);">
+                <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500; color: var(--ink);">API key</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">For pay-as-you-go usage</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">STEP 03</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Pick your starting point.</h3>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px;">Open a folder, clone a repo, or pick from recent. Atrium remembers everything you've ever opened.</p>
+        <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 32px; box-shadow: var(--shadow-md); height: 380px; display: flex; flex-direction: column;">
+          <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 4px;">Open a workspace</h3>
+          <p style="font-size: 12.5px; color: var(--ink-3); margin-bottom: 20px;">Or import all 4 from your existing setup</p>
+          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto;">
+            <div style="padding: 12px 14px; border-radius: var(--r-sm); display: flex; align-items: center; gap: 12px; background: var(--bg-sunk); border: 1px solid var(--line);">
+              <span style="width: 10px; height: 10px; background: #5e6ad2; border-radius: 3px;"></span>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">cursor-for-pms</div>
+                <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono);">~/projects/cursor-for-pms &middot; 38 sessions</div>
+              </div>
+              <span style="font-size: 11px; color: var(--green); font-weight: 500;">Active</span>
+            </div>
+            <div style="padding: 12px 14px; border-radius: var(--r-sm); display: flex; align-items: center; gap: 12px;">
+              <span style="width: 10px; height: 10px; background: #c5a572; border-radius: 3px;"></span>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">lookout</div>
+                <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono);">~/projects/lookout &middot; 24 sessions</div>
+              </div>
+            </div>
+            <div style="padding: 12px 14px; border-radius: var(--r-sm); display: flex; align-items: center; gap: 12px;">
+              <span style="width: 10px; height: 10px; background: var(--green); border-radius: 3px;"></span>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">gemma-agent</div>
+                <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono);">~/projects/gemma &middot; 31 sessions</div>
+              </div>
+            </div>
+            <div style="padding: 12px 14px; border-radius: var(--r-sm); display: flex; align-items: center; gap: 12px;">
+              <span style="width: 10px; height: 10px; background: #c73e3a; border-radius: 3px;"></span>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">careguide</div>
+                <div style="font-size: 11px; color: var(--ink-3); font-family: var(--mono);">~/projects/careguide &middot; 28 sessions</div>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
+            <button class="btn" style="flex: 1;">+ Open folder</button>
+            <button class="btn" style="flex: 1;">+ Clone repo</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">STEP 04</div>
+        <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 8px;">Set the safety dial.</h3>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px;">One question that determines how much friction you'll feel. Adjustable later, per workspace.</p>
+        <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 32px; box-shadow: var(--shadow-md); height: 380px; display: flex; flex-direction: column;">
+          <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500; margin-bottom: 4px;">How much should Claude ask?</h3>
+          <p style="font-size: 12.5px; color: var(--ink-3); margin-bottom: 24px; font-family: var(--serif); font-style: italic;">You can change this any time, per workspace or session.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+            <div style="padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); display: flex; align-items: flex-start; gap: 12px;">
+              <div style="width: 18px; height: 18px; border: 2px solid var(--line-2); border-radius: 50%; flex-shrink: 0; margin-top: 2px;"></div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Ask before everything</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">Maximum control &middot; slowest</div>
+              </div>
+            </div>
+            <div style="padding: 14px; border: 1px solid var(--green); background: var(--green-soft); border-radius: var(--r-md); display: flex; align-items: flex-start; gap: 12px;">
+              <div style="width: 18px; height: 18px; border: 2px solid var(--green); border-radius: 50%; flex-shrink: 0; margin-top: 2px; position: relative;">
+                <div style="position: absolute; inset: 3px; background: var(--green); border-radius: 50%;"></div>
+              </div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Auto edits, ask for shell</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">Recommended &middot; file changes flow, commands ask</div>
+              </div>
+            </div>
+            <div style="padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); display: flex; align-items: flex-start; gap: 12px;">
+              <div style="width: 18px; height: 18px; border: 2px solid var(--line-2); border-radius: 50%; flex-shrink: 0; margin-top: 2px;"></div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">YOLO mode</div>
+                <div style="font-size: 11.5px; color: var(--ink-3);">Skip all prompts &middot; only in worktree-isolated sessions</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn primary" style="margin-top: 20px;">Open my first session &rarr;</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<div class="page-divider"></div>
+
+<!-- ============== 10 · COMPONENT LIBRARY ============== -->
+<section style="padding: 100px 80px; background: var(--bg-sunk); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div style="max-width: 1280px; margin: 0 auto;">
+
+    <div style="text-align: center; margin-bottom: 60px;">
+      <div class="detail-num">10 &middot; COMPONENTS</div>
+      <h2 style="font-family: var(--serif); font-size: 48px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 16px;">The <em style="color: var(--green); font-style: italic;">design system.</em></h2>
+      <p style="font-size: 16px; color: var(--ink-2); max-width: 580px; margin: 0 auto; line-height: 1.6;">A small but exacting set of primitives. Every screen above is built from these.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;">Typography</div>
+        <div style="font-family: var(--serif); font-size: 36px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 4px;">Atrium</div>
+        <div style="font-family: var(--serif); font-size: 22px; font-style: italic; color: var(--ink-2); margin-bottom: 16px;">A place to think.</div>
+        <div style="font-size: 14px; color: var(--ink); margin-bottom: 4px;">Body &mdash; Inter Tight, 14px / 1.5</div>
+        <div style="font-size: 12.5px; color: var(--ink-2); margin-bottom: 16px;">Smaller &mdash; Inter Tight, 12.5px / 1.5</div>
+        <div style="font-family: var(--mono); font-size: 12px; color: var(--ink-2); padding: 8px 12px; background: var(--bg-sunk); border-radius: 4px; display: inline-block;">JetBrains Mono &middot; 12px</div>
+        <div style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; gap: 28px; font-size: 11.5px;">
+          <div><span style="color: var(--ink-3);">Display:</span> Source Serif 4</div>
+          <div><span style="color: var(--ink-3);">Body:</span> Inter Tight</div>
+          <div><span style="color: var(--ink-3);">Code:</span> JetBrains Mono</div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Palette</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+          <div>
+            <div style="height: 56px; background: var(--bg); border-radius: var(--r-sm); border: 1px solid var(--line); margin-bottom: 6px;"></div>
+            <div style="font-size: 11px; font-weight: 500;">Cream</div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono);">#faf8f5</div>
+          </div>
+          <div>
+            <div style="height: 56px; background: var(--ink); border-radius: var(--r-sm); margin-bottom: 6px;"></div>
+            <div style="font-size: 11px; font-weight: 500;">Ink</div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono);">#1a1a1a</div>
+          </div>
+          <div>
+            <div style="height: 56px; background: var(--green); border-radius: var(--r-sm); margin-bottom: 6px;"></div>
+            <div style="font-size: 11px; font-weight: 500;">Green</div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono);">#10A37F</div>
+          </div>
+          <div>
+            <div style="height: 56px; background: var(--amber); border-radius: var(--r-sm); margin-bottom: 6px;"></div>
+            <div style="font-size: 11px; font-weight: 500;">Amber</div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono);">#b8860b</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+          <div>
+            <div style="height: 36px; background: var(--bg-sunk); border-radius: var(--r-sm); border: 1px solid var(--line);"></div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">sunk</div>
+          </div>
+          <div>
+            <div style="height: 36px; background: var(--green-soft); border-radius: var(--r-sm); border: 1px solid var(--green);"></div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">green-soft</div>
+          </div>
+          <div>
+            <div style="height: 36px; background: var(--amber-soft); border-radius: var(--r-sm); border: 1px solid var(--amber);"></div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">amber-soft</div>
+          </div>
+          <div>
+            <div style="height: 36px; background: var(--red-soft); border-radius: var(--r-sm); border: 1px solid var(--red);"></div>
+            <div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">red-soft</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Buttons</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+          <button class="btn primary">Primary</button>
+          <button class="btn">Secondary</button>
+          <button class="btn ghost">Ghost</button>
+          <button class="btn danger">Danger</button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+          <button class="btn" style="padding: 4px 10px; font-size: 11.5px;">Small</button>
+          <button class="btn">Medium</button>
+          <button class="btn primary" style="padding: 10px 20px; font-size: 14px;">Large</button>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; padding-top: 14px; border-top: 1px solid var(--line);">
+          <button class="icon-btn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="icon-btn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+          <button class="icon-btn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+          <span style="margin-left: auto; font-size: 11px; color: var(--ink-3); font-family: var(--mono);">icon-btn &middot; 30&times;30</span>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Status indicators</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;">
+            <span class="session-status running"></span>
+            <span style="color: var(--ink); font-weight: 500;">Running</span>
+            <span style="color: var(--ink-3);">&mdash; pulse animation</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;">
+            <span class="session-status waiting"></span>
+            <span style="color: var(--ink); font-weight: 500;">Awaiting permission</span>
+            <span style="color: var(--ink-3);">&mdash; amber, static</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;">
+            <span class="session-status"></span>
+            <span style="color: var(--ink); font-weight: 500;">Idle</span>
+            <span style="color: var(--ink-3);">&mdash; grey</span>
+          </div>
+          <div style="margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap;">
+            <span class="tool-status ok">success</span>
+            <span class="tool-status run">running</span>
+            <span style="font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--red-soft); color: var(--red); font-weight: 500;">error</span>
+            <span style="font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--bg-sunk); color: var(--ink-3); font-weight: 500;">cancelled</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Inputs</div>
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;">Text input</div>
+          <div style="background: var(--bg); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 8px 12px; font-size: 13px; color: var(--ink-3);">Search 47 servers&hellip;</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;">Toggle</div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div class="toggle on"></div>
+            <div class="toggle"></div>
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;">Segmented control</div>
+          <div class="mode-select" style="display: inline-flex;">
+            <span>Ask</span>
+            <span class="on">Edit</span>
+            <span>Plan</span>
+            <span>Auto</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;">Select</div>
+          <div class="select-mock"><span>Claude Opus 4.7</span><svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+        <div style="font-family: var(--mono); font-size: 10.5px; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">Spacing &amp; radius</div>
+        <div style="display: flex; gap: 14px; align-items: flex-end; margin-bottom: 14px;">
+          <div style="text-align: center;"><div style="width: 4px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">4</div></div>
+          <div style="text-align: center;"><div style="width: 8px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">8</div></div>
+          <div style="text-align: center;"><div style="width: 12px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">12</div></div>
+          <div style="text-align: center;"><div style="width: 16px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">16</div></div>
+          <div style="text-align: center;"><div style="width: 24px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">24</div></div>
+          <div style="text-align: center;"><div style="width: 32px; height: 20px; background: var(--ink-3);"></div><div style="font-size: 10px; color: var(--ink-3); font-family: var(--mono); margin-top: 4px;">32</div></div>
+        </div>
+        <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 8px; padding-top: 14px; border-top: 1px solid var(--line);">Radius &mdash; sm 6 &middot; md 10 &middot; lg 14</div>
+        <div style="display: flex; gap: 10px;">
+          <div style="width: 36px; height: 36px; background: var(--ink); border-radius: 6px;"></div>
+          <div style="width: 36px; height: 36px; background: var(--ink); border-radius: 10px;"></div>
+          <div style="width: 36px; height: 36px; background: var(--ink); border-radius: 14px;"></div>
+        </div>
+        <div style="font-size: 11.5px; color: var(--ink-3); margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); line-height: 1.6;">
+          <strong style="color: var(--ink); font-weight: 500;">Motion:</strong> 120ms hover &middot; 180ms toggle &middot; 240ms drawer &middot; ease-out
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============== 11 · ROADMAP ============== -->
+<section style="padding: 100px 80px; background: var(--bg);">
+  <div style="max-width: 880px; margin: 0 auto; text-align: center;">
+    <div class="detail-num">11 &middot; ROADMAP</div>
+    <h2 style="font-family: var(--serif); font-size: 48px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 16px;">A weekend, <em style="color: var(--green); font-style: italic;">not a year.</em></h2>
+    <p style="font-size: 16px; color: var(--ink-2); max-width: 580px; margin: 0 auto 60px; line-height: 1.6;">Scope this honestly &mdash; Atrium is a polish layer over an engine that already works. Ship the shell, then earn each feature.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 16px; text-align: left;">
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; grid-template-columns: 100px 1fr auto; gap: 24px; align-items: center;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 600;">v0.1 &middot; WK1</div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 4px;">Tauri shell &middot; spawn the CLI &middot; render conversation</div>
+          <div style="font-size: 13px; color: var(--ink-2); line-height: 1.5;">Three-column layout. Read the JSONL transcript. Markdown rendering. Composer that pipes back to the CLI's stdin. No terminal yet &mdash; text only.</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 4px 10px; background: var(--bg-sunk); border-radius: 10px;">MVP</div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; grid-template-columns: 100px 1fr auto; gap: 24px; align-items: center;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 600;">v0.2 &middot; WK2</div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 4px;">Diff rendering &middot; permission modals &middot; screenshot paste</div>
+          <div style="font-size: 13px; color: var(--ink-2); line-height: 1.5;">The actual differentiation vs Clarc. Tool calls collapse into cards. Permission cards have proper buttons. Cmd+V on an image just works.</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 4px 10px; background: var(--bg-sunk); border-radius: 10px;">DELIGHT</div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; grid-template-columns: 100px 1fr auto; gap: 24px; align-items: center;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 600;">v0.3 &middot; WK3</div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 4px;">Settings surface &middot; MCP toggles &middot; slash palette (&#8984;K)</div>
+          <div style="font-size: 13px; color: var(--ink-2); line-height: 1.5;">First-class settings for everything in <code style="font-family: var(--mono); font-size: 12px;">~/.claude/</code>. The MCP marketplace can be a stub that just lists what's installed.</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 4px 10px; background: var(--bg-sunk); border-radius: 10px;">MOAT</div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; grid-template-columns: 100px 1fr auto; gap: 24px; align-items: center;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 600;">v0.4 &middot; WK4</div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 4px;">Terminal drawer &middot; history search &middot; dark theme</div>
+          <div style="font-size: 13px; color: var(--ink-2); line-height: 1.5;">xterm.js drawer. SQLite FTS5 for transcript search. Dark theme as a polish ship.</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 4px 10px; background: var(--bg-sunk); border-radius: 10px;">SHIP</div>
+      </div>
+
+      <div style="background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; display: grid; grid-template-columns: 100px 1fr auto; gap: 24px; align-items: center; opacity: 0.6;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 600;">LATER</div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 4px;">Plan mode UI &middot; Lookout integration &middot; onboarding wizard</div>
+          <div style="font-size: 13px; color: var(--ink-2); line-height: 1.5;">Earn these by getting v0.4 in front of users first. Don't pre-build them.</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 4px 10px; background: var(--bg-sunk); border-radius: 10px;">EARN</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 60px; padding: 24px; background: var(--amber-soft); border: 1px solid var(--amber); border-radius: var(--r-lg); text-align: left;">
+      <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">A note to self</div>
+      <p style="font-size: 14px; color: var(--ink-2); line-height: 1.6;">This case study is a portfolio piece, not a build commitment. Clarc and Anthropic Desktop already cover most of this surface &mdash; the moat would be taste, not capability. The right next move is to lift Atrium's design language into <em>Lookout</em>, ship Cursor for PMs at the hackathon, and let this concept earn its v0.1 by getting a real user first.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer class="footer">
+  <div class="footer-mark">Atrium</div>
+  <div class="footer-meta">A place to think &middot; Concept &middot; Mockup v0.2</div>
+</footer>
+
+<script>
+  // Auto-resize composer
+  const composer = document.querySelector('.composer-input');
+  if (composer) {
+    composer.addEventListener('input', () => {
+      composer.style.height = 'auto';
+      composer.style.height = Math.min(composer.scrollHeight, 200) + 'px';
+    });
+  }
+</script>
+
+</body>
+</html>

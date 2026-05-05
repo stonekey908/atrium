@@ -4,9 +4,14 @@
 # Node
 node_modules/
 dist/
+dist-ssr/
+*.local
 *.log
 npm-debug.log*
-.pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Rust / Tauri
 src-tauri/target/
@@ -19,12 +24,20 @@ src-tauri/gen/schemas/
 !.env.example
 
 # IDE
+.vscode/*
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS / misc
 Thumbs.db
 
 # Repo-specific — historical handoff archive, not part of source
 files.zip
+files/atrium-repo.zip

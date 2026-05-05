@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atrium · Settings — Skills, MCP, Permissions, Inheritance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-elev: #ffffff;
+    --bg-sunk: #f3efe9;
+    --bg-hover: #efeae2;
+    --ink: #1a1a1a;
+    --ink-2: #4a4a4a;
+    --ink-3: #8a8a8a;
+    --ink-4: #b8b8b8;
+    --line: #e8e2d8;
+    --line-2: #ddd6c8;
+    --green: #10A37F;
+    --green-soft: #e8f5f0;
+    --amber: #b8860b;
+    --amber-soft: #fdf6e3;
+    --red: #c73e3a;
+    --red-soft: #fdeae8;
+    --blue: #3b6ea8;
+    --blue-soft: #eaf1fa;
+    --purple: #7a5cc8;
+    --purple-soft: #f1ecfb;
+
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'Inter Tight', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+
+    --shadow-sm: 0 1px 2px rgba(26,26,26,0.04);
+    --shadow-md: 0 4px 14px rgba(26,26,26,0.05), 0 1px 3px rgba(26,26,26,0.03);
+    --shadow-lg: 0 18px 48px rgba(26,26,26,0.07), 0 6px 12px rgba(26,26,26,0.03);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding-bottom: 96px; }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+  .section { margin-top: 96px; }
+
+  .section-eyebrow {
+    display: flex; align-items: baseline; gap: 16px; margin-bottom: 22px;
+  }
+  .section-eyebrow .num {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .section-eyebrow h2 {
+    font-family: var(--serif); font-size: 22px; font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .section-eyebrow .sub {
+    margin-left: auto; font-family: var(--serif); font-size: 14px;
+    color: var(--ink-3); font-style: italic; max-width: 480px; text-align: right;
+  }
+
+  .frame {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .titlebar {
+    display: flex; align-items: center;
+    height: 38px; padding: 0 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .traffic { display: flex; gap: 8px; margin-right: 18px; }
+  .traffic span { width: 12px; height: 12px; border-radius: 50%; }
+  .traffic span:nth-child(1) { background: #ff5f57; }
+  .traffic span:nth-child(2) { background: #febc2e; }
+  .traffic span:nth-child(3) { background: #28c840; }
+  .crumb {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12.5px; color: var(--ink-2); font-weight: 500;
+  }
+  .crumb .sep { color: var(--ink-4); font-weight: 400; }
+  .titlebar-right {
+    margin-left: auto; display: flex; align-items: center; gap: 16px;
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 500;
+    background: var(--bg-sunk); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .pill.alive {
+    background: var(--green-soft); border-color: rgba(16,163,127,0.25); color: var(--green);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover { margin-top: 80px; }
+  .cover-frame {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    padding: 80px 80px 64px;
+    position: relative;
+  }
+  .cover-frame::before {
+    content: ''; position: absolute;
+    top: -120px; right: -120px;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(122,92,200,0.06) 0%, transparent 65%);
+  }
+  .cover .meta-row { display: flex; gap: 10px; margin-bottom: 32px; }
+  .cover h1 {
+    font-family: var(--serif);
+    font-size: 56px; font-weight: 400; line-height: 1.05;
+    letter-spacing: -0.022em; max-width: 900px; margin-bottom: 22px;
+  }
+  .cover h1 em { font-style: italic; color: var(--ink-2); }
+  .cover h1 .accent { color: var(--green); font-style: italic; }
+  .cover .lede {
+    font-family: var(--serif); font-size: 19px;
+    color: var(--ink-2); line-height: 1.55;
+    max-width: 700px; margin-bottom: 40px;
+  }
+  .cover .threeup {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px;
+    border-top: 1px solid var(--line); padding-top: 32px;
+  }
+  .cover .threeup h4 {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .cover .threeup h3 {
+    font-family: var(--serif); font-size: 18px; font-weight: 500;
+    line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.005em;
+  }
+  .cover .threeup p {
+    font-family: var(--serif); font-size: 14px; color: var(--ink-2); line-height: 1.55;
+  }
+
+  /* ---------- Settings shell ---------- */
+  .settings-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 880px;
+    background: var(--bg);
+  }
+
+  /* left rail — settings nav */
+  .settings-rail {
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    padding: 24px 14px;
+    overflow-y: auto;
+  }
+  .rail-head {
+    padding: 0 12px 14px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .rail-head h2 {
+    font-family: var(--serif); font-size: 20px; font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .rail-head .scope {
+    margin-top: 4px;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .rail-section {
+    padding: 14px 4px 6px;
+  }
+  .rail-label {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--ink-4); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0 8px 6px;
+  }
+  .rail-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: var(--r-sm);
+    font-size: 13px; color: var(--ink-2);
+    cursor: pointer;
+    margin-bottom: 1px;
+  }
+  .rail-link:hover { background: var(--bg-hover); }
+  .rail-link.active {
+    background: var(--bg-elev); color: var(--ink);
+    font-weight: 500;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .rail-link .ico {
+    width: 14px; height: 14px;
+    color: var(--ink-3);
+    flex-shrink: 0;
+  }
+  .rail-link.active .ico { color: var(--ink); }
+  .rail-link .ct {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-4);
+  }
+
+  /* main settings area */
+  .settings-main {
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .settings-head {
+    padding: 32px 44px 22px;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 24px;
+    align-items: end;
+    background: var(--bg);
+  }
+  .settings-head h1 {
+    font-family: var(--serif);
+    font-size: 30px; font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .settings-head .descr {
+    font-family: var(--serif); font-size: 14.5px;
+    color: var(--ink-2); max-width: 560px; line-height: 1.55;
+  }
+
+  /* inheritance chain */
+  .inherit {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 6px 8px;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+  }
+  .inherit .lvl {
+    padding: 3px 8px; border-radius: 4px;
+    background: var(--bg-sunk); color: var(--ink-3);
+  }
+  .inherit .lvl.set {
+    background: var(--green-soft); color: var(--green);
+    border: 1px solid rgba(16,163,127,0.2);
+  }
+  .inherit .lvl.over {
+    background: var(--purple-soft); color: var(--purple);
+    border: 1px solid rgba(122,92,200,0.2);
+  }
+  .inherit .arrow { color: var(--ink-4); }
+
+  /* settings body */
+  .settings-body {
+    padding: 28px 44px 60px;
+  }
+
+  /* search bar (skills) */
+  .search-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .search-bar .ico { color: var(--ink-3); }
+  .search-bar input {
+    flex: 1;
+    border: none; outline: none; background: transparent;
+    font-family: var(--sans); font-size: 14.5px;
+    color: var(--ink);
+  }
+  .search-bar input::placeholder { color: var(--ink-4); }
+  .search-bar .filter {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .search-bar .filter.on {
+    background: var(--ink); color: #fff; border-color: var(--ink);
+  }
+  .search-bar .add {
+    background: var(--ink); color: #fff;
+    padding: 6px 14px; border-radius: var(--r-sm);
+    border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .search-bar .add:hover { background: #000; }
+
+  /* skill list */
+  .skill-list {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .skill-row {
+    display: grid;
+    grid-template-columns: 32px minmax(0,1fr) 110px 130px 60px;
+    gap: 16px; align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .skill-row:last-child { border-bottom: none; }
+  .skill-row:hover { background: var(--bg-hover); }
+  .skill-row.expanded {
+    background: var(--bg-hover);
+    grid-template-columns: 32px 1fr;
+  }
+  .skill-row .glyph {
+    width: 32px; height: 32px;
+    border-radius: var(--r-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--ink-3);
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+  }
+  .skill-row.proc .glyph { background: var(--purple-soft); color: var(--purple); border-color: rgba(122,92,200,0.2); }
+  .skill-row.impl .glyph { background: var(--blue-soft); color: var(--blue); border-color: rgba(59,110,168,0.2); }
+  .skill-row.flex .glyph { background: var(--amber-soft); color: var(--amber); border-color: rgba(184,134,11,0.2); }
+
+  .skill-row .body .name {
+    font-family: var(--serif); font-size: 15px; font-weight: 500;
+    color: var(--ink); letter-spacing: -0.005em;
+    margin-bottom: 2px;
+  }
+  .skill-row .body .desc {
+    font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+  }
+  .skill-row .src {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .skill-row .auto {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .skill-row .auto.on { color: var(--green); }
+
+  /* toggle */
+  .toggle {
+    width: 32px; height: 18px;
+    background: var(--line);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.18s;
+  }
+  .toggle.on { background: var(--green); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #fff; border-radius: 50%;
+    top: 2px; left: 2px;
+    box-shadow: var(--shadow-sm);
+    transition: left 0.2s cubic-bezier(0.32, 0.72, 0.24, 1);
+  }
+  .toggle.on::after { left: 16px; }
+
+  .skill-row.expanded .body { padding-top: 4px; }
+  .skill-row.expanded .body .name { margin-bottom: 6px; }
+  .skill-row.expanded .body .desc {
+    -webkit-line-clamp: unset;
+    color: var(--ink-2);
+    font-family: var(--serif); font-size: 14px;
+    margin-bottom: 14px;
+  }
+  .skill-row .detail-row {
+    display: grid; grid-template-columns: 110px 1fr;
+    gap: 14px; padding: 8px 0;
+    border-top: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .skill-row .detail-row .lbl {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .skill-row .detail-row .val {
+    font-size: 13px; color: var(--ink-2);
+  }
+  .skill-row .detail-row .val code {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--bg-sunk); padding: 1px 6px; border-radius: 3px;
+  }
+  .skill-row .detail-actions {
+    display: flex; gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+  }
+  .btn {
+    padding: 6px 12px; border-radius: var(--r-sm);
+    font-size: 12px; border: 1px solid var(--line);
+    background: var(--bg-elev); color: var(--ink-2);
+    cursor: pointer; font-weight: 500;
+    font-family: var(--sans);
+  }
+  .btn:hover { background: var(--bg-hover); }
+  .btn.subtle {
+    background: transparent; border-color: transparent;
+    color: var(--ink-3);
+  }
+  .btn.danger {
+    color: var(--red);
+  }
+
+  /* community / browse section */
+  .browse-block {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+  }
+  .browse-block h3 {
+    font-family: var(--serif); font-size: 19px; font-weight: 600;
+    letter-spacing: -0.005em; margin-bottom: 6px;
+  }
+  .browse-block p.descr {
+    font-family: var(--serif); font-size: 14.5px;
+    color: var(--ink-2); margin-bottom: 18px;
+  }
+  .community-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .community-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .community-card:hover {
+    border-color: var(--line-2);
+    box-shadow: var(--shadow-sm);
+  }
+  .community-card .row1 {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .community-card .glyph {
+    width: 26px; height: 26px;
+    border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    background: var(--bg-sunk); color: var(--ink-3);
+    border: 1px solid var(--line);
+  }
+  .community-card .name {
+    font-family: var(--serif); font-size: 15px; font-weight: 500;
+    letter-spacing: -0.005em; color: var(--ink);
+  }
+  .community-card .stars {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+  }
+  .community-card .desc {
+    font-size: 13px; color: var(--ink-2);
+    line-height: 1.5; margin-bottom: 12px;
+  }
+  .community-card .footer {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+  }
+  .community-card .install {
+    margin-left: auto;
+    padding: 4px 10px;
+    background: var(--ink); color: #fff;
+    border: none; border-radius: var(--r-sm);
+    font-family: var(--sans); font-size: 11.5px;
+    font-weight: 500; cursor: pointer;
+  }
+  .community-card .install:hover { background: #000; }
+
+  /* tab snapshots — model & prompt */
+  .snap-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+  .snap {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .snap-head {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .snap-head h4 {
+    font-family: var(--serif); font-size: 17px; font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .snap-head .tag {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--ink-3); letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .snap-body { padding: 14px 22px 22px; }
+
+  .field-row {
+    display: grid; grid-template-columns: minmax(0,1fr) auto;
+    gap: 16px; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .lbl {
+    font-size: 13px; font-weight: 500; color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .field-row .help {
+    font-size: 11.5px; color: var(--ink-3);
+  }
+  .field-row .help code {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--bg-sunk); padding: 1px 5px; border-radius: 3px;
+  }
+  .select {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: var(--r-sm);
+    font-size: 12.5px; color: var(--ink-2);
+    cursor: pointer;
+    min-width: 168px;
+    justify-content: space-between;
+  }
+  .select.green { color: var(--green); }
+  .select svg { color: var(--ink-3); }
+  .input {
+    display: inline-flex; align-items: center;
+    padding: 5px 10px; border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: var(--r-sm);
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--ink-2); min-width: 168px;
+  }
+  .input.serif {
+    font-family: var(--serif); font-style: italic; font-size: 13px;
+  }
+
+  /* permissions snap */
+  .perm-rule {
+    display: grid;
+    grid-template-columns: 1fr 90px 90px;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .perm-rule .pat {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--ink); background: var(--bg-sunk);
+    padding: 4px 10px; border-radius: 4px;
+    border: 1px solid var(--line);
+    display: inline-block; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .perm-rule .verdict {
+    font-family: var(--mono); font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 2px 9px; border-radius: 999px;
+    text-align: center;
+  }
+  .perm-rule .verdict.allow { background: var(--green-soft); color: var(--green); }
+  .perm-rule .verdict.ask { background: var(--amber-soft); color: var(--amber); }
+  .perm-rule .verdict.deny { background: var(--red-soft); color: var(--red); }
+  .perm-rule .scope {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); text-align: right;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  /* mcp snap */
+  .mcp-row {
+    display: grid;
+    grid-template-columns: 32px 1fr 70px 60px 50px;
+    gap: 14px; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .mcp-row:last-child { border-bottom: none; }
+  .mcp-row .glyph {
+    width: 28px; height: 28px;
+    border-radius: 5px;
+    background: var(--bg-sunk);
+    border: 1px solid var(--line);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--ink-3); font-family: var(--mono);
+    font-size: 12px; font-weight: 600;
+  }
+  .mcp-row .info .name {
+    font-size: 13.5px; font-weight: 500; color: var(--ink);
+  }
+  .mcp-row .info .meta {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-3); margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .mcp-row .auth {
+    font-family: var(--mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 2px 8px; border-radius: 999px;
+    text-align: center;
+  }
+  .mcp-row .auth.ok { background: var(--green-soft); color: var(--green); }
+  .mcp-row .auth.warn { background: var(--amber-soft); color: var(--amber); }
+  .mcp-row .tools {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink-3);
+    text-align: right;
+  }
+
+  /* hotkeys snap */
+  .hot-row {
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 14px; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-2);
+  }
+  .hot-row .keys {
+    display: inline-flex; gap: 4px;
+  }
+  .kbd {
+    background: var(--bg-elev); border: 1px solid var(--line);
+    padding: 2px 7px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-2);
+  }
+
+  /* foot */
+  .foot {
+    margin-top: 96px; padding: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-3); font-size: 12px;
+    font-family: var(--mono);
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================== -->
+<!-- COVER                                           -->
+<!-- ============================================== -->
+<section class="wrap cover">
+  <div class="cover-frame">
+    <div class="meta-row">
+      <span class="pill alive">settings · companion to atrium-v4</span>
+      <span class="pill">2026-05-04</span>
+      <span class="pill">skills · MCP · permissions · hooks</span>
+    </div>
+    <h1>No more <em>~/.claude/</em> JSON.<br>Skills are <span class="accent">searchable.</span></h1>
+    <p class="lede">Every config that today lives in dotfiles or environment variables gets a typed, searchable surface. Inheritance from <em>global → workspace → project → session</em> is visible at the top of every panel. Skills get their own home — find them, install them, write your own, see them in flight.</p>
+    <div class="threeup">
+      <div>
+        <h4>Inheritance</h4>
+        <h3>See where the value is set.</h3>
+        <p>Every field shows its inheritance chain. <em>Global → Workspace → Project → Session.</em> Override at any level; the others stay visible so you know what you'd revert to.</p>
+      </div>
+      <div>
+        <h4>Skills, first-class</h4>
+        <h3>Search · install · author.</h3>
+        <p>Atrium ships your skills as a real registry. Type to filter; toggle auto-load per project; browse community skills with one-tap install; create new ones with the editor right here.</p>
+      </div>
+      <div>
+        <h4>Permissions, demystified</h4>
+        <h3>Regex preview, no JSON.</h3>
+        <p>Approval rules with live regex preview ("always allow <code style="font-family: var(--mono); font-size: 12px; background: var(--bg-sunk); padding: 1px 5px; border-radius: 3px;">npm test*</code>"). Per-MCP scopes shown before you install. Plus the global mode pill — default · acceptEdits · plan · bypass — surfaced everywhere it applies.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================== -->
+<!-- 01 · SETTINGS · SKILLS TAB (hero)               -->
+<!-- ============================================== -->
+<section class="wrap section">
+  <div class="section-eyebrow">
+    <span class="num">01</span>
+    <h2>Settings · Skills tab</h2>
+    <span class="sub">Hero state. Search across installed; expand for config; browse community; add your own.</span>
+  </div>
+
+  <div class="frame">
+    <div class="titlebar">
+      <div class="traffic"><span></span><span></span><span></span></div>
+      <div class="crumb">
+        <span>Atrium</span><span class="sep">/</span>
+        <span>Settings</span><span class="sep">/</span>
+        <span style="color: var(--ink); font-weight: 500;">Skills</span>
+      </div>
+      <div class="titlebar-right">
+        <span class="pill">workspace · stonekey</span>
+      </div>
+    </div>
+
+    <div class="settings-shell">
+      <!-- left rail · settings nav -->
+      <aside class="settings-rail">
+        <div class="rail-head">
+          <h2>Settings</h2>
+          <div class="scope">workspace · stonekey</div>
+        </div>
+
+        <div class="rail-section">
+          <div class="rail-label">Workspace</div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><line x1="8" y1="3" x2="8" y2="8"/><line x1="8" y1="8" x2="11" y2="10"/></svg>
+            <span>General</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v3 M8 11v3 M2 8h3 M11 8h3 M3.5 3.5l2 2 M10.5 10.5l2 2 M3.5 12.5l2-2 M10.5 5.5l2-2"/></svg>
+            <span>Model &amp; Prompt</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6.5" width="10" height="6.5" rx="1"/><path d="M5.5 6.5V4.5a2.5 2.5 0 015 0v2"/></svg>
+            <span>Permissions</span>
+            <span class="ct">12</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+            <span>MCP</span>
+            <span class="ct">6</span>
+          </div>
+          <div class="rail-link active">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4l5 3 5-3 M3 4v8l5 3 M8 7v8 M13 4v8l-5 3"/></svg>
+            <span>Skills</span>
+            <span class="ct">14</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6 l3 3 l3-3 M8 6 l3 3 l3-3"/></svg>
+            <span>Hooks</span>
+            <span class="ct">3</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="4.5" width="11" height="7" rx="1"/><line x1="4.5" y1="7" x2="5" y2="7"/><line x1="6.5" y1="7" x2="7" y2="7"/><line x1="4.5" y1="9" x2="11.5" y2="9"/></svg>
+            <span>Hotkeys</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg>
+            <span>Appearance</span>
+          </div>
+        </div>
+
+        <div class="rail-section">
+          <div class="rail-label">Project · atrium</div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3" width="11" height="10" rx="1"/></svg>
+            <span>CLAUDE.md</span>
+            <span class="ct">312L</span>
+          </div>
+          <div class="rail-link">
+            <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="3"/><circle cx="11" cy="11" r="2.5"/></svg>
+            <span>Linear sync</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- main settings -->
+      <section class="settings-main">
+        <div class="settings-head">
+          <div>
+            <h1>Skills</h1>
+            <p class="descr">Skills extend Claude Code with named workflows. Atrium auto-loads them per project, indexes their descriptions for ⌘K, and shows you which one is in flight.</p>
+          </div>
+          <div class="inherit">
+            <span class="lvl set">Global · 8</span>
+            <span class="arrow">›</span>
+            <span class="lvl set">Workspace · 4</span>
+            <span class="arrow">›</span>
+            <span class="lvl over">Project · 2</span>
+          </div>
+        </div>
+
+        <div class="settings-body">
+          <div class="search-bar">
+            <svg class="ico" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><line x1="10.3" y1="10.3" x2="13" y2="13"/></svg>
+            <input value="" placeholder="Search 14 installed skills · description, trigger, source…">
+            <span class="filter on">All</span>
+            <span class="filter">Process</span>
+            <span class="filter">Implementation</span>
+            <span class="filter">Flexible</span>
+            <button class="add">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+              Add skill
+            </button>
+          </div>
+
+          <div class="skill-list">
+            <!-- expanded skill -->
+            <div class="skill-row proc expanded">
+              <span class="glyph">/r</span>
+              <div class="body">
+                <div class="name">/requirements</div>
+                <div class="desc">Turn a vague idea into a Linear ticket with clear acceptance criteria. Researches feasibility, defines scope, creates the ticket. Use before /sprint or /design-first.</div>
+                <div class="detail-row">
+                  <span class="lbl">Source</span>
+                  <span class="val"><code>~/.claude/skills/requirements</code> · local</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Trigger</span>
+                  <span class="val">Manual via <code>/requirements</code> — or auto when user describes a vague idea</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Auto-load</span>
+                  <span class="val">All projects · enabled</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Last used</span>
+                  <span class="val">Wave 4 · MCP marketplace · 32m ago</span>
+                </div>
+                <div class="detail-actions">
+                  <button class="btn">Edit</button>
+                  <button class="btn">View source</button>
+                  <button class="btn">Restrict to projects</button>
+                  <button class="btn subtle danger" style="margin-left: auto;">Disable</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="skill-row proc">
+              <span class="glyph">/d</span>
+              <div class="body">
+                <div class="name">/design-first</div>
+                <div class="desc">Design and build features using vertical slices — core functionality first (UI + API + data working together), then broaden.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto on">auto · all projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row proc">
+              <span class="glyph">/s</span>
+              <div class="body">
+                <div class="name">/sprint</div>
+                <div class="desc">Execute a sprint on Linear tickets — pickup, plan, implement in vertical slices, quality gates, UAT, commit.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto on">auto · all projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row proc">
+              <span class="glyph">/u</span>
+              <div class="body">
+                <div class="name">/uat</div>
+                <div class="desc">User acceptance testing with triage. Classifies findings as bugs, new features, or docs gaps.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto on">auto · all projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row impl">
+              <span class="glyph">/se</span>
+              <div class="body">
+                <div class="name">/session-start</div>
+                <div class="desc">Read CLAUDE.md handoff notes, check git state, surface active Linear tickets.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto on">auto · all projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row impl">
+              <span class="glyph">/se</span>
+              <div class="body">
+                <div class="name">/session-end</div>
+                <div class="desc">Commit, push, update CLAUDE.md handoff notes, update Linear.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto on">auto · all projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row flex">
+              <span class="glyph">/u</span>
+              <div class="body">
+                <div class="name">/ux-design</div>
+                <div class="desc">Design intuitive user experiences for information-dense applications.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto">manual</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row impl">
+              <span class="glyph">/r</span>
+              <div class="body">
+                <div class="name">/retro</div>
+                <div class="desc">Review session friction and propose skill / CLAUDE.md updates. Manual only.</div>
+              </div>
+              <span class="src">local</span>
+              <span class="auto">manual</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row impl">
+              <span class="glyph">⌘k</span>
+              <div class="body">
+                <div class="name">claude-api</div>
+                <div class="desc">Build, debug, and optimize Claude API / Anthropic SDK apps. Auto-triggers on imports.</div>
+              </div>
+              <span class="src">community</span>
+              <span class="auto on">auto · 3 projects</span>
+              <span class="toggle on"></span>
+            </div>
+
+            <div class="skill-row proc">
+              <span class="glyph">tdd</span>
+              <div class="body">
+                <div class="name">test-driven-development</div>
+                <div class="desc">Use when implementing any feature or bugfix, before writing implementation code.</div>
+              </div>
+              <span class="src">superpowers</span>
+              <span class="auto">manual</span>
+              <span class="toggle"></span>
+            </div>
+          </div>
+
+          <!-- community / browse -->
+          <div class="browse-block">
+            <h3>Browse community skills</h3>
+            <p class="descr">Curated skills from the Claude community. One-tap install · sandboxed by default · permissions previewed before activation.</p>
+
+            <div class="community-grid">
+              <div class="community-card">
+                <div class="row1">
+                  <span class="glyph">⏰</span>
+                  <span class="name">schedule</span>
+                  <span class="stars">★ 1.2k</span>
+                </div>
+                <p class="desc">Create, update, list, or run scheduled remote agents (triggers) that execute on a cron schedule.</p>
+                <div class="footer">
+                  <span>by anthropic</span>
+                  <span>·</span>
+                  <span>0 perms</span>
+                  <button class="install">Install</button>
+                </div>
+              </div>
+              <div class="community-card">
+                <div class="row1">
+                  <span class="glyph">🔍</span>
+                  <span class="name">code-review</span>
+                  <span class="stars">★ 940</span>
+                </div>
+                <p class="desc">Code review a pull request — checks against the original plan, coding standards, and security patterns.</p>
+                <div class="footer">
+                  <span>by anthropic</span>
+                  <span>·</span>
+                  <span>read-only</span>
+                  <button class="install">Install</button>
+                </div>
+              </div>
+              <div class="community-card">
+                <div class="row1">
+                  <span class="glyph">A</span>
+                  <span class="name">automate</span>
+                  <span class="stars">★ 612</span>
+                </div>
+                <p class="desc">Autonomous development pipeline — chains skills from ticket pickup through implementation, testing, and commit.</p>
+                <div class="footer">
+                  <span>by superpowers</span>
+                  <span>·</span>
+                  <span style="color: var(--amber);">edit + bash</span>
+                  <button class="install">Install</button>
+                </div>
+              </div>
+              <div class="community-card">
+                <div class="row1">
+                  <span class="glyph">N</span>
+                  <span class="name">Notion:tasks:plan</span>
+                  <span class="stars">★ 184</span>
+                </div>
+                <p class="desc">Plan a task from a Notion page URL. Pulls in the doc, drafts a plan, syncs back.</p>
+                <div class="footer">
+                  <span>by community</span>
+                  <span>·</span>
+                  <span>notion mcp</span>
+                  <button class="install">Install</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================== -->
+<!-- 02 · MODEL & PROMPT + PERMISSIONS               -->
+<!-- ============================================== -->
+<section class="wrap section">
+  <div class="section-eyebrow">
+    <span class="num">02</span>
+    <h2>Model &amp; Prompt · Permissions</h2>
+    <span class="sub">The two tabs you'll touch most. Inheritance shown above every field.</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+    <div class="snap">
+      <div class="snap-head">
+        <h4>Model &amp; Prompt</h4>
+        <span class="tag">workspace · stonekey</span>
+      </div>
+      <div class="snap-body">
+        <div class="field-row">
+          <div>
+            <div class="lbl">Primary model</div>
+            <div class="help">Inherits from global · <code>opus-4-7</code></div>
+          </div>
+          <div class="select">
+            <span>Claude Opus 4.7</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="lbl">Fast model · small tasks</div>
+            <div class="help">Autocomplete, summarisation, file ops</div>
+          </div>
+          <div class="select">
+            <span>Claude Haiku 4.5</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="lbl">Reasoning effort</div>
+            <div class="help">Auto · Low · Medium · High · Max</div>
+          </div>
+          <div class="select">
+            <span>Medium</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="lbl">Project CLAUDE.md</div>
+            <div class="help">Detected at <code>/atrium/CLAUDE.md</code> · 312 lines</div>
+          </div>
+          <div class="select green">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>Active</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="lbl">Workspace addendum</div>
+            <div class="help">Prepended to every session in this workspace</div>
+          </div>
+          <div class="input serif">"Use shadcn primitives where possible..."</div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="lbl">Persona</div>
+            <div class="help">Shared across all workspaces</div>
+          </div>
+          <div class="input">nick.persona.md · 18 lines</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="snap">
+      <div class="snap-head">
+        <h4>Permissions</h4>
+        <span class="tag">12 rules · regex preview live</span>
+      </div>
+      <div class="snap-body">
+        <div class="perm-rule">
+          <span class="pat">Bash(npm test*)</span>
+          <span class="verdict allow">Allow</span>
+          <span class="scope">global</span>
+        </div>
+        <div class="perm-rule">
+          <span class="pat">Bash(git push:*)</span>
+          <span class="verdict ask">Ask</span>
+          <span class="scope">project</span>
+        </div>
+        <div class="perm-rule">
+          <span class="pat">Edit(/atrium/files/atrium-spec.md)</span>
+          <span class="verdict allow">Allow</span>
+          <span class="scope">project</span>
+        </div>
+        <div class="perm-rule">
+          <span class="pat">Bash(rm -rf:*)</span>
+          <span class="verdict deny">Deny</span>
+          <span class="scope">global</span>
+        </div>
+        <div class="perm-rule">
+          <span class="pat">WebFetch(domain:linear.app)</span>
+          <span class="verdict allow">Allow</span>
+          <span class="scope">workspace</span>
+        </div>
+        <div class="perm-rule" style="border-bottom: none;">
+          <span class="pat">Edit(*.env*)</span>
+          <span class="verdict deny">Deny</span>
+          <span class="scope">global</span>
+        </div>
+        <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 12px; color: var(--ink-3);">Mode pill applies on top of these rules:</div>
+          <div style="display: flex; gap: 4px;">
+            <span class="pill" style="background: var(--bg-elev);">default</span>
+            <span class="pill alive">acceptEdits</span>
+            <span class="pill" style="background: var(--bg-elev);">plan</span>
+            <span class="pill" style="background: var(--bg-elev);">bypass</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================== -->
+<!-- 03 · MCP + HOTKEYS                              -->
+<!-- ============================================== -->
+<section class="wrap section">
+  <div class="section-eyebrow">
+    <span class="num">03</span>
+    <h2>MCP servers · Hotkeys</h2>
+    <span class="sub">Auth status, tool inventory, scope. Hotkeys searchable, rebindable.</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px;">
+    <div class="snap">
+      <div class="snap-head">
+        <h4>MCP</h4>
+        <span class="tag">6 servers · 142 tools</span>
+      </div>
+      <div class="snap-body">
+        <div class="mcp-row">
+          <span class="glyph">L</span>
+          <div class="info">
+            <div class="name">linear</div>
+            <div class="meta">stonekey workspace · OAuth</div>
+          </div>
+          <span class="auth ok">authed</span>
+          <span class="tools">42 tools</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="mcp-row">
+          <span class="glyph">N</span>
+          <div class="info">
+            <div class="name">Notion</div>
+            <div class="meta">workspace inherited · OAuth</div>
+          </div>
+          <span class="auth warn">re-auth</span>
+          <span class="tools">12 tools</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="mcp-row">
+          <span class="glyph">G</span>
+          <div class="info">
+            <div class="name">claude-Gmail</div>
+            <div class="meta">global · drafts + labels</div>
+          </div>
+          <span class="auth ok">authed</span>
+          <span class="tools">10 tools</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="mcp-row">
+          <span class="glyph">w</span>
+          <div class="info">
+            <div class="name">wikilm</div>
+            <div class="meta">project · learning capture</div>
+          </div>
+          <span class="auth ok">authed</span>
+          <span class="tools">9 tools</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="mcp-row">
+          <span class="glyph">r</span>
+          <div class="info">
+            <div class="name">reuse</div>
+            <div class="meta">global · code reuse search</div>
+          </div>
+          <span class="auth ok">authed</span>
+          <span class="tools">11 tools</span>
+          <span class="toggle on"></span>
+        </div>
+        <div class="mcp-row">
+          <span class="glyph">+</span>
+          <div class="info">
+            <div class="name" style="color: var(--ink-3);">Browse the registry</div>
+            <div class="meta">38 community servers · 1-click install</div>
+          </div>
+          <span class="tools" style="grid-column: span 3; text-align: right;">→</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="snap">
+      <div class="snap-head">
+        <h4>Hotkeys</h4>
+        <span class="tag">searchable · rebindable</span>
+      </div>
+      <div class="snap-body">
+        <div class="hot-row"><span>Open ⌘K palette</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">K</span></span></div>
+        <div class="hot-row"><span>Toggle terminal drawer</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">T</span></span></div>
+        <div class="hot-row"><span>Send composer</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">↵</span></span></div>
+        <div class="hot-row"><span>Cancel in flight</span><span class="keys"><span class="kbd">esc</span></span></div>
+        <div class="hot-row"><span>New session in this project</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">N</span></span></div>
+        <div class="hot-row"><span>Switch model</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">M</span></span></div>
+        <div class="hot-row"><span>Run /sprint</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">S</span></span></div>
+        <div class="hot-row"><span>Approve edit</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">↵</span></span></div>
+        <div class="hot-row"><span>Reject edit</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">⇥</span></span></div>
+        <div class="hot-row" style="border: none;"><span>Mode · acceptEdits</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">⌥</span><span class="kbd">E</span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<div class="wrap foot">
+  <span>atrium-settings.html · 2026-05-04 · companion to v4</span>
+  <span>settings · skills · MCP · permissions</span>
+</div>
+
+</body>
+</html>
