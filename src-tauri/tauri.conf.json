@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "atrium-scaffold",
+  "productName": "Atrium",
   "version": "0.1.0",
   "identifier": "com.stonekey.atrium",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "atrium-scaffold",
-        "width": 800,
-        "height": 600
+        "title": "Atrium",
+        "width": 1280,
+        "height": 820
       }
     ],
     "security": {
