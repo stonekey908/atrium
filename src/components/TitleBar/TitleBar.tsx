@@ -24,7 +24,12 @@ export function TitleBar() {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
-    void getCurrentWindow().startDragging();
+    // eslint-disable-next-line no-console
+    console.log("[TitleBar] startDragging fired");
+    getCurrentWindow()
+      .startDragging()
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error("[TitleBar] startDragging failed:", err));
   };
 
   return (
@@ -67,7 +72,14 @@ export function TitleBar() {
 /* ------------------------------------------------------------------ */
 
 function TrafficLights() {
-  const win = () => getCurrentWindow();
+  const log = (label: string, p: Promise<unknown>) => {
+    // eslint-disable-next-line no-console
+    console.log(`[TrafficLight] ${label} fired`);
+    p.catch((err) =>
+      // eslint-disable-next-line no-console
+      console.error(`[TrafficLight] ${label} failed:`, err),
+    );
+  };
   return (
     <div
       data-no-drag
@@ -77,21 +89,21 @@ function TrafficLights() {
       <TrafficLight
         title="Close"
         className="bg-[#FF5F57] hover:brightness-95"
-        onClick={() => void win().close()}
+        onClick={() => log("close", getCurrentWindow().close())}
       >
         <CloseGlyph />
       </TrafficLight>
       <TrafficLight
         title="Minimize"
         className="bg-[#FFBD2E] hover:brightness-95"
-        onClick={() => void win().minimize()}
+        onClick={() => log("minimize", getCurrentWindow().minimize())}
       >
         <MinimizeGlyph />
       </TrafficLight>
       <TrafficLight
         title="Toggle maximize"
         className="bg-[#28C940] hover:brightness-95"
-        onClick={() => void win().toggleMaximize()}
+        onClick={() => log("toggleMaximize", getCurrentWindow().toggleMaximize())}
       >
         <MaximizeGlyph />
       </TrafficLight>
