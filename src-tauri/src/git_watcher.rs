@@ -40,12 +40,11 @@ pub fn start(app: &AppHandle, path: &Path) -> Result<GitWatcher, String> {
     let app_handle = app.clone();
     std::thread::spawn(move || {
         for batch in rx {
-            // Any debounced change triggers a refresh — payload is intentionally empty.
             if batch.is_err() {
                 continue;
             }
             if let Err(e) = app_handle.emit(GIT_CHANGED_EVENT, ()) {
-                eprintln!("emit {GIT_CHANGED_EVENT} failed: {e}");
+                eprintln!("[git_watcher] emit failed: {e}");
             }
         }
     });
