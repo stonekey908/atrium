@@ -1,4 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useGitStatus } from "../../lib/git-status";
+import { BranchChip } from "./BranchChip";
 
 /**
  * TitleBar — Atrium's 36px chrome bar above the AppShell.
@@ -16,10 +18,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * the bar. Children that should not drag (the traffic lights, the pills) opt
  * out via `data-no-drag`.
  *
- * Scope (T-005 / STO-2096): static breadcrumb + pills. Real branch / session /
- * model / token data lands in T-008 (git status) and Wave 1 (CLI bridge).
+ * Branch chip is fed live from `get_git_status` (Tauri command) — re-fetches
+ * on window-focus regain. File-watcher refresh lands in slice 2.
  */
 export function TitleBar() {
+  const { status } = useGitStatus();
   const onDragStart = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
@@ -45,11 +48,18 @@ export function TitleBar() {
         <span className="text-muted-foreground" aria-hidden>
           /
         </span>
-        <BranchChip name="feat/wave-0-visual-layer" />
+        {status?.isRepo && (
+          <BranchChip
+            branch={status.branch}
+            dirty={status.dirty}
+            ahead={status.ahead}
+            behind={status.behind}
+          />
+        )}
         <span className="text-muted-foreground" aria-hidden>
           ·
         </span>
-        <span className="truncate text-muted-foreground">T-005 title bar</span>
+        <span className="truncate text-muted-foreground">T-008 git status</span>
       </div>
 
       <div className="flex-1" />
@@ -174,25 +184,3 @@ function Pill({ dotClassName, label, mono = false, shortcut }: PillProps) {
   );
 }
 
-function BranchChip({ name }: { name: string }) {
-  return (
-    <span className="inline-flex h-5 items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-2xs text-foreground">
-      <svg
-        width="9"
-        height="9"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        aria-hidden
-      >
-        <circle cx="4.5" cy="3.5" r="1.5" />
-        <circle cx="4.5" cy="12.5" r="1.5" />
-        <circle cx="11.5" cy="6.5" r="1.5" />
-        <path d="M4.5 5v6" />
-        <path d="M11.5 8c0 2-3 3-7 3" />
-      </svg>
-      <span className="truncate">{name}</span>
-    </span>
-  );
-}
