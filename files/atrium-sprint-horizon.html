@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Atrium · Sprint Horizon (mockup)</title>
+<style>
+  :root {
+    --bg: #1b1b1d; --panel: #232326; --panel-2: #2a2a2e; --border: #343438;
+    --fg: #d6d6d8; --fg-muted: #8a8a90; --fg-dim: #6a6a70;
+    --green: #89d185; --blue: #4aa3ff; --yellow: #cca700; --orange: #d18616;
+    --purple: #b180d7; --red: #f14c4c; --link: #4aa3ff;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans);
+    font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 20px 60px; }
+
+  /* ── header + overall ── */
+  .topbar { display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .logo { width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--purple),var(--blue)); }
+  .brand { font-weight:650; } .muted { color:var(--fg-muted); } .dim { color:var(--fg-dim); }
+  .mono { font-family:var(--mono); font-size:11px; }
+  .spacer { margin-left:auto; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--fg-muted); }
+  .dot { width:7px;height:7px;border-radius:50%; }
+  .live { color:var(--green); } .live .dot{ background:var(--green); box-shadow:0 0 6px var(--green); }
+
+  .overall { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .pct { font-family:var(--mono); font-size:15px; font-weight:600; }
+  .bar { height:7px; border-radius:99px; background:var(--border); overflow:hidden; display:flex; flex:1; max-width:340px; }
+  .bar > span { height:100%; display:block; }
+  .seg-done{ background:var(--green);} .seg-doing{ background:var(--yellow);} .seg-review{ background:var(--blue);}
+  .tag { font-size:11px; color:var(--fg-muted); display:inline-flex; gap:5px; align-items:center; }
+  .pipe { display:flex; gap:6px; align-items:center; padding:10px 0 4px; font-size:11px; color:var(--fg-dim); flex-wrap:wrap; }
+  .pipe b { color:var(--blue); font-weight:600; } .pipe .done { color:var(--fg-muted); }
+
+  /* ── horizon bands: focus gradient ── */
+  .band { margin-top:14px; }
+  .band-label { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-dim);
+    display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .band-label::after { content:""; flex:1; height:1px; background:var(--border); }
+
+  /* behind you — dim + compact */
+  .behind { opacity:.62; }
+  .behind .row { display:flex; align-items:center; gap:10px; padding:5px 10px; }
+  .wave-done { display:inline-flex; gap:7px; align-items:center; font-size:12px; }
+  .check { color:var(--green); }
+  .loose { margin-top:8px; border:1px solid #4a3a1a; background:#2a2310; border-radius:8px;
+    padding:9px 12px; display:flex; gap:10px; align-items:flex-start; opacity:1; }
+  .loose .warn { color:var(--orange); }
+  .loose b { color:var(--fg); font-weight:600; }
+  .loose .item { font-family:var(--mono); font-size:11px; color:var(--orange); }
+
+  /* current sprint — the spotlight */
+  .spotlight { position:relative; margin-top:18px; border:1px solid #2f3a52; border-radius:14px;
+    background:linear-gradient(180deg,#212530,#1d1d20 60%); padding:16px 16px 18px;
+    box-shadow:0 0 0 1px rgba(74,163,255,.08), 0 14px 40px -18px rgba(74,163,255,.35); }
+  .spot-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .star { color:var(--blue); }
+  .spot-title { font-weight:650; font-size:14px; }
+  .spot-sub { color:var(--fg-muted); font-size:12px; }
+  .badge { font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:2px 8px; border-radius:99px;
+    background:var(--blue); color:#06121f; font-weight:700; }
+
+  .kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .col { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px; min-height:200px; }
+  .col-h { display:flex; align-items:center; justify-content:space-between; font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); padding:2px 4px 8px; }
+  .col-count { font-family:var(--mono); }
+  .col.review .col-h { color:var(--blue); }
+  .col.doing .col-h { color:var(--yellow); }
+  .col.done .col-h { color:var(--green); }
+
+  .card { background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:8px 9px;
+    margin-bottom:8px; cursor:grab; transition:transform .08s ease, box-shadow .08s ease; }
+  .card:hover { transform:translateY(-1px); box-shadow:0 6px 16px -10px rgba(0,0,0,.7); }
+  .card .id { font-family:var(--mono); font-size:10px; color:var(--fg-muted); display:flex; justify-content:space-between; align-items:center; }
+  .card .ttl { font-size:12px; margin:3px 0 6px; }
+  .card .meta { display:flex; align-items:center; gap:8px; }
+  .pri { font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+  .pri.urgent{ color:var(--red);} .pri.high{ color:var(--orange);} .pri.med{ color:var(--blue);} .pri.low{ color:var(--fg-dim);}
+  .ext { margin-left:auto; color:var(--fg-dim); font-size:11px; }
+  .sync { display:inline-flex; align-items:center; gap:4px; font-size:9px; }
+  .sync .dot{ width:6px;height:6px;border-radius:50%; }
+  .sync.synced{ color:var(--green);} .sync.synced .dot{ background:var(--green);}
+  .sync.syncing{ color:var(--yellow);} .sync.syncing .dot{ background:var(--yellow); animation:pulse 1s infinite; }
+  .sync.failed{ color:var(--red);} .sync.failed .dot{ background:var(--red);}
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* a card mid-drag, dropped into a new column with optimistic sync */
+  .card.ghost { border-style:dashed; opacity:.55; }
+  .card.moving { outline:2px solid var(--blue); outline-offset:1px; box-shadow:0 14px 30px -12px rgba(74,163,255,.6); transform:rotate(-1.5deg); }
+  .col.dropzone { outline:2px dashed var(--blue); outline-offset:-4px; background:rgba(74,163,255,.05); }
+
+  /* around the corner — fading in */
+  .corner { margin-top:20px; opacity:.82; }
+  .corner-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .next { border:1px solid var(--border); border-radius:10px; padding:11px 12px; background:var(--panel); }
+  .next h4 { margin:0 0 3px; font-size:12px; font-weight:600; }
+  .next .peek { display:flex; gap:5px; margin-top:8px; }
+  .peek-card { flex:1; height:26px; border-radius:5px; background:var(--panel-2); border:1px solid var(--border); }
+
+  /* later — minimized, navigable */
+  .later { margin-top:18px; opacity:.5; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .later .lw { font-size:12px; display:inline-flex; gap:6px; align-items:center; }
+  .nav { margin-left:auto; color:var(--link); font-size:11px; opacity:1; }
+
+  .legend { margin-top:34px; border-top:1px solid var(--border); padding-top:14px; color:var(--fg-muted); font-size:11px; }
+  .legend b{ color:var(--fg); } .legend code{ font-family:var(--mono); color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- header -->
+  <div class="topbar">
+    <span class="logo"></span>
+    <span class="brand">Atrium</span>
+    <span class="muted">Stonekey · Atrium</span>
+    <span class="spacer"></span>
+    <span class="chip mono">⎇ main</span>
+    <span class="chip live"><span class="dot"></span> live</span>
+    <span class="chip">↻</span>
+  </div>
+
+  <!-- overall progress -->
+  <div class="overall">
+    <span class="pct">18%</span>
+    <span class="bar"><span class="seg-done" style="width:34%"></span><span class="seg-doing" style="width:8%"></span><span class="seg-review" style="width:14%"></span></span>
+    <span class="tag">9 done · <span style="color:var(--blue)">7 active</span> · <span style="color:var(--orange)">3 spikes</span></span>
+  </div>
+  <div class="pipe"><span class="done">Plan</span> › <span class="done">Design</span> › <span class="done">UX</span> › <b>● Build</b> › UAT › Release</div>
+
+  <!-- BEHIND YOU -->
+  <div class="band behind">
+    <div class="band-label">↩ behind you · shipped</div>
+    <div class="row">
+      <span class="wave-done"><span class="check">✓</span> Wave 0 · Visual layer <span class="dim mono">9/9</span></span>
+      <span class="wave-done" style="margin-left:18px"><span class="check">✓</span> Wave 0.5 · Wave &amp; ticket rail <span class="dim mono">6/8</span></span>
+    </div>
+  </div>
+
+  <!-- LOOSE ENDS (hygiene) -->
+  <div class="loose">
+    <span class="warn">⚠</span>
+    <div>
+      <b>Loose ends from earlier</b> <span class="muted">— outstanding so the backlog stays clean</span>
+      <div style="margin-top:5px; display:flex; gap:16px; flex-wrap:wrap;">
+        <span class="item">STO-2184 · drag-to-reorder <span class="muted" style="font-family:var(--sans)">(Wave 0.5, never finished)</span></span>
+        <span class="item">STO-2187 · UAT case rollup <span class="muted" style="font-family:var(--sans)">(Wave 0.5, todo)</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURRENT SPRINT — SPOTLIGHT -->
+  <div class="spotlight">
+    <div class="spot-head">
+      <span class="star">★</span>
+      <span class="badge">Current sprint</span>
+      <span class="spot-title">Wave 0.6 · Cockpit data</span>
+      <span class="spot-sub">— real Linear data + cockpit surfaces</span>
+      <span class="spacer"></span>
+      <span class="bar" style="max-width:120px"><span class="seg-done" style="width:20%"></span><span class="seg-doing" style="width:20%"></span><span class="seg-review" style="width:40%"></span></span>
+      <span class="mono muted">3/5</span>
+    </div>
+
+    <div class="kanban">
+      <div class="col todo">
+        <div class="col-h"><span>To do</span><span class="col-count">1</span></div>
+        <div class="card">
+          <div class="id">STO-2465 <span class="ext">↗</span></div>
+          <div class="ttl">Click-through to Linear</div>
+          <div class="meta"><span class="pri med">Med</span></div>
+        </div>
+      </div>
+
+      <div class="col doing">
+        <div class="col-h"><span>In progress</span><span class="col-count">1</span></div>
+        <!-- a card just dragged here: optimistic + syncing -->
+        <div class="card moving">
+          <div class="id">STO-2464 <span class="ext">↗</span></div>
+          <div class="ttl">Spike-gate map + Pass-N badge</div>
+          <div class="meta"><span class="pri high">High</span><span class="sync syncing"><span class="dot"></span> syncing…</span></div>
+        </div>
+      </div>
+
+      <div class="col review">
+        <div class="col-h"><span>In review</span><span class="col-count">2</span></div>
+        <div class="card">
+          <div class="id">STO-2462 <span class="ext">↗</span></div>
+          <div class="ttl">Project rollup bar + segmented bars</div>
+          <div class="meta"><span class="pri high">High</span><span class="sync synced"><span class="dot"></span> synced</span></div>
+        </div>
+        <div class="card">
+          <div class="id">STO-2463 <span class="ext">↗</span></div>
+          <div class="ttl">Active Work strip</div>
+          <div class="meta"><span class="pri high">High</span><span class="sync synced"><span class="dot"></span> synced</span></div>
+        </div>
+      </div>
+
+      <div class="col done">
+        <div class="col-h"><span>Done</span><span class="col-count">1</span></div>
+        <div class="card" style="opacity:.7">
+          <div class="id">STO-2461 <span class="ext">↗</span></div>
+          <div class="ttl">Board snapshot + BoardSource loader</div>
+          <div class="meta"><span class="pri urgent">Urgent</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AROUND THE CORNER -->
+  <div class="band corner">
+    <div class="band-label">↪ around the corner · next up</div>
+    <div class="corner-grid">
+      <div class="next">
+        <h4>Wave 3.5 · Plan &amp; Design <span class="dim mono">3</span></h4>
+        <span class="muted">Spec docs, acceptance criteria, mockup-on-canvas + annotation pins</span>
+        <div class="peek"><span class="peek-card"></span><span class="peek-card"></span><span class="peek-card"></span></div>
+      </div>
+      <div class="next">
+        <h4>Wave 4.5 · Pipeline &amp; UAT <span class="dim mono">4</span></h4>
+        <span class="muted">Tier-1 pipeline, UAT findings, loop-back machinery</span>
+        <div class="peek"><span class="peek-card"></span><span class="peek-card"></span><span class="peek-card"></span><span class="peek-card"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LATER -->
+  <div class="later">
+    <span class="band-label" style="margin:0">⋯ later</span>
+    <span class="lw"><span class="dim">Wave 4 · Rails &amp; palette</span> <span class="dim mono">8</span></span>
+    <span class="lw"><span class="dim">Wave 8 · Polish</span> <span class="dim mono">4</span></span>
+    <span class="nav">navigate ›</span>
+  </div>
+
+  <div class="legend">
+    <b>The focus gradient.</b> Distance from <i>now</i> sets the emphasis:
+    <b>behind you</b> collapses to a line (done is done) — except a <code>⚠ Loose ends</code> callout that surfaces
+    <i>incomplete</i> past tickets as a hygiene signal. The <b>current sprint</b> is the bright spotlight: a kanban you
+    drag across <code>To do → In progress → In review → Done</code>, each move written to Linear optimistically with a
+    per-card <code>syncing → synced / failed</code> state. <b>Around the corner</b> fades in as you approach; <b>later</b>
+    stays a quiet, one-click-navigable line.
+  </div>
+
+</div>
+</body>
+</html>
