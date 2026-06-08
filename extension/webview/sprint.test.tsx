@@ -61,17 +61,33 @@ describe("boardToColumns", () => {
 });
 
 describe("currentSprint", () => {
-  it("returns the wave at the Build stage", () => {
-    const waves = [wave("past", "release"), wave("now", "build", tk("A", "doing")), wave("future", "plan")];
-    expect(currentSprint(waves)?.name).toBe("now");
+  it("picks the wave with active (in-progress / in-review) work", () => {
+    const waves = [
+      wave("done-wave", "release", tk("A", "done")),
+      wave("active", "build", tk("B", "doing")),
+      wave("queued", "plan", tk("C", "todo")),
+    ];
+    expect(currentSprint(waves)?.name).toBe("active");
   });
 
-  it("returns the first Build-stage wave when several match", () => {
-    expect(currentSprint([wave("a", "build"), wave("b", "build")])?.name).toBe("a");
+  it("prefers the active wave furthest along the pipeline", () => {
+    const waves = [wave("plan-active", "plan", tk("A", "doing")), wave("build-active", "build", tk("B", "review"))];
+    expect(currentSprint(waves)?.name).toBe("build-active");
   });
 
-  it("returns null when no wave is at Build", () => {
-    expect(currentSprint([wave("x", "plan")])).toBeNull();
+  it("falls back to the next unfinished wave when nothing is in progress", () => {
+    const waves = [wave("shipped", "release", tk("A", "done")), wave("next", "plan", tk("B", "todo"))];
+    expect(currentSprint(waves)?.name).toBe("next");
+  });
+
+  it("returns null when every ticket is done (no active sprint)", () => {
+    expect(currentSprint([wave("w", "build", tk("A", "done"))])).toBeNull();
+  });
+
+  it("lets an override win when it matches a wave, and ignores it otherwise", () => {
+    const waves = [wave("active", "build", tk("A", "doing")), wave("pinned", "plan", tk("B", "todo"))];
+    expect(currentSprint(waves, "pinned")?.name).toBe("pinned");
+    expect(currentSprint(waves, "ghost")?.name).toBe("active");
   });
 });
 

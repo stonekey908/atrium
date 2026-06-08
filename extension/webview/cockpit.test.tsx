@@ -198,6 +198,33 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
   });
 
+  it("pins a horizon wave as the current sprint, then unpins back to auto", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    fireEvent.click(screen.getByRole("button", { name: /Pin Wave 1 · CLI bridge as the current sprint/i }));
+    expect(screen.getByText(/pinned/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /unpin current sprint/i }));
+    expect(screen.queryByText(/pinned/i)).toBeNull();
+  });
+
+  it("shows the all-shipped state when every ticket is done", () => {
+    render(<App />);
+    sendInit({
+      ...PAYLOAD,
+      spikes: [],
+      waves: [
+        {
+          name: "Done wave",
+          stage: "build",
+          tickets: [
+            { id: "A", title: "a", priority: "med", state: "done", spec: [], tests: { passed: 0, failed: 0, missing: 0 }, activity: [] },
+          ],
+        },
+      ],
+    });
+    expect(screen.getByText(/All shipped/i)).toBeInTheDocument();
+  });
+
   it("opens a kanban card in Linear via the host", () => {
     render(<App />);
     sendInit(PAYLOAD);
@@ -230,8 +257,9 @@ describe("Atrium cockpit webview", () => {
     render(<App />);
     sendInit(PAYLOAD);
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
-    // The wave header is a button; the return-strip also mentions the name (a div).
-    fireEvent.click(screen.getByRole("button", { name: /Wave 1 · CLI bridge/i }));
+    // The collapse toggle button's name starts with the wave name (the pin
+    // button's starts with "Pin …"); the return-strip mentions it in a div.
+    fireEvent.click(screen.getByRole("button", { name: /^Wave 1 · CLI bridge/i }));
     expect(screen.queryByText("STO-2164")).toBeNull();
   });
 });

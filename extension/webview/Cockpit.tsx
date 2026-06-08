@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
-import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
+import { waveStages, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
 import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
 import { SprintBoard } from "./SprintBoard";
@@ -20,13 +20,47 @@ import type {
   WriteState,
 } from "./types";
 
+/** Persisted (per-webview) manual current-sprint override; null = auto. */
+function readSprintOverride(): string | null {
+  const s = vscode.getState() as { sprintOverride?: string | null } | undefined;
+  return s?.sprintOverride ?? null;
+}
+function persistSprintOverride(name: string | null): void {
+  const s = (vscode.getState() as Record<string, unknown> | undefined) ?? {};
+  vscode.setState({ ...s, sprintOverride: name });
+}
+
+/** Shown in the sprint slot when every ticket is done (no active sprint). */
+function NoSprint() {
+  return (
+    <div className="mx-auto w-full max-w-[1100px] shrink-0 px-3 py-2">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-green/[0.06] text-[12px]">
+        <span className="codicon codicon-check-all text-green shrink-0" />
+        <span className="font-semibold">All shipped — no active sprint.</span>
+        <span className="text-fg-muted truncate">
+          Drag a ticket up to start one, or pin a wave below as the current sprint.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function Cockpit({ init }: { init: InitPayload }) {
   const [view, setView] = useState<CockpitView>("board");
+  // Manual override for which wave is the current sprint (persisted), in case the
+  // data-driven pick is wrong. null = auto.
+  const [sprintOverride, setSprintOverride] = useState<string | null>(() => readSprintOverride());
+  const setOverride = (name: string | null) => {
+    setSprintOverride(name);
+    persistSprintOverride(name);
+  };
   // Optimistic write-back layers local moves over the host's board; drag is only
   // enabled in live mode (a key is set), so the board never fakes a sync.
   const { displayWaves, syncOf, move, reorder, moveToWave } = useBoardMutations(init.waves);
   const canWrite = init.source === "live";
-  const sprint = currentSprint(displayWaves);
+  const sprint = currentSprint(displayWaves, sprintOverride);
+  const pinned = !!sprintOverride && sprint?.name === sprintOverride;
+  const hasWork = displayWaves.some((w) => w.tickets.length > 0);
   // Plan reads the optimistic board too, so moves reflect everywhere.
   const liveInit = { ...init, waves: displayWaves };
   return (
@@ -43,8 +77,9 @@ export function Cockpit({ init }: { init: InitPayload }) {
           <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
           {/* The sprint kanban stays pinned; only the horizon list below scrolls.
               Drag a card down into a wave to demote it, or a wave ticket up to
-              promote it into the sprint. */}
-          {sprint && (
+              promote it into the sprint. Current sprint is data-driven (the wave
+              with active work) with a manual pin override. */}
+          {sprint ? (
             <div className="mx-auto w-full max-w-[1100px] shrink-0">
               <SprintBoard
                 wave={sprint}
@@ -53,15 +88,25 @@ export function Cockpit({ init }: { init: InitPayload }) {
                 onMove={move}
                 onReorder={reorder}
                 onMoveToWave={moveToWave}
+                pinned={pinned}
+                onUnpin={() => setOverride(null)}
               />
             </div>
-          )}
+          ) : hasWork ? (
+            <NoSprint />
+          ) : null}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1100px]">
               {displayWaves
                 .filter((w) => w !== sprint)
                 .map((w) => (
-                  <WaveSection key={w.name} wave={w} canWrite={canWrite} onMoveToWave={moveToWave} />
+                  <WaveSection
+                    key={w.name}
+                    wave={w}
+                    canWrite={canWrite}
+                    onMoveToWave={moveToWave}
+                    onPinSprint={() => setOverride(w.name)}
+                  />
                 ))}
             </div>
           </div>
@@ -254,10 +299,12 @@ function WaveSection({
   wave,
   canWrite = false,
   onMoveToWave,
+  onPinSprint,
 }: {
   wave: Wave;
   canWrite?: boolean;
   onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
+  onPinSprint?: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const [isOver, setIsOver] = useState(false);
@@ -265,7 +312,6 @@ function WaveSection({
   const doing = wave.tickets.filter((t) => t.state === "doing").length;
   const review = wave.tickets.filter((t) => t.state === "review").length;
   const todo = wave.tickets.filter((t) => t.state === "todo").length;
-  const current = isCurrentSprint(wave.stage);
   const passN = wave.passN ?? 1;
 
   const droppable = canWrite && !!wave.label && !!onMoveToWave;
@@ -291,47 +337,51 @@ function WaveSection({
         droppable ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsOver(false); } : undefined
       }
       onDrop={droppable ? onDrop : undefined}
-      className={`border-b border-border transition-colors ${current ? "bg-active/5" : ""} ${
+      className={`border-b border-border transition-colors ${
         isOver ? "outline outline-1 -outline-offset-1 outline-link bg-active/10" : ""
       }`}
     >
-      <button
-        className="w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover text-left"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
-        <span className="font-semibold text-[11px] uppercase tracking-wide truncate">{wave.name}</span>
-        {current && (
-          <span className="flex items-center gap-1 px-1.5 rounded-full bg-active text-active-fg text-[9px] uppercase tracking-wide shrink-0">
-            <span className="codicon codicon-debug-start text-[9px]" />
-            Current sprint
-          </span>
-        )}
-        {wave.gatedBy && (
-          <span
-            className="flex items-center gap-1 px-1.5 rounded-full bg-orange/15 text-orange text-[9px] uppercase tracking-wide shrink-0"
-            title={`Blocked by spike ${wave.gatedBy}`}
+      <div className="group w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover">
+        <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left" onClick={() => setOpen((o) => !o)}>
+          <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
+          <span className="font-semibold text-[11px] uppercase tracking-wide truncate">{wave.name}</span>
+          {wave.gatedBy && (
+            <span
+              className="flex items-center gap-1 px-1.5 rounded-full bg-orange/15 text-orange text-[9px] uppercase tracking-wide shrink-0"
+              title={`Blocked by spike ${wave.gatedBy}`}
+            >
+              <span className="codicon codicon-warning text-[9px]" />
+              Gated by {wave.gatedBy}
+            </span>
+          )}
+          {passN > 1 && (
+            <span
+              className="flex items-center gap-1 px-1.5 rounded-full bg-yellow/15 text-yellow text-[9px] uppercase tracking-wide shrink-0"
+              title="UAT loop-backs"
+            >
+              <span className="codicon codicon-history text-[9px]" />
+              Pass {passN}
+            </span>
+          )}
+        </button>
+        {onPinSprint && (
+          <button
+            type="button"
+            onClick={onPinSprint}
+            title="Make this the current sprint"
+            aria-label={`Pin ${wave.name} as the current sprint`}
+            className="flex items-center text-fg-muted hover:text-link opacity-0 group-hover:opacity-100 shrink-0"
           >
-            <span className="codicon codicon-warning text-[9px]" />
-            Gated by {wave.gatedBy}
-          </span>
+            <span className="codicon codicon-pin text-[12px]" />
+          </button>
         )}
-        {passN > 1 && (
-          <span
-            className="flex items-center gap-1 px-1.5 rounded-full bg-yellow/15 text-yellow text-[9px] uppercase tracking-wide shrink-0"
-            title="UAT loop-backs"
-          >
-            <span className="codicon codicon-history text-[9px]" />
-            Pass {passN}
-          </span>
-        )}
-        <span className="ml-auto flex items-center gap-2 text-fg-muted text-[11px] shrink-0">
+        <span className="flex items-center gap-2 text-fg-muted text-[11px] shrink-0">
           <span className="font-mono">
             {done}/{wave.tickets.length}
           </span>
           <SegmentedBar done={done} doing={doing} review={review} todo={todo} className="w-16" />
         </span>
-      </button>
+      </div>
       {wave.stage && <WaveStageStrip stage={wave.stage} />}
       {open && (
         <div>

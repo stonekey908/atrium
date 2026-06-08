@@ -29,7 +29,15 @@ export function SprintBoard({
   onMove,
   onReorder,
   onMoveToWave,
-}: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
+  pinned = false,
+  onUnpin,
+}: {
+  wave: Wave;
+  syncOf?: (id: string) => SyncState;
+  /** True when this wave is the current sprint by a manual pin (vs auto). */
+  pinned?: boolean;
+  onUnpin?: () => void;
+} & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
   const count = (k: TicketState) => columns.find((c) => c.key === k)!.tickets.length;
@@ -60,6 +68,24 @@ export function SprintBoard({
           <span className="uppercase text-[9px] tracking-wide text-fg-muted">Current sprint</span>
           <span className="font-semibold truncate">{wave.name}</span>
         </button>
+        {pinned && (
+          <span
+            className="flex items-center gap-1 px-1.5 rounded-full bg-active/20 text-[9px] uppercase tracking-wide shrink-0"
+            title="Pinned manually as the current sprint"
+          >
+            <span className="codicon codicon-pin text-[9px]" />
+            pinned
+            <button
+              type="button"
+              onClick={onUnpin}
+              title="Unpin — return to automatic"
+              aria-label="Unpin current sprint"
+              className="flex items-center hover:text-link"
+            >
+              <span className="codicon codicon-close text-[9px]" />
+            </button>
+          </span>
+        )}
         {!canWrite && (
           <span
             className="flex items-center gap-1 text-fg-muted text-[10px] shrink-0"

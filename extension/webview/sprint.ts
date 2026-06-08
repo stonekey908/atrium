@@ -26,10 +26,25 @@ export function boardToColumns(wave: Wave): KanbanColumn[] {
   }));
 }
 
-/** The wave to spotlight as the current sprint: the first at the Build stage,
- *  or null if none (then the kanban hides and only the wave list shows). */
-export function currentSprint(waves: Wave[]): Wave | null {
-  return waves.find((w) => isCurrentSprint(w.stage)) ?? null;
+/**
+ * The wave to spotlight as the current sprint. Data-driven: the wave with active
+ * (in-progress / in-review) work, else the next wave that still has unfinished
+ * tickets, preferring whichever is furthest along the pipeline. Returns null when
+ * every ticket is done (no active sprint → the board shows the "all shipped"
+ * state). An explicit `override` wave name wins whenever it still matches a wave,
+ * so the user can correct a wrong guess.
+ */
+export function currentSprint(waves: Wave[], override?: string | null): Wave | null {
+  if (override) {
+    const pinned = waves.find((w) => w.name === override);
+    if (pinned) return pinned;
+  }
+  const unfinished = waves.filter((w) => w.tickets.length > 0 && w.tickets.some((t) => t.state !== "done"));
+  if (unfinished.length === 0) return null;
+  const active = unfinished.filter((w) => w.tickets.some((t) => t.state === "doing" || t.state === "review"));
+  const pool = active.length > 0 ? active : unfinished;
+  const stageIdx = (w: Wave) => PIPELINE.findIndex((s) => s.key === w.stage);
+  return pool.reduce((best, w) => (stageIdx(w) > stageIdx(best) ? w : best), pool[0]);
 }
 
 /** The Tier-1 pipeline, in order. A wave's `stage` names where it sits on it. */
