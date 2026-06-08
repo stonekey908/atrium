@@ -5,6 +5,7 @@ import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
 import { LinearWriteClient, resolveStateId } from "./linear-writes";
 import { getGitStatus } from "./git";
+import { getTestFileCount, getDesignRefs } from "./discover";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
@@ -132,6 +133,10 @@ interface InboundMessage {
   fromState?: TicketState;
   toState?: TicketState;
   sortOrder?: number;
+  /** Design-canvas + UAT-finding fields. */
+  path?: string;
+  body?: string;
+  verdict?: string;
 }
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
@@ -147,8 +152,31 @@ function wireMessages(webview: vscode.Webview): void {
       void handleMoveTicket(webview, msg);
     } else if (msg?.type === "reorderTicket") {
       void handleReorderTicket(webview, msg);
+    } else if (msg?.type === "openFile" && msg.path) {
+      // Open a design reference in VS Code's own editor (STO-2168).
+      void vscode.window.showTextDocument(vscode.Uri.file(msg.path), { preview: true });
+    } else if (msg?.type === "addFinding") {
+      void handleAddFinding(webview, msg);
     }
   });
+}
+
+/** Files a UAT finding as a Linear comment on the target ticket (STO-2175/2176). */
+async function handleAddFinding(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { id, linearId, body, verdict } = msg;
+  if (!id || !body) return;
+  const client = getWriteClient();
+  if (!client || !linearId) {
+    postMutationResult(webview, { id, ok: false, error: "No Linear API key set — can't file findings." });
+    return;
+  }
+  try {
+    const tag = verdict ? `**UAT finding · ${verdict}**` : "**UAT finding**";
+    const ok = await client.addComment(linearId, `${tag}\n\n${body}`);
+    postMutationResult(webview, { id, ok });
+  } catch (e) {
+    postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 /** One write client per API key, reused so workflow-state lookups stay cached. */
@@ -261,6 +289,8 @@ async function buildInitPayload(): Promise<InitPayload> {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
+    testFiles: root ? getTestFileCount(root) : undefined,
+    designRefs: root ? getDesignRefs(root) : undefined,
     folders,
     stages: STAGES,
     waves: board.waves,

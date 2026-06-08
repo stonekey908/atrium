@@ -50,6 +50,12 @@ export interface GitInfo {
   behind: number;
 }
 
+export interface DesignRef {
+  name: string;
+  path: string;
+  kind: "html" | "image" | "figma";
+}
+
 export interface InitPayload {
   project: string;
   branch: string;
@@ -60,6 +66,10 @@ export interface InitPayload {
   /** Real workspace git status for the status strip (STO-2170); absent if the
    *  workspace isn't a git repo. */
   git?: GitInfo;
+  /** Count of unit-test files discovered in the workspace (STO-2186). */
+  testFiles?: number;
+  /** Design reference artifacts found in the project (STO-2168). */
+  designRefs?: DesignRef[];
   /** Where the board came from + how fresh it is (shown as a header chip). */
   source?: "snapshot" | "live";
   generatedAt?: string;

@@ -13,6 +13,12 @@ export function StatusStrip({ init }: { init: InitPayload }) {
     <div className="flex items-center gap-3 px-3 h-6 border-b border-border shrink-0 text-[11px] text-fg-muted">
       {init.git && <GitCell git={init.git} />}
       <LinearCell source={init.source} generatedAt={init.generatedAt} />
+      {typeof init.testFiles === "number" && (
+        <span className="flex items-center gap-1 shrink-0" title="Unit-test files discovered in the workspace">
+          <span className="codicon codicon-beaker text-[11px]" />
+          {init.testFiles} tests
+        </span>
+      )}
       <span className="ml-auto flex items-center gap-1" title="Open workspace folders">
         <span className="codicon codicon-folder-opened" />
         {init.folders.length}

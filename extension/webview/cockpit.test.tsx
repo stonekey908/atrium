@@ -84,7 +84,8 @@ describe("Atrium cockpit webview", () => {
     render(<App />);
     sendInit(PAYLOAD);
     expect(screen.getAllByText("Build").length).toBeGreaterThan(0); // pipeline stage (also appears in the wave strip)
-    expect(screen.getByText("Wave 1 · CLI bridge")).toBeInTheDocument();
+    // "Wave 1 · CLI bridge" appears in the WaveSection and the return-strip (it's looped back).
+    expect(screen.getAllByText("Wave 1 · CLI bridge").length).toBeGreaterThan(0);
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // open folder count
   });
@@ -153,10 +154,23 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/gated by T-110/i)).toBeInTheDocument();
   });
 
-  it("shows a Pass-N badge when a wave has looped back", () => {
+  it("shows a Pass-N badge and a return-strip when a wave has looped back", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    expect(screen.getByText(/pass 2/i)).toBeInTheDocument();
+    // Pass-2 appears on the wave card and in the return-strip (STO-2177).
+    expect(screen.getAllByText(/pass 2/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/looped back/i)).toBeInTheDocument();
+  });
+
+  it("switches to the Plan, Design and UAT views via the tabs", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    fireEvent.click(screen.getByRole("button", { name: /^Plan$/i }));
+    expect(screen.getByRole("heading", { name: /acceptance criteria/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Design$/i }));
+    expect(screen.getByRole("heading", { name: /design · references/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^UAT$/i }));
+    expect(screen.getByText(/File a finding/i)).toBeInTheDocument();
   });
 
   it("asks the host to refresh when the Refresh button is clicked", () => {
@@ -216,7 +230,8 @@ describe("Atrium cockpit webview", () => {
     render(<App />);
     sendInit(PAYLOAD);
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Wave 1 · CLI bridge"));
+    // The wave header is a button; the return-strip also mentions the name (a div).
+    fireEvent.click(screen.getByRole("button", { name: /Wave 1 · CLI bridge/i }));
     expect(screen.queryByText("STO-2164")).toBeNull();
   });
 });

@@ -93,6 +93,20 @@ export class LinearWriteClient {
     return res.data?.issueUpdate?.success ?? false;
   }
 
+  /** Posts a comment to an issue — used to file UAT findings (STO-2175/2176). */
+  async addComment(issueId: string, body: string): Promise<boolean> {
+    const mutation = `
+      mutation FileFinding($issueId: String!, $body: String!) {
+        commentCreate(input: { issueId: $issueId, body: $body }) { success }
+      }
+    `;
+    const res = await this.client.client.rawRequest<
+      { commentCreate: { success: boolean } },
+      { issueId: string; body: string }
+    >(mutation, { issueId, body });
+    return res.data?.commentCreate?.success ?? false;
+  }
+
   /** Sets the issue's sort order (priority within the project). STO-2470. */
   async setSortOrder(uuid: string, sortOrder: number): Promise<boolean> {
     const mutation = `

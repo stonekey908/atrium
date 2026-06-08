@@ -2,49 +2,107 @@ import { useState } from "react";
 import { vscode } from "./vscode";
 import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
+import { computePipeline, loopBacks, type CockpitView, type PipelineStage } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
+import { PlanView } from "./PlanView";
+import { DesignView } from "./DesignView";
+import { UatView } from "./UatView";
 import { useBoardMutations } from "./useBoardMutations";
 import { PRIORITY, StateIcon, Empty, AuditRibbon } from "./ui";
 import type {
   ActivityKind,
   InitPayload,
   Spike,
-  Stage,
   TestSummary,
   Ticket,
   Wave,
 } from "./types";
 
 export function Cockpit({ init }: { init: InitPayload }) {
+  const [view, setView] = useState<CockpitView>("board");
   // Optimistic write-back layers local moves over the host's board; drag is only
   // enabled in live mode (a key is set), so the board never fakes a sync.
   const { displayWaves, syncOf, move, reorder } = useBoardMutations(init.waves);
   const canWrite = init.source === "live";
   const sprint = currentSprint(displayWaves);
+  // Plan/UAT read the optimistic board too, so moves reflect everywhere.
+  const liveInit = { ...init, waves: displayWaves };
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
       <Header init={init} />
       <StatusStrip init={init} />
+      <ViewTabs view={view} setView={setView} />
       {init.error && <LoadBanner message={init.error} />}
-      <Pipeline stages={init.stages} />
-      <ActiveWork waves={displayWaves} branch={init.branch} />
-      <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
-      {/* Centred, capped width so it reads well full-screen and in the rail. */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1000px]">
-          {/* Spotlight the current sprint as a kanban; the other waves are the
-              horizon list below (the current sprint isn't repeated there). */}
-          {sprint && (
-            <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} onReorder={reorder} />
-          )}
-          {displayWaves
-            .filter((w) => w !== sprint)
-            .map((w) => (
-              <WaveSection key={w.name} wave={w} />
-            ))}
-        </div>
-      </div>
+      {view === "board" && (
+        <>
+          <Pipeline stages={computePipeline(displayWaves)} />
+          <ReturnStrip waves={displayWaves} />
+          <ActiveWork waves={displayWaves} branch={init.branch} />
+          <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
+          {/* Centred, capped width so it reads well full-screen and in the rail. */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-[1000px]">
+              {/* Spotlight the current sprint as a kanban; the other waves are the
+                  horizon list below (the current sprint isn't repeated there). */}
+              {sprint && (
+                <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} onReorder={reorder} />
+              )}
+              {displayWaves
+                .filter((w) => w !== sprint)
+                .map((w) => (
+                  <WaveSection key={w.name} wave={w} />
+                ))}
+            </div>
+          </div>
+        </>
+      )}
+      {view === "plan" && <PlanView init={liveInit} />}
+      {view === "design" && <DesignView init={init} />}
+      {view === "uat" && <UatView init={liveInit} />}
+    </div>
+  );
+}
+
+const VIEW_TABS: { key: CockpitView; label: string; icon: string }[] = [
+  { key: "board", label: "Board", icon: "codicon-layout" },
+  { key: "plan", label: "Plan", icon: "codicon-checklist" },
+  { key: "design", label: "Design", icon: "codicon-symbol-color" },
+  { key: "uat", label: "UAT", icon: "codicon-verified" },
+];
+
+function ViewTabs({ view, setView }: { view: CockpitView; setView: (v: CockpitView) => void }) {
+  return (
+    <div className="flex items-center gap-1 px-3 h-8 border-b border-border shrink-0">
+      {VIEW_TABS.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={() => setView(t.key)}
+          aria-pressed={view === t.key}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[12px] ${
+            view === t.key ? "bg-active text-active-fg" : "text-fg-muted hover:text-fg"
+          }`}
+        >
+          <span className={`codicon ${t.icon} text-[12px]`} />
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Loop-back return-strip (STO-2177): the most recent wave that bounced back. */
+function ReturnStrip({ waves }: { waves: Wave[] }) {
+  const looped = loopBacks(waves);
+  if (looped.length === 0) return null;
+  const w = looped[0];
+  return (
+    <div className="flex items-center gap-2 px-3 py-1 border-b border-border shrink-0 text-[11px] bg-yellow/5 text-yellow">
+      <span className="codicon codicon-discard text-[12px]" />
+      <span className="text-fg-muted">
+        <span className="font-semibold text-fg">{w.name}</span> looped back · now on Pass {w.passN}
+      </span>
     </div>
   );
 }
@@ -150,35 +208,37 @@ function Header({ init }: { init: InitPayload }) {
   );
 }
 
-function Pipeline({ stages }: { stages: Stage[] }) {
+/** Tier-1 project pipeline (STO-2174): each stage's state + wave count derived
+ *  from where the waves actually sit. */
+function Pipeline({ stages }: { stages: PipelineStage[] }) {
   return (
     <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0 overflow-x-auto">
       {stages.map((s, i) => (
         <span key={s.key} className="flex items-center shrink-0">
           <span
             className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] ${
-              s.status === "active"
+              s.state === "active"
                 ? "bg-active text-active-fg"
-                : s.status === "done"
+                : s.state === "done"
                   ? "text-fg"
                   : "text-fg-muted"
             }`}
+            title={s.waves.length > 0 ? s.waves.map((w) => w.name).join(", ") : `No waves at ${s.label}`}
           >
-            <span className={`codicon ${stageIcon(s.status)}`} />
+            <span className={`codicon ${stageIcon(s.state)}`} />
             {s.label}
+            {s.waves.length > 0 && <span className="font-mono opacity-70">{s.waves.length}</span>}
           </span>
-          {i < stages.length - 1 && (
-            <span className="codicon codicon-chevron-right text-fg-muted opacity-50" />
-          )}
+          {i < stages.length - 1 && <span className="codicon codicon-chevron-right text-fg-muted opacity-50" />}
         </span>
       ))}
     </div>
   );
 }
 
-function stageIcon(status: Stage["status"]): string {
-  if (status === "done") return "codicon-pass-filled text-green";
-  if (status === "active") return "codicon-circle-large-filled";
+function stageIcon(state: PipelineStage["state"]): string {
+  if (state === "done") return "codicon-pass-filled text-green";
+  if (state === "active") return "codicon-circle-large-filled";
   return "codicon-circle-large-outline";
 }
 
