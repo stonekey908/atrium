@@ -20,9 +20,27 @@ const PAYLOAD: InitPayload = {
   ],
   spikes: [{ id: "STO-2146", code: "T-110", gatesWave: "Wave 1", state: "todo" }],
   waves: [
+    // The current sprint (Build stage) — spotlighted in the kanban, not the list.
+    {
+      name: "Wave 0.7 · Sprint board",
+      stage: "build",
+      tickets: [
+        {
+          id: "STO-2468",
+          title: "Read-only sprint kanban",
+          url: "https://linear.app/stonekey/issue/STO-2468",
+          priority: "high",
+          state: "doing",
+          spec: ["Spotlight current sprint"],
+          tests: { passed: 0, failed: 0, missing: 0 },
+          activity: [],
+        },
+      ],
+    },
+    // A horizon wave (not Build) — renders as a collapsible WaveSection in the list.
     {
       name: "Wave 1 · CLI bridge",
-      stage: "build",
+      stage: "plan",
       gatedBy: "T-110",
       passN: 2,
       tickets: [
@@ -120,13 +138,12 @@ describe("Atrium cockpit webview", () => {
     });
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(screen.getByText(/1 active/i)).toBeInTheDocument();
-    expect(screen.getByTitle("in review")).toBeInTheDocument();
   });
 
   it("shows the project rollup with done/total and spike count", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    expect(screen.getByText("0/1 done")).toBeInTheDocument();
+    expect(screen.getByText("0/2 done")).toBeInTheDocument();
     expect(screen.getByText(/1 spike/i)).toBeInTheDocument();
   });
 
@@ -153,6 +170,28 @@ describe("Atrium cockpit webview", () => {
     render(<App />);
     sendInit(PAYLOAD);
     expect(screen.getByText(/current sprint/i)).toBeInTheDocument();
+  });
+
+  it("spotlights the current sprint in the kanban with its four columns", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    // All four kanban columns render.
+    for (const label of ["To do", "In progress", "In review", "Done"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // The Build-stage ticket shows in the kanban; the horizon wave keeps its own.
+    expect(screen.getAllByText("STO-2468").length).toBeGreaterThan(0);
+    expect(screen.getByText("STO-2164")).toBeInTheDocument();
+  });
+
+  it("opens a kanban card in Linear via the host", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    fireEvent.click(screen.getByRole("button", { name: /open STO-2468 in Linear/i }));
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "openLinear",
+      url: "https://linear.app/stonekey/issue/STO-2468",
+    });
   });
 
   it("shows a live badge when the board came from Linear", () => {

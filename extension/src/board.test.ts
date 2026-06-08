@@ -113,9 +113,9 @@ describe("specFromDescription", () => {
 describe("boardFromIssues", () => {
   const ISSUES: LinearIssueLite[] = [
     { identifier: "STO-2095", title: "AppShell", url: "u1", priority: 2, stateType: "completed", stateName: "Done", labels: ["ATR Wave 0"], description: "- a\n- b\n- c\n- d" },
-    { identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
-    { identifier: "STO-2146", title: "Spike T-110", url: "u3", priority: 3, stateType: "unstarted", stateName: "Todo", labels: ["ATR Wave 1", "ATR Spike"], description: null },
-    { identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 1"], description: null },
+    { identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "started", stateName: "In Review", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
+    { identifier: "STO-2468", title: "Read-only kanban", url: "u3", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
+    { identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
   ];
   const board = boardFromIssues(ISSUES, { projectName: "Atrium", generatedAt: "2026-06-08" });
 
@@ -123,26 +123,26 @@ describe("boardFromIssues", () => {
     expect(() => validateBoard(board)).not.toThrow();
   });
 
-  it("groups issues into named, ordered, non-empty waves with stage + gatedBy metadata", () => {
+  it("groups issues into named, ordered, non-empty waves with stage metadata", () => {
     expect(board.waves.map((w) => w.name)).toEqual([
       "Wave 0 · Visual layer",
       "Wave 0.6 · Cockpit data",
-      "Wave 1 · CLI bridge",
+      "Wave 0.7 · Sprint board",
     ]);
-    const w1 = board.waves.find((w) => w.name === "Wave 1 · CLI bridge")!;
-    expect(w1.gatedBy).toBe("T-110");
     expect(board.waves[0].stage).toBe("release");
+    // The current sprint is whichever wave sits at the Build stage.
+    expect(board.waves.find((w) => w.name === "Wave 0.7 · Sprint board")!.stage).toBe("build");
   });
 
   it("excludes canceled issues", () => {
     const ids = board.waves.flatMap((w) => w.tickets.map((t) => t.id));
     expect(ids).not.toContain("STO-9999");
-    expect(ids).toContain("STO-2146");
+    expect(ids).toContain("STO-2468");
   });
 
   it("collects tickets with no recognized wave label into an Unsorted bucket", () => {
     const issues: LinearIssueLite[] = [
-      { identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 1"], description: null },
+      { identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0"], description: null },
       { identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
       { identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
     ];
@@ -157,11 +157,14 @@ describe("boardFromIssues", () => {
     expect(board.waves.some((w) => w.name === "Unsorted · No sprint")).toBe(false);
   });
 
-  it("maps ticket fields and derives spikes from known ids present in the input", () => {
+  it("maps ticket fields onto the board model", () => {
     const ticket = board.waves[0].tickets[0];
     expect(ticket).toMatchObject({ id: "STO-2095", priority: "high", state: "done" });
     expect(ticket.spec).toEqual(["a", "b", "c"]);
     expect(ticket.tests.discovered).toBe(false);
-    expect(board.spikes).toEqual([{ id: "STO-2146", code: "T-110", gatesWave: "Wave 1", state: "todo" }]);
+  });
+
+  it("derives no spikes now that the gated waves were pruned", () => {
+    expect(board.spikes).toEqual([]);
   });
 });

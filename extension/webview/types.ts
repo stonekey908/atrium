@@ -3,6 +3,10 @@ export type TicketState = "todo" | "doing" | "review" | "done";
 export type StageStatus = "done" | "active" | "todo";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
+/** Per-card write-back status for the sprint kanban (slice 2+). `idle` = no
+ *  pending write; `conflict` = Linear already moved out from under us. */
+export type SyncState = "idle" | "syncing" | "synced" | "failed" | "conflict";
+
 export interface TestSummary {
   passed: number;
   failed: number;

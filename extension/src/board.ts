@@ -177,24 +177,17 @@ export interface LinearIssueLite {
  *  truth for grouping; keep in sync with the snapshot generator. */
 const WAVE_META: { label: string; name: string; stage: string; gatedBy: string | null }[] = [
   { label: "ATR Wave 0", name: "Wave 0 · Visual layer", stage: "release", gatedBy: null },
-  { label: "ATR Wave 0.5", name: "Wave 0.5 · Wave & ticket rail", stage: "build", gatedBy: null },
-  { label: "ATR Wave 0.6 · Cockpit data", name: "Wave 0.6 · Cockpit data", stage: "build", gatedBy: null },
-  { label: "ATR Wave 1", name: "Wave 1 · CLI bridge", stage: "plan", gatedBy: "T-110" },
-  { label: "ATR Wave 2", name: "Wave 2 · Tool & permission cards", stage: "plan", gatedBy: "T-209" },
-  { label: "ATR Wave 3", name: "Wave 3 · Composer extras", stage: "plan", gatedBy: "T-301" },
+  { label: "ATR Wave 0.5", name: "Wave 0.5 · Wave & ticket rail", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 0.6 · Cockpit data", name: "Wave 0.6 · Cockpit data", stage: "uat", gatedBy: null },
+  { label: "ATR Wave 0.7 · Sprint board", name: "Wave 0.7 · Sprint board", stage: "build", gatedBy: null },
   { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design", stage: "plan", gatedBy: null },
   { label: "ATR Wave 4", name: "Wave 4 · Rails & palette", stage: "plan", gatedBy: null },
   { label: "ATR Wave 4.5", name: "Wave 4.5 · Pipeline & UAT", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 5", name: "Wave 5 · Settings & registry", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 7", name: "Wave 7 · History & search", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 8", name: "Wave 8 · Polish", stage: "plan", gatedBy: null },
 ];
 
-const SPIKE_META: { id: string; code: string; gatesWave: string }[] = [
-  { id: "STO-2146", code: "T-110", gatesWave: "Wave 1" },
-  { id: "STO-2147", code: "T-209", gatesWave: "Wave 2" },
-  { id: "STO-2115", code: "T-301", gatesWave: "Wave 3" },
-];
+// All earlier spikes (T-110/T-209/T-301) were cancelled with their waves in the
+// lighter-extension prune; an empty list means no spike chips show.
+const SPIKE_META: { id: string; code: string; gatesWave: string }[] = [];
 
 export function mapPriority(p: number): Priority {
   return p === 1 ? "urgent" : p === 2 ? "high" : p === 3 ? "med" : "low";

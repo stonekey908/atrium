@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { waveStages, isCurrentSprint, resolveActiveTicket } from "./sprint";
+import { waveStages, isCurrentSprint, resolveActiveTicket, boardToColumns, currentSprint } from "./sprint";
 import type { TicketState, Wave } from "./types";
 
 const tk = (id: string, state: TicketState) => ({
@@ -12,6 +12,7 @@ const tk = (id: string, state: TicketState) => ({
   activity: [],
 });
 const wavesOf = (...t: ReturnType<typeof tk>[]): Wave[] => [{ name: "W", tickets: t }];
+const wave = (name: string, stage: string, ...t: ReturnType<typeof tk>[]): Wave => ({ name, stage, tickets: t });
 
 describe("waveStages", () => {
   it("marks stages before the wave's stage done, the stage itself active, later ones todo", () => {
@@ -41,6 +42,36 @@ describe("isCurrentSprint", () => {
     expect(isCurrentSprint("plan")).toBe(false);
     expect(isCurrentSprint("release")).toBe(false);
     expect(isCurrentSprint(undefined)).toBe(false);
+  });
+});
+
+describe("boardToColumns", () => {
+  it("groups tickets into the four ordered columns by state", () => {
+    const cols = boardToColumns(
+      wave("W", "build", tk("A", "todo"), tk("B", "doing"), tk("C", "doing"), tk("D", "review"), tk("E", "done")),
+    );
+    expect(cols.map((c) => c.key)).toEqual(["todo", "doing", "review", "done"]);
+    expect(cols.map((c) => c.tickets.length)).toEqual([1, 2, 1, 1]);
+  });
+
+  it("yields empty columns when a state is absent", () => {
+    const cols = boardToColumns(wave("W", "build", tk("A", "todo")));
+    expect(cols.find((c) => c.key === "done")!.tickets).toEqual([]);
+  });
+});
+
+describe("currentSprint", () => {
+  it("returns the wave at the Build stage", () => {
+    const waves = [wave("past", "release"), wave("now", "build", tk("A", "doing")), wave("future", "plan")];
+    expect(currentSprint(waves)?.name).toBe("now");
+  });
+
+  it("returns the first Build-stage wave when several match", () => {
+    expect(currentSprint([wave("a", "build"), wave("b", "build")])?.name).toBe("a");
+  });
+
+  it("returns null when no wave is at Build", () => {
+    expect(currentSprint([wave("x", "plan")])).toBeNull();
   });
 });
 

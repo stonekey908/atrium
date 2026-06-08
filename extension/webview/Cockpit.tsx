@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
-import { waveStages, isCurrentSprint, resolveActiveTicket } from "./sprint";
+import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
+import { SprintBoard } from "./SprintBoard";
+import { PRIORITY, StateIcon, Empty } from "./ui";
 import type {
   ActivityKind,
   InitPayload,
-  Priority,
   Spike,
   Stage,
   TestSummary,
   Ticket,
-  TicketState,
   Wave,
 } from "./types";
 
 export function Cockpit({ init }: { init: InitPayload }) {
+  const sprint = currentSprint(init.waves);
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
       <Header init={init} />
@@ -25,9 +26,14 @@ export function Cockpit({ init }: { init: InitPayload }) {
       {/* Centred, capped width so it reads well full-screen and in the rail. */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1000px]">
-          {init.waves.map((w) => (
-            <WaveSection key={w.name} wave={w} />
-          ))}
+          {/* Spotlight the current sprint as a kanban; the other waves are the
+              horizon list below (the current sprint isn't repeated there). */}
+          {sprint && <SprintBoard wave={sprint} />}
+          {init.waves
+            .filter((w) => w !== sprint)
+            .map((w) => (
+              <WaveSection key={w.name} wave={w} />
+            ))}
         </div>
       </div>
     </div>
@@ -281,13 +287,6 @@ function WaveStageStrip({ stage }: { stage: string }) {
   );
 }
 
-const PRIORITY: Record<Priority, { label: string; cls: string }> = {
-  urgent: { label: "Urgent", cls: "text-red" },
-  high: { label: "High", cls: "text-orange" },
-  med: { label: "Med", cls: "text-blue" },
-  low: { label: "Low", cls: "text-fg-muted" },
-};
-
 function TicketRow({ ticket }: { ticket: Ticket }) {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((o) => !o);
@@ -340,15 +339,6 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
       {open && <TicketDetail ticket={ticket} />}
     </div>
   );
-}
-
-function StateIcon({ state }: { state: TicketState }) {
-  if (state === "done") return <span className="codicon codicon-pass-filled text-green" title="done" />;
-  if (state === "review")
-    return <span className="codicon codicon-git-pull-request text-blue" title="in review" />;
-  if (state === "doing")
-    return <span className="codicon codicon-sync text-yellow" title="in progress" />;
-  return <span className="codicon codicon-circle-large-outline text-fg-muted" title="todo" />;
 }
 
 type Tab = "spec" | "tests" | "activity";
@@ -436,6 +426,3 @@ function Activity({ items }: { items: Ticket["activity"] }) {
   );
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] text-fg-muted italic">{children}</p>;
-}

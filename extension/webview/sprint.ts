@@ -1,4 +1,33 @@
-import type { StageStatus, Ticket, Wave } from "./types";
+import type { StageStatus, Ticket, TicketState, Wave } from "./types";
+
+/** The kanban columns, in board order, with their display labels. */
+export const KANBAN_COLUMNS: { key: TicketState; label: string }[] = [
+  { key: "todo", label: "To do" },
+  { key: "doing", label: "In progress" },
+  { key: "review", label: "In review" },
+  { key: "done", label: "Done" },
+];
+
+export interface KanbanColumn {
+  key: TicketState;
+  label: string;
+  tickets: Ticket[];
+}
+
+/** Groups a wave's tickets into the four ordered kanban columns by state.
+ *  Pure — the SprintBoard is just layout over this. */
+export function boardToColumns(wave: Wave): KanbanColumn[] {
+  return KANBAN_COLUMNS.map((c) => ({
+    ...c,
+    tickets: wave.tickets.filter((t) => t.state === c.key),
+  }));
+}
+
+/** The wave to spotlight as the current sprint: the first at the Build stage,
+ *  or null if none (then the kanban hides and only the wave list shows). */
+export function currentSprint(waves: Wave[]): Wave | null {
+  return waves.find((w) => isCurrentSprint(w.stage)) ?? null;
+}
 
 /** The Tier-1 pipeline, in order. A wave's `stage` names where it sits on it. */
 export const PIPELINE: { key: string; label: string }[] = [
