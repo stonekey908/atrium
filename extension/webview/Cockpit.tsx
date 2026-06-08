@@ -2,7 +2,7 @@ import { useState } from "react";
 import { vscode } from "./vscode";
 import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
-import { computePipeline, loopBacks, type CockpitView, type PipelineStage } from "./views";
+import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
 import { PlanView } from "./PlanView";
@@ -61,13 +61,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
               {displayWaves
                 .filter((w) => w !== sprint)
                 .map((w) => (
-                  <WaveSection
-                    key={w.name}
-                    wave={w}
-                    sprintLabel={sprint?.label}
-                    canWrite={canWrite}
-                    onMoveToWave={moveToWave}
-                  />
+                  <WaveSection key={w.name} wave={w} canWrite={canWrite} onMoveToWave={moveToWave} />
                 ))}
             </div>
           </div>
@@ -258,12 +252,10 @@ function stageIcon(state: PipelineStage["state"]): string {
 
 function WaveSection({
   wave,
-  sprintLabel,
   canWrite = false,
   onMoveToWave,
 }: {
   wave: Wave;
-  sprintLabel?: string;
   canWrite?: boolean;
   onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
 }) {
@@ -276,22 +268,31 @@ function WaveSection({
   const current = isCurrentSprint(wave.stage);
   const passN = wave.passN ?? 1;
 
+  const droppable = canWrite && !!wave.label && !!onMoveToWave;
+
   // A card dropped from another wave (e.g. the sprint) moves here (demote).
+  // Pulling active work out of the sprint un-starts it (review/doing → todo);
+  // done/todo keep their state.
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsOver(false);
-    if (!canWrite || !wave.label || !onMoveToWave) return;
+    if (!droppable) return;
     const p = getDrag(e);
-    if (p && p.fromWaveLabel !== wave.label) onMoveToWave(p.id, p.linearId, wave.label);
+    if (!p || p.fromWaveLabel === wave.label) return;
+    onMoveToWave!(p.id, p.linearId, wave.label!, demoteState(p.fromState));
   };
 
   return (
     <section
-      onDragOver={canWrite && wave.label ? (e) => { e.preventDefault(); setIsOver(true); } : undefined}
-      onDragLeave={() => setIsOver(false)}
-      onDrop={onDrop}
-      className={`border-b border-border ${current ? "bg-active/5" : ""} ${
-        isOver ? "outline outline-1 outline-link bg-active/10" : ""
+      onDragOver={droppable ? (e) => { e.preventDefault(); if (!isOver) setIsOver(true); } : undefined}
+      // Only clear the highlight when the pointer truly leaves the section — not
+      // when it crosses a child row — so the drop target doesn't flicker/jitter.
+      onDragLeave={
+        droppable ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsOver(false); } : undefined
+      }
+      onDrop={droppable ? onDrop : undefined}
+      className={`border-b border-border transition-colors ${current ? "bg-active/5" : ""} ${
+        isOver ? "outline outline-1 -outline-offset-1 outline-link bg-active/10" : ""
       }`}
     >
       <button
@@ -338,9 +339,6 @@ function WaveSection({
             <TicketRow key={t.id} ticket={t} draggable={canWrite} fromWaveLabel={wave.label} />
           ))}
         </div>
-      )}
-      {isOver && sprintLabel !== wave.label && (
-        <div className="px-5 py-1 text-[10px] text-link bg-active/10">Drop to move into {wave.name}</div>
       )}
     </section>
   );

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { computePipeline, loopBacks, uatCasesFromTicket, waveUatRollup, isUiTicket, waveTouchesUi } from "./views";
+import {
+  computePipeline,
+  loopBacks,
+  demoteState,
+  uatCasesFromTicket,
+  waveUatRollup,
+  isUiTicket,
+  waveTouchesUi,
+} from "./views";
 import type { Ticket, Wave } from "./types";
 
 const tk = (id: string, spec: string[] = [], title = id): Ticket => ({
@@ -36,6 +44,15 @@ describe("loopBacks", () => {
   it("returns only waves at Pass ≥ 2", () => {
     const got = loopBacks([wave("A", "build", { passN: 1 }), wave("B", "uat", { passN: 3 })]);
     expect(got.map((w) => w.name)).toEqual(["B"]);
+  });
+});
+
+describe("demoteState", () => {
+  it("un-starts active work but leaves done/todo unchanged", () => {
+    expect(demoteState("review")).toBe("todo");
+    expect(demoteState("doing")).toBe("todo");
+    expect(demoteState("done")).toBeUndefined();
+    expect(demoteState("todo")).toBeUndefined();
   });
 });
 

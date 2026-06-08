@@ -32,14 +32,24 @@ export function SprintBoard({
 }: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const count = (k: TicketState) => columns.find((c) => c.key === k)!.tickets.length;
 
   return (
     <section className="border-b border-border shrink-0 bg-active/[0.03]">
       <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 text-[12px]">
-        <span className="codicon codicon-layout text-link" />
-        <span className="uppercase text-[9px] tracking-wide text-fg-muted">Current sprint</span>
-        <span className="font-semibold truncate">{wave.name}</span>
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand sprint board" : "Collapse sprint board"}
+          className="flex items-center gap-2 min-w-0 hover:text-fg"
+        >
+          <span className={`codicon ${collapsed ? "codicon-chevron-right" : "codicon-chevron-down"} text-fg-muted`} />
+          <span className="codicon codicon-layout text-link" />
+          <span className="uppercase text-[9px] tracking-wide text-fg-muted">Current sprint</span>
+          <span className="font-semibold truncate">{wave.name}</span>
+        </button>
         {!canWrite && (
           <span
             className="flex items-center gap-1 text-fg-muted text-[10px] shrink-0"
@@ -57,29 +67,33 @@ export function SprintBoard({
           <Tally dot="bg-border" n={count("todo")} label="to do" />
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-2 px-3 pb-2">
-        {columns.map((col) => (
-          <Column
-            key={col.key}
-            col={col}
-            waveLabel={wave.label}
-            canWrite={canWrite}
-            syncOf={syncOf}
-            isOver={overCol === col.key}
-            setOver={setOverCol}
-            onMove={onMove}
-            onReorder={onReorder}
-            onMoveToWave={onMoveToWave}
-          />
-        ))}
-      </div>
-      {/* UAT phase row (STO-2173): the wave's acceptance pass after Build. */}
-      <div className="flex items-center gap-2 mx-3 mb-3 px-2 py-1 rounded bg-yellow/10 text-[11px] text-yellow">
-        <span className="codicon codicon-question text-[12px]" />
-        <span className="uppercase text-[9px] tracking-wide">UAT</span>
-        <span className="text-fg-muted">{wave.name} · acceptance pass after Build</span>
-        <span className="ml-auto px-1.5 rounded-full bg-yellow/20 text-[9px] uppercase tracking-wide">Phase</span>
-      </div>
+      {!collapsed && (
+        <>
+          <div className="grid grid-cols-4 gap-2 px-3 pb-2">
+            {columns.map((col) => (
+              <Column
+                key={col.key}
+                col={col}
+                waveLabel={wave.label}
+                canWrite={canWrite}
+                syncOf={syncOf}
+                isOver={overCol === col.key}
+                setOver={setOverCol}
+                onMove={onMove}
+                onReorder={onReorder}
+                onMoveToWave={onMoveToWave}
+              />
+            ))}
+          </div>
+          {/* UAT phase row (STO-2173): the wave's acceptance pass after Build. */}
+          <div className="flex items-center gap-2 mx-3 mb-3 px-2 py-1 rounded bg-yellow/10 text-[11px] text-yellow">
+            <span className="codicon codicon-question text-[12px]" />
+            <span className="uppercase text-[9px] tracking-wide">UAT</span>
+            <span className="text-fg-muted">{wave.name} · acceptance pass after Build</span>
+            <span className="ml-auto px-1.5 rounded-full bg-yellow/20 text-[9px] uppercase tracking-wide">Phase</span>
+          </div>
+        </>
+      )}
     </section>
   );
 }
