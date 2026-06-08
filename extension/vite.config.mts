@@ -8,11 +8,13 @@ import { fileURLToPath, URL } from "node:url";
  * there and injects them into a sandboxed webview with a strict CSP.
  *
  * Fixed output filenames (no content hash) so the host can reference them
- * without parsing a manifest. IIFE format keeps the bundle self-contained —
- * no module loader inside the webview sandbox.
+ * without parsing a manifest. IIFE format keeps the bundle self-contained.
+ * `base: "./"` makes url() refs in the bundled CSS (the codicon font) resolve
+ * relative to the webview resource origin instead of an absolute "/".
  */
 export default defineConfig({
   plugins: [react()],
+  base: "./",
   build: {
     outDir: "dist/webview",
     emptyOutDir: true,

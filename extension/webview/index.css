@@ -2,50 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Atrium tokens — identical palette to the Tauri app's src/index.css.
- * The cockpit deliberately uses Atrium's own brand surface, not VS Code theme
- * variables, so it reads as Atrium regardless of the user's editor theme. */
+/* Native VS Code look: adopt the editor theme, font, and size so the cockpit
+ * is identical in feel to the Claude Code panel. Colours come from the theme
+ * variables mapped in tailwind.config.ts. */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --ring: 240 5% 64.9%;
-    --subtle: 240 5% 64.9%;
-
-    --emerald: 160 56% 35%;
-    --emerald-soft: 160 50% 96%;
-    --emerald-border: 160 40% 85%;
-    --amber: 38 60% 42%;
-    --amber-soft: 38 70% 96%;
-    --amber-border: 38 50% 82%;
-    --rose: 0 60% 50%;
-    --rose-soft: 0 70% 97%;
-    --rose-border: 0 50% 88%;
-    --indigo: 218 50% 45%;
-    --indigo-soft: 218 60% 97%;
-    --indigo-border: 218 40% 88%;
-    --violet: 258 40% 50%;
-    --violet-soft: 258 60% 97%;
-    --violet-border: 258 35% 88%;
-    --orange: 20 60% 50%;
-    --orange-soft: 20 60% 97%;
+  html,
+  body,
+  #root {
+    height: 100%;
   }
-
   body {
-    @apply bg-background text-foreground font-sans antialiased;
     margin: 0;
-    font-size: 13px;
-    line-height: 1.5;
-    letter-spacing: -0.005em;
+    font-family: var(--vscode-font-family, -apple-system, system-ui, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground, #cccccc);
+    background: var(--vscode-editor-background, #1e1e1e);
+  }
+  /* Keep codicons crisp and vertically centred next to text. */
+  .codicon {
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: text-bottom;
   }
 }

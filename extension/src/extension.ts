@@ -1,32 +1,32 @@
 import * as vscode from "vscode";
-import { buildHtml, getNonce, STUB_WAVES, type InitPayload } from "./cockpit-html";
+import { buildHtml, getNonce, STAGES, STUB_WAVES, type InitPayload } from "./cockpit-html";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
  *
- * Architecture proof: the cockpit UI is a React webview (built by Vite into
- * dist/webview). All editor / git / terminal / extension-ecosystem features are
- * VS Code's own — this extension only adds the Linear/PRD/sprint cockpit on top
- * and brokers messages between the webview and Node-land (where real Linear-MCP
- * / `claude` stream-json calls will live in Wave 1).
+ * The cockpit UI is a React webview (built by Vite into dist/webview). All
+ * editor / git / terminal / extension-ecosystem features are VS Code's own —
+ * this extension only adds the Linear/PRD/sprint cockpit on top and brokers
+ * project state to the webview (real Linear-MCP / `claude` calls land in Wave 1).
  */
 export function activate(context: vscode.ExtensionContext): void {
-  // 1. Cockpit in the Activity Bar (the "it's a real part of VS Code" surface).
+  // 1. Cockpit in the Activity Bar.
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       CockpitViewProvider.viewType,
       new CockpitViewProvider(context.extensionUri),
+      { webviewOptions: { retainContextWhenHidden: true } },
     ),
   );
 
-  // 2. Same cockpit as a full editor-area tab (the "dashboard beside my code" surface).
+  // 2. Same cockpit as a full editor-area tab — the full-screen surface.
   context.subscriptions.push(
     vscode.commands.registerCommand("atrium.openDashboard", () => {
       const panel = vscode.window.createWebviewPanel(
         "atrium.dashboard",
         "Atrium · Cockpit",
         vscode.ViewColumn.Active,
-        webviewOptions(context.extensionUri),
+        { ...webviewOptions(context.extensionUri), retainContextWhenHidden: true },
       );
       panel.webview.html = getHtml(panel.webview, context.extensionUri);
       wireMessages(panel.webview);
@@ -57,25 +57,12 @@ function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
   };
 }
 
-/** The webview <-> host message channel. This is where real integrations land. */
+/** Webview <-> host channel. The webview asks once it has booted; we answer
+ *  with project state. Ticket interactions are handled inside the webview. */
 function wireMessages(webview: vscode.Webview): void {
-  webview.onDidReceiveMessage((msg: { type?: string; id?: string; title?: string }) => {
-    switch (msg?.type) {
-      case "ready":
-        // Webview booted → push it the project state. Today: real workspace
-        // folders + a stubbed wave/ticket rollup. Tomorrow: Linear MCP.
-        void webview.postMessage({ type: "init", payload: buildInitPayload() });
-        return;
-      case "openTicket":
-        vscode.window.showInformationMessage(
-          `Atrium · ${msg.id} — would open Spec / Tests / Activity inline (Wave 0.5).`,
-        );
-        return;
-      case "runClaude":
-        vscode.window.showInformationMessage(
-          `Atrium · would spawn  claude -p "${msg.title}"  over the stream-json bridge (Wave 1).`,
-        );
-        return;
+  webview.onDidReceiveMessage((msg: { type?: string }) => {
+    if (msg?.type === "ready") {
+      void webview.postMessage({ type: "init", payload: buildInitPayload() });
     }
   });
 }
@@ -86,6 +73,7 @@ function buildInitPayload(): InitPayload {
     project: vscode.workspace.name ?? folders[0] ?? "workspace",
     branch: "claude/vs-plugin-architecture",
     folders,
+    stages: STAGES,
     waves: STUB_WAVES,
   };
 }

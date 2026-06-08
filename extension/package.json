@@ -38,7 +38,24 @@
     "commands": [
       {
         "command": "atrium.openDashboard",
-        "title": "Atrium: Open Dashboard (full tab)"
+        "title": "Atrium: Open Dashboard (full screen)",
+        "icon": "$(screen-full)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "atrium.openDashboard",
+          "when": "view == atrium.cockpit",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "atrium.openDashboard",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
       }
     ]
   },
@@ -66,6 +83,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/vscode": "^1.98.0",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vscode/codicons": "^0.0.36",
     "autoprefixer": "^10",
     "postcss": "^8",
     "tailwindcss": "^3.4",

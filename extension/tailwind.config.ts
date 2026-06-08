@@ -1,80 +1,41 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Atrium design tokens — same shadcn-slate palette as the Tauri app
- * (src/index.css / files/atrium-v5.html). Consumed via
- * `hsl(var(--name) / <alpha-value>)` so opacity utilities work.
- * Content scope is the webview only.
+ * Theme mapped to VS Code's own theme variables so the cockpit is *identical in
+ * look and feel* to the Claude Code panel — it adopts the user's editor theme
+ * (dark by default), font, and accent colours. Fallback values keep it legible
+ * outside VS Code (e.g. in jsdom tests). These are full colour values, not HSL
+ * triples, so no `<alpha-value>` wrapper.
  */
 export default {
   content: ["./webview/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        background: "hsl(var(--background) / <alpha-value>)",
-        foreground: "hsl(var(--foreground) / <alpha-value>)",
-        muted: {
-          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
-          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card) / <alpha-value>)",
-          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
-        },
-        border: "hsl(var(--border) / <alpha-value>)",
-        input: "hsl(var(--input) / <alpha-value>)",
-        primary: {
-          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
-          foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
-          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
-        },
-        ring: "hsl(var(--ring) / <alpha-value>)",
-        subtle: "hsl(var(--subtle) / <alpha-value>)",
-        emerald: {
-          DEFAULT: "hsl(var(--emerald) / <alpha-value>)",
-          soft: "hsl(var(--emerald-soft) / <alpha-value>)",
-          border: "hsl(var(--emerald-border) / <alpha-value>)",
-        },
-        amber: {
-          DEFAULT: "hsl(var(--amber) / <alpha-value>)",
-          soft: "hsl(var(--amber-soft) / <alpha-value>)",
-          border: "hsl(var(--amber-border) / <alpha-value>)",
-        },
-        rose: {
-          DEFAULT: "hsl(var(--rose) / <alpha-value>)",
-          soft: "hsl(var(--rose-soft) / <alpha-value>)",
-          border: "hsl(var(--rose-border) / <alpha-value>)",
-        },
-        indigo: {
-          DEFAULT: "hsl(var(--indigo) / <alpha-value>)",
-          soft: "hsl(var(--indigo-soft) / <alpha-value>)",
-          border: "hsl(var(--indigo-border) / <alpha-value>)",
-        },
-        violet: {
-          DEFAULT: "hsl(var(--violet) / <alpha-value>)",
-          soft: "hsl(var(--violet-soft) / <alpha-value>)",
-          border: "hsl(var(--violet-border) / <alpha-value>)",
-        },
-        orange: {
-          DEFAULT: "hsl(var(--orange) / <alpha-value>)",
-          soft: "hsl(var(--orange-soft) / <alpha-value>)",
-        },
+        bg: "var(--vscode-editor-background, #1e1e1e)",
+        "side-bg": "var(--vscode-sideBar-background, #181818)",
+        fg: "var(--vscode-foreground, #cccccc)",
+        "fg-muted": "var(--vscode-descriptionForeground, #8b8b8b)",
+        border: "var(--vscode-panel-border, #2b2b2b)",
+        hover: "var(--vscode-list-hoverBackground, #2a2d2e)",
+        active: "var(--vscode-list-activeSelectionBackground, #04395e)",
+        "active-fg": "var(--vscode-list-activeSelectionForeground, #ffffff)",
+        link: "var(--vscode-textLink-foreground, #4daafc)",
+        focus: "var(--vscode-focusBorder, #007fd4)",
+        badge: "var(--vscode-badge-background, #4d4d4d)",
+        "badge-fg": "var(--vscode-badge-foreground, #ffffff)",
+        input: "var(--vscode-input-background, #313131)",
+        "input-border": "var(--vscode-input-border, #3c3c3c)",
+        green: "var(--vscode-charts-green, #89d185)",
+        red: "var(--vscode-charts-red, #f14c4c)",
+        blue: "var(--vscode-charts-blue, #3794ff)",
+        yellow: "var(--vscode-charts-yellow, #cca700)",
+        orange: "var(--vscode-charts-orange, #d18616)",
+        purple: "var(--vscode-charts-purple, #b180d7)",
       },
       fontFamily: {
-        sans: ['"Inter Variable"', '"Inter"', "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
-        mono: ['"JetBrains Mono Variable"', '"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-      },
-      fontSize: {
-        "2xs": ["10px", { lineHeight: "1.4" }],
-      },
-      borderRadius: {
-        sm: "4px",
-        DEFAULT: "6px",
-        md: "8px",
-        lg: "10px",
+        sans: ["var(--vscode-font-family, -apple-system, system-ui, sans-serif)"],
+        mono: ["var(--vscode-editor-font-family, ui-monospace, Menlo, monospace)"],
       },
     },
   },

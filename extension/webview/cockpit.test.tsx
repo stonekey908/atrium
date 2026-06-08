@@ -14,11 +14,23 @@ const PAYLOAD: InitPayload = {
   project: "atrium",
   branch: "claude/vs-plugin-architecture",
   folders: ["atrium", "shared"],
+  stages: [
+    { key: "build", label: "Build", status: "active" },
+    { key: "uat", label: "UAT", status: "todo" },
+  ],
   waves: [
     {
       name: "Wave 1 · CLI bridge",
       tickets: [
-        { id: "STO-2164", title: "Conversation strip — stream-json renderer", priority: "urgent", state: "todo" },
+        {
+          id: "STO-2164",
+          title: "Conversation strip — stream-json renderer",
+          priority: "urgent",
+          state: "todo",
+          spec: ["Renders streaming assistant text", "Tool calls as collapsible cards"],
+          tests: { passed: 3, failed: 1, missing: 2 },
+          activity: [{ kind: "pickup", text: "Picked up", when: "today" }],
+        },
       ],
     },
   ],
@@ -29,6 +41,8 @@ function sendInit(payload: InitPayload) {
     window.dispatchEvent(new MessageEvent("message", { data: { type: "init", payload } }));
   });
 }
+
+const TICKET_TITLE = "Conversation strip — stream-json renderer";
 
 describe("Atrium cockpit webview", () => {
   beforeEach(() => postMessage.mockClear());
@@ -43,29 +57,35 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/Connecting to Atrium host/i)).toBeInTheDocument();
   });
 
-  it("renders waves, tickets, and real folder count after init", () => {
+  it("renders the pipeline, waves, tickets and folder count after init", () => {
     render(<App />);
     sendInit(PAYLOAD);
+    expect(screen.getByText("Build")).toBeInTheDocument(); // pipeline stage
     expect(screen.getByText("Wave 1 · CLI bridge")).toBeInTheDocument();
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
-    expect(screen.getByText("2 folders open")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument(); // open folder count
   });
 
-  it("round-trips a runClaude message when ▶ Run is clicked", () => {
+  it("expands a ticket to its acceptance criteria (Spec) on click", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    fireEvent.click(screen.getByRole("button", { name: "▶ Run" }));
-    expect(postMessage).toHaveBeenCalledWith({
-      type: "runClaude",
-      id: "STO-2164",
-      title: "Conversation strip — stream-json renderer",
-    });
+    fireEvent.click(screen.getByText(TICKET_TITLE));
+    expect(screen.getByText("Renders streaming assistant text")).toBeInTheDocument();
   });
 
-  it("posts openTicket when the row (not the Run button) is clicked", () => {
+  it("switches the expanded ticket to the Tests tab", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    fireEvent.click(screen.getByText("Conversation strip — stream-json renderer"));
-    expect(postMessage).toHaveBeenCalledWith({ type: "openTicket", id: "STO-2164" });
+    fireEvent.click(screen.getByText(TICKET_TITLE));
+    fireEvent.click(screen.getByText("tests"));
+    expect(screen.getByText("3 passed")).toBeInTheDocument();
+  });
+
+  it("collapses a wave, hiding its tickets", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText("STO-2164")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Wave 1 · CLI bridge"));
+    expect(screen.queryByText("STO-2164")).toBeNull();
   });
 });
