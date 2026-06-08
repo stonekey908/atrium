@@ -67,7 +67,23 @@
         "key": "ctrl+alt+a",
         "mac": "cmd+alt+a"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Atrium",
+      "properties": {
+        "atrium.linear.apiKey": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "Linear personal API key. When set, the cockpit pulls the board **live** from Linear on refresh; otherwise it uses the committed snapshot. Create one at [linear.app/settings/api](https://linear.app/settings/api)."
+        },
+        "atrium.linear.projectName": {
+          "type": "string",
+          "default": "Atrium",
+          "description": "Linear project name the cockpit loads when a live API key is configured."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "vite build && tsc -p tsconfig.json && cp src/atrium-board.json dist/",
@@ -81,6 +97,7 @@
     "vscode:prepublish": "vite build && tsc -p tsconfig.json && cp src/atrium-board.json dist/"
   },
   "dependencies": {
+    "@linear/sdk": "^86.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

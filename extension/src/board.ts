@@ -65,7 +65,7 @@ export interface Board {
 }
 
 export interface BoardSource {
-  load(): Board;
+  load(): Promise<Board>;
 }
 
 const PRIORITIES = new Set<Priority>(["urgent", "high", "med", "low"]);
@@ -147,20 +147,113 @@ export function validateBoard(raw: unknown): Board {
   return raw as unknown as Board;
 }
 
-/** Today's source: a committed JSON snapshot handed in already-parsed. */
+/** Today's default source: a committed JSON snapshot handed in already-parsed. */
 export class SnapshotSource implements BoardSource {
   constructor(private readonly raw: unknown) {}
-  load(): Board {
+  async load(): Promise<Board> {
     return validateBoard(this.raw);
-  }
-}
-
-/** Future live source (`@linear/sdk` + API key). Seam only — not built yet. */
-export class LinearSdkSource implements BoardSource {
-  load(): Board {
-    throw new Error("LinearSdkSource not implemented — live Linear fetch lands in a later wave");
   }
 }
 
 /** Empty board for the error-fallback path (malformed/missing snapshot). */
 export const EMPTY_BOARD: Board = { project: "", generatedAt: "", spikes: [], waves: [] };
+
+// ── Pure Linear → Board mapping (shared by the live source; SDK-free so it
+//    unit-tests without pulling @linear/sdk) ──────────────────────────────────
+
+/** The flattened shape the live source extracts from a Linear issue. */
+export interface LinearIssueLite {
+  identifier: string;
+  title: string;
+  url: string;
+  priority: number;
+  stateType: string;
+  stateName: string;
+  labels: string[];
+  description: string | null;
+}
+
+/** Wave label → display name + pipeline stage + gating spike. Single source of
+ *  truth for grouping; keep in sync with the snapshot generator. */
+const WAVE_META: { label: string; name: string; stage: string; gatedBy: string | null }[] = [
+  { label: "ATR Wave 0", name: "Wave 0 · Visual layer", stage: "release", gatedBy: null },
+  { label: "ATR Wave 0.5", name: "Wave 0.5 · Wave & ticket rail", stage: "build", gatedBy: null },
+  { label: "ATR Wave 0.6 · Cockpit data", name: "Wave 0.6 · Cockpit data", stage: "build", gatedBy: null },
+  { label: "ATR Wave 1", name: "Wave 1 · CLI bridge", stage: "plan", gatedBy: "T-110" },
+  { label: "ATR Wave 2", name: "Wave 2 · Tool & permission cards", stage: "plan", gatedBy: "T-209" },
+  { label: "ATR Wave 3", name: "Wave 3 · Composer extras", stage: "plan", gatedBy: "T-301" },
+  { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 4", name: "Wave 4 · Rails & palette", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 4.5", name: "Wave 4.5 · Pipeline & UAT", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 5", name: "Wave 5 · Settings & registry", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 7", name: "Wave 7 · History & search", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 8", name: "Wave 8 · Polish", stage: "plan", gatedBy: null },
+];
+
+const SPIKE_META: { id: string; code: string; gatesWave: string }[] = [
+  { id: "STO-2146", code: "T-110", gatesWave: "Wave 1" },
+  { id: "STO-2147", code: "T-209", gatesWave: "Wave 2" },
+  { id: "STO-2115", code: "T-301", gatesWave: "Wave 3" },
+];
+
+export function mapPriority(p: number): Priority {
+  return p === 1 ? "urgent" : p === 2 ? "high" : p === 3 ? "med" : "low";
+}
+
+export function mapState(stateType: string): TicketState {
+  if (stateType === "completed") return "done";
+  if (stateType === "started") return "doing";
+  return "todo";
+}
+
+/** First 3 bullet lines (-, *, or "1.") with their markers stripped. */
+export function specFromDescription(description: string | null): string[] {
+  if (!description) return [];
+  return description
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => /^([-*]|\d+\.)\s+/.test(l))
+    .map((l) => l.replace(/^([-*]|\d+\.)\s+/, "").replace(/^\[[ x]\]\s*/i, "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function issueToTicket(i: LinearIssueLite): Ticket {
+  return {
+    id: i.identifier,
+    title: i.title,
+    url: i.url,
+    priority: mapPriority(i.priority),
+    state: mapState(i.stateType),
+    spec: specFromDescription(i.description),
+    tests: { passed: 0, failed: 0, missing: 0, discovered: false },
+    activity: [],
+  };
+}
+
+/** Groups live Linear issues into the same Board shape the snapshot produces.
+ *  Canceled issues are dropped; empty waves are omitted. Pure. */
+export function boardFromIssues(
+  issues: LinearIssueLite[],
+  opts: { projectName: string; generatedAt: string },
+): Board {
+  const live = issues.filter((i) => i.stateType !== "canceled");
+
+  const waves: Wave[] = WAVE_META.map((meta) => ({
+    name: meta.name,
+    label: meta.label,
+    stage: meta.stage,
+    passN: 1,
+    gatedBy: meta.gatedBy,
+    tickets: live.filter((i) => i.labels.includes(meta.label)).map(issueToTicket),
+  })).filter((w) => w.tickets.length > 0);
+
+  const spikes: Spike[] = SPIKE_META.flatMap((meta) => {
+    const issue = live.find((i) => i.identifier === meta.id);
+    return issue
+      ? [{ id: meta.id, code: meta.code, gatesWave: meta.gatesWave, state: mapState(issue.stateType) }]
+      : [];
+  });
+
+  return { project: opts.projectName, generatedAt: opts.generatedAt, spikes, waves };
+}

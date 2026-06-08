@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
-import { SnapshotSource, EMPTY_BOARD, type Board } from "./board";
+import { validateBoard, EMPTY_BOARD, type Board } from "./board";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
@@ -53,12 +53,12 @@ function trackWebview(webview: vscode.Webview): void {
   activeWebviews.add(webview);
 }
 
-function postInit(webview: vscode.Webview): void {
-  void webview.postMessage({ type: "init", payload: buildInitPayload() });
+async function postInit(webview: vscode.Webview): Promise<void> {
+  void webview.postMessage({ type: "init", payload: await buildInitPayload() });
 }
 
 function refreshAll(): void {
-  for (const webview of activeWebviews) postInit(webview);
+  for (const webview of activeWebviews) void postInit(webview);
 }
 
 export function deactivate(): void {
@@ -99,19 +99,40 @@ function wireMessages(webview: vscode.Webview): void {
 /** Reads the committed snapshot copied next to the compiled host (dist/). On any
  *  failure we degrade to an empty board + an error string the webview surfaces as
  *  a non-fatal banner — never a blank screen. */
-function loadBoard(): { board: Board; error?: string } {
+function loadSnapshot(): { board: Board; error?: string } {
   try {
     const raw = JSON.parse(readFileSync(join(__dirname, "atrium-board.json"), "utf8"));
-    return { board: new SnapshotSource(raw).load() };
+    return { board: validateBoard(raw) };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return { board: EMPTY_BOARD, error: `Couldn't load board snapshot: ${message}` };
   }
 }
 
-function buildInitPayload(): InitPayload {
+/** Picks the data source from settings. With `atrium.linear.apiKey` set we pull
+ *  live from Linear (SDK loaded lazily); on any live failure we fall back to the
+ *  committed snapshot and tell the user why. Without a key we use the snapshot. */
+async function loadBoard(): Promise<{ board: Board; error?: string }> {
+  const cfg = vscode.workspace.getConfiguration("atrium");
+  const apiKey = (cfg.get<string>("linear.apiKey") ?? "").trim();
+  const projectName = (cfg.get<string>("linear.projectName") ?? "").trim() || "Atrium";
+
+  if (!apiKey) return loadSnapshot();
+
+  try {
+    const { LinearSdkSource } = await import("./linear-source");
+    const generatedAt = new Date().toISOString().slice(0, 10);
+    const board = await new LinearSdkSource({ apiKey, projectName, generatedAt }).load();
+    return { board };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ...loadSnapshot(), error: `Live Linear fetch failed (${message}); showing the committed snapshot.` };
+  }
+}
+
+async function buildInitPayload(): Promise<InitPayload> {
   const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.name);
-  const { board, error } = loadBoard();
+  const { board, error } = await loadBoard();
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     branch: "claude/vs-plugin-architecture",
