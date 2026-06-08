@@ -241,7 +241,7 @@
           "title": "NEW-G — UAT case rollup from acceptance criteria + UAT canvas findings",
           "url": "https://linear.app/stonekey/issue/STO-2187/new-g-uat-case-rollup-from-acceptance-criteria-uat-canvas-findings",
           "priority": "med",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Acceptance criteria** — parsed from the ticket description's `## Acceptance` section. Each bullet becomes a UAT case. Status: `pending` until manually marked or until a finding closes it.",
             "**UAT canvas findings** — when a UAT session classifies a finding against this ticket (Wave 4.5 territory, see [STO-2176](https://linear.app/stonekey/issue/STO-2176/uat-canvas-question-card-classified-findings-list)), it lands here as `fail` or `pending` depending on resolution.",
@@ -253,16 +253,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "plan",
+              "text": "Implementation complete (pending UAT). UAT cases derived 1:1 from acceptance criteria (…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "04567b89-2ed2-45ea-a04d-12d4bd779a57",
-          "sortOrder": -1302323
+          "sortOrder": -39106
         },
         {
           "id": "STO-2186",
           "title": "NEW-F — Test discovery: auto-find unit tests, count pass/fail/missing per ticket + per wave",
           "url": "https://linear.app/stonekey/issue/STO-2186/new-f-test-discovery-auto-find-unit-tests-count-passfailmissing-per",
           "priority": "med",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Glob: `**/*.test.{ts,tsx,js,jsx}` and `**/*.spec.{ts,tsx}` (configurable per project in CLAUDE.md / atrium config).",
             "Association heuristics, in order:",
@@ -274,16 +280,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete — reframed (pending UAT). Project-level test-file discovery (ho…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "39eb3860-bd09-4808-b06e-1316b179f19a",
-          "sortOrder": -1301247
+          "sortOrder": -43026
         },
         {
           "id": "STO-2185",
           "title": "NEW-E — Ticket inline-expand: Spec / Tests / Activity tabs",
           "url": "https://linear.app/stonekey/issue/STO-2185/new-e-ticket-inline-expand-spec-tests-activity-tabs",
           "priority": "high",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Three tabs along the top: **Spec** · **Tests** · **Activity**.",
             "Below tabs: panel content (single panel visible at a time).",
@@ -295,9 +307,15 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Already built — verified. Ticket inline-expand with Spec / Tests / Activity tabs is the…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "0c2a44db-99e5-4a86-aa2e-38cda65382e6",
-          "sortOrder": -1300247
+          "sortOrder": -46993
         }
       ]
     },
@@ -551,7 +569,7 @@
           "title": "Fast-track gate — UI-detection blocks bypass with warning chip",
           "url": "https://linear.app/stonekey/issue/STO-2169/fast-track-gate-ui-detection-blocks-bypass-with-warning-chip",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Acceptance criteria contain any of: `screen`, `canvas`, `UI`, `component`, `dialog`, `modal`, `flow`, `view`, `pane`, `card`",
             "Spec mentions `wireframe`, `mockup`, `design`, `figma`, `prototype`",
@@ -563,16 +581,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "plan",
+              "text": "Implementation complete (pending UAT). Fast-track gate as a UI-detection heuristic (isU…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "8a93ae69-6ba5-420c-8993-c7adef043452",
-          "sortOrder": -1284463
+          "sortOrder": -45015
         },
         {
           "id": "STO-2168",
           "title": "Design canvas — mockup-on-canvas + annotation pins",
           "url": "https://linear.app/stonekey/issue/STO-2168/design-canvas-mockup-on-canvas-annotation-pins",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Toolbar: file path (mono), pin count chip (amber soft), edited-timestamp, zoom controls",
             "Stage area: dot-grid background, mockup rendered inside a chrome-styled mini-frame",
@@ -584,16 +608,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete — lightweight, reframed (pending UAT). Design view lists mockup…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "acac7c97-88a1-4093-9aa5-5ecb35059197",
-          "sortOrder": -1283433
+          "sortOrder": -44047
         },
         {
           "id": "STO-2167",
           "title": "Plan canvas — spec doc + acceptance criteria + ticket-tags",
           "url": "https://linear.app/stonekey/issue/STO-2167/plan-canvas-spec-doc-acceptance-criteria-ticket-tags",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Doc title (28px serif, `-0.025em` letter-spacing)",
             "Doc meta row: date · ticket count · file path",
@@ -605,9 +635,15 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "plan",
+              "text": "Implementation complete (pending UAT). Plan view: per-wave acceptance criteria with tic…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "17fd507a-96f0-43cb-a42c-75ccca423405",
-          "sortOrder": -1282450
+          "sortOrder": -38160
         }
       ]
     },
@@ -635,7 +671,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "plan",
+              "text": "Implementation complete (pending UAT). Wave-plan breakdown tally (done / in-flight / in…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "195e7943-9bc5-48d7-bcbf-52ae6a9fedc0",
           "sortOrder": -35195
         },
@@ -656,7 +698,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "Implementation complete (pending UAT). 4-dot audit ribbon (Pickup → Plan → Phase → Clos…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "28cf63fb-4216-4792-8df8-613b358cb37c",
           "sortOrder": -34153
         },
@@ -698,7 +746,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete (pending UAT). Built as a status strip below the header: real w…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "2ca48bd0-9bc5-4067-b844-cc48b6a26286",
           "sortOrder": -33083
         }
@@ -716,7 +770,7 @@
           "title": "Loop-back machinery — chip on wave card + return-strip + Pass-N badge",
           "url": "https://linear.app/stonekey/issue/STO-2177/loop-back-machinery-chip-on-wave-card-return-strip-pass-n-badge",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Amber** `Pass N` chip on the wave card in Tier-1 pipeline",
             "**One-line return-strip** below the pipeline citing the originating finding (\"Wave 3 returned to Design 12 minutes ago — UAT-091 reopened the preview height. 2 pins active. Pass 2 of 3\")",
@@ -728,16 +782,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete (pending UAT). Return-strip below the pipeline surfaces the mos…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "c0abf9c0-2500-4b97-9863-cd692671c8a2",
-          "sortOrder": -1292324
+          "sortOrder": -40971
         },
         {
           "id": "STO-2176",
           "title": "UAT canvas — Question card + classified findings list",
           "url": "https://linear.app/stonekey/issue/STO-2176/uat-canvas-question-card-classified-findings-list",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Hero**: Question card (NEW-11 — supports Tab-to-add-note + screenshot)",
             "**Findings table** below the card:",
@@ -749,16 +809,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete (pending UAT). UAT view with rollup tiles + a classified findin…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "7b94b088-2935-4bd1-9240-064bdba31168",
-          "sortOrder": -1291281
+          "sortOrder": -42051
         },
         {
           "id": "STO-2175",
           "title": "Screenshot annotation — capture, draw, redact, file as finding",
           "url": "https://linear.app/stonekey/issue/STO-2175/screenshot-annotation-capture-draw-redact-file-as-finding",
           "priority": "high",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Global hotkey `⌘⇧4` triggers a snip overlay (system-style cross-hair selection). Screenshot capture goes via the extension host (Node) or a webview capture; the OS capture path differs under a VS Code extension — flag to revisit. The annotation UI stays in the webview.",
             "Camera button in titlebar / composer attach-row triggers same flow",
@@ -770,16 +836,22 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete — lightweight, reframed (pending UAT). The \"file as finding\" pa…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "949a0fcd-f96c-437c-8877-7a4eeee6818d",
-          "sortOrder": -1290336
+          "sortOrder": -45937
         },
         {
           "id": "STO-2174",
           "title": "Tier-1 Project Overview pipeline (Plan / Design / UX / Build / UAT / Release)",
           "url": "https://linear.app/stonekey/issue/STO-2174/tier-1-project-overview-pipeline-plan-design-ux-build-uat-release",
           "priority": "high",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "Title row: swatch (stage colour) · name · count",
             "1px border-bottom rule beneath title",
@@ -791,9 +863,15 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implementation complete (pending UAT). Tier-1 pipeline now derives each stage's state +…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "f27198a7-c460-4f18-b757-f563f9f6ba44",
-          "sortOrder": -1289294
+          "sortOrder": -40062
         }
       ]
     }

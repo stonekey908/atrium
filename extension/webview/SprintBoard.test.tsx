@@ -73,6 +73,26 @@ describe("SprintBoard drag-to-status", () => {
     expect(onReorder).toHaveBeenCalledWith("STO-3", "uuid-STO-3", 30, 9);
   });
 
+  it("promotes a card dragged in from another wave (relabels to the sprint + sets the column state)", () => {
+    const onMoveToWave = vi.fn();
+    const wave: Wave = {
+      name: "Wave 0.7",
+      stage: "build",
+      label: "ATR Wave 0.7 · Sprint board",
+      tickets: [ticket("STO-1", "todo", 10)],
+    };
+    const { container } = render(
+      <SprintBoard wave={wave} canWrite onMove={vi.fn()} onReorder={vi.fn()} onMoveToWave={onMoveToWave} />,
+    );
+    const dt = dataTransfer();
+    dt.setData(
+      "application/x-atrium-card",
+      JSON.stringify({ id: "STO-9", linearId: "uuid-9", fromState: "todo", fromWaveLabel: "ATR Wave 4.5", sortOrder: 5 }),
+    );
+    fireEvent.drop(container.querySelector('[data-col="doing"]')!, { dataTransfer: dt });
+    expect(onMoveToWave).toHaveBeenCalledWith("STO-9", "uuid-9", "ATR Wave 0.7 · Sprint board", "doing");
+  });
+
   it("is read-only without a key: cards aren't draggable and drops are ignored", () => {
     const onMove = vi.fn();
     const { container, getByText, getAllByText } = render(

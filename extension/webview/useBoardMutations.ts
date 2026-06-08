@@ -15,6 +15,9 @@ export interface BoardMutations {
   move: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
   /** Reorder a ticket within its column (STO-2470); writes Linear sortOrder. */
   reorder: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
+  /** Move a ticket into/out of a wave (promote to / demote from the sprint);
+   *  relabels in Linear, then the host refreshes to reposition it. */
+  moveToWave: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
 }
 
 /**
@@ -62,10 +65,16 @@ export function useBoardMutations(waves: Wave[]): BoardMutations {
     vscode.postMessage({ type: "reorderTicket", id, linearId, sortOrder: toSortOrder });
   };
 
+  const moveToWave: BoardMutations["moveToWave"] = (id, linearId, toWaveLabel, toState) => {
+    dispatch({ type: "wavemove", id });
+    vscode.postMessage({ type: "moveToWave", id, linearId, toWaveLabel, toState });
+  };
+
   return {
     displayWaves: applyOrder(applyOverrides(waves, state.overrides), state.order),
     syncOf: (id) => state.sync[id] ?? "idle",
     move,
     reorder,
+    moveToWave,
   };
 }

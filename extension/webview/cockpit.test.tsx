@@ -162,15 +162,15 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/looped back/i)).toBeInTheDocument();
   });
 
-  it("switches to the Plan, Design and UAT views via the tabs", () => {
+  it("switches to the Plan and Design views via the tabs", () => {
     render(<App />);
     sendInit(PAYLOAD);
     fireEvent.click(screen.getByRole("button", { name: /^Plan$/i }));
     expect(screen.getByRole("heading", { name: /acceptance criteria/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Design$/i }));
     expect(screen.getByRole("heading", { name: /design · references/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^UAT$/i }));
-    expect(screen.getByText(/File a finding/i)).toBeInTheDocument();
+    // The UAT tab was removed (too much info for now); no UAT button.
+    expect(screen.queryByRole("button", { name: /^UAT$/i })).toBeNull();
   });
 
   it("asks the host to refresh when the Refresh button is clicked", () => {

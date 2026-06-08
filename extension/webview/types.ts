@@ -38,6 +38,9 @@ export interface Ticket {
 export interface Wave {
   name: string;
   tickets: Ticket[];
+  /** The wave's Linear label (e.g. "ATR Wave 0.7 · Sprint board") — the target
+   *  when a ticket is dragged into or out of this wave. */
+  label?: string;
   /** Where this wave sits on the Tier-1 pipeline (plan…release). */
   stage?: string;
   /** Spike code blocking this wave (e.g. "T-110"), or null/absent. */

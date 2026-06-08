@@ -1,26 +1,9 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
 import { boardToColumns, type KanbanColumn } from "./sprint";
+import { setDrag, getDrag } from "./dnd";
 import { PRIORITY } from "./ui";
 import type { SyncState, Ticket, TicketState, Wave } from "./types";
-
-const DND_MIME = "application/x-atrium-card";
-interface DragPayload {
-  id: string;
-  linearId?: string;
-  fromState: TicketState;
-  sortOrder: number;
-}
-
-function parseDrag(e: React.DragEvent): DragPayload | null {
-  const raw = e.dataTransfer.getData(DND_MIME);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as DragPayload;
-  } catch {
-    return null;
-  }
-}
 
 export interface SprintBoardCallbacks {
   /** True when a live Linear key is set; gates all drag interactions. */
@@ -29,13 +12,15 @@ export interface SprintBoardCallbacks {
   onMove?: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
   /** Drag a card within its column to reprioritize (STO-2470). */
   onReorder?: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
+  /** A card from another wave was dropped in — promote it into this wave. */
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
 }
 
 /**
- * The spotlight kanban for the current sprint. Read-only layout over
- * `boardToColumns`, plus, when a live key is set, drag-to-status across columns
- * (STO-2469) and drag-to-reorder within a column (STO-2470). Without a key the
- * board is read-only and cards aren't draggable (STO-2468).
+ * The spotlight kanban for the current sprint. Drag-to-status across columns
+ * (STO-2469), drag-to-reorder within a column (STO-2470), and — new — drag a
+ * ticket up from the horizon list to promote it into the sprint (relabels it to
+ * this wave). Read-only without a live key (STO-2468).
  */
 export function SprintBoard({
   wave,
@@ -43,6 +28,7 @@ export function SprintBoard({
   canWrite = false,
   onMove,
   onReorder,
+  onMoveToWave,
 }: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
@@ -76,12 +62,14 @@ export function SprintBoard({
           <Column
             key={col.key}
             col={col}
+            waveLabel={wave.label}
             canWrite={canWrite}
             syncOf={syncOf}
             isOver={overCol === col.key}
             setOver={setOverCol}
             onMove={onMove}
             onReorder={onReorder}
+            onMoveToWave={onMoveToWave}
           />
         ))}
       </div>
@@ -96,47 +84,57 @@ export function SprintBoard({
   );
 }
 
-function Tally({ dot, n, label }: { dot: string; n: number; label: string }) {
-  return (
-    <span className="flex items-center gap-1" title={`${n} ${label}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-      {n}
-    </span>
-  );
-}
-
 function Column({
   col,
+  waveLabel,
   canWrite,
   syncOf,
   isOver,
   setOver,
   onMove,
   onReorder,
+  onMoveToWave,
 }: {
   col: KanbanColumn;
+  waveLabel?: string;
   canWrite: boolean;
   syncOf?: (id: string) => SyncState;
   isOver: boolean;
   setOver: (s: TicketState | null) => void;
 } & SprintBoardCallbacks) {
-  /** Drop on the column body (not on a card) → move a card here from elsewhere. */
+  /** A card from another wave was dropped → promote it into this sprint wave. */
+  const promote = (id: string, linearId: string | undefined): boolean => {
+    if (waveLabel && onMoveToWave) {
+      onMoveToWave(id, linearId, waveLabel, col.key);
+      return true;
+    }
+    return false;
+  };
+
   const onColumnDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setOver(null);
     if (!canWrite) return;
-    const p = parseDrag(e);
-    if (p && p.fromState !== col.key) onMove?.(p.id, p.linearId, p.fromState, col.key);
+    const p = getDrag(e);
+    if (!p) return;
+    if (p.fromWaveLabel !== waveLabel) {
+      promote(p.id, p.linearId);
+    } else if (p.fromState !== col.key) {
+      onMove?.(p.id, p.linearId, p.fromState, col.key);
+    }
   };
 
-  /** Drop on a card → reorder before it (same column) or move into this column. */
   const onCardDrop = (index: number, e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setOver(null);
     if (!canWrite) return;
-    const p = parseDrag(e);
+    const p = getDrag(e);
     if (!p) return;
+    if (p.fromWaveLabel !== waveLabel) {
+      promote(p.id, p.linearId);
+      return;
+    }
     if (p.fromState !== col.key) {
       onMove?.(p.id, p.linearId, p.fromState, col.key);
       return;
@@ -175,6 +173,7 @@ function Column({
             sync={syncOf?.(t.id) ?? "idle"}
             draggable={canWrite}
             fromState={col.key}
+            fromWaveLabel={waveLabel}
             onDrop={(e) => onCardDrop(i, e)}
           />
         ))}
@@ -188,23 +187,24 @@ export function KanbanCard({
   sync = "idle",
   draggable = false,
   fromState,
+  fromWaveLabel,
   onDrop,
 }: {
   ticket: Ticket;
   sync?: SyncState;
   draggable?: boolean;
   fromState?: TicketState;
+  fromWaveLabel?: string;
   onDrop?: (e: React.DragEvent) => void;
 }) {
   const onDragStart = (e: React.DragEvent) => {
-    const payload: DragPayload = {
+    setDrag(e, {
       id: ticket.id,
       linearId: ticket.linearId,
       fromState: fromState ?? ticket.state,
+      fromWaveLabel,
       sortOrder: ticket.sortOrder ?? 0,
-    };
-    e.dataTransfer.setData(DND_MIME, JSON.stringify(payload));
-    e.dataTransfer.effectAllowed = "move";
+    });
   };
   return (
     <div
@@ -239,6 +239,15 @@ export function KanbanCard({
       </div>
       <div className="mt-0.5 leading-snug line-clamp-2">{ticket.title}</div>
     </div>
+  );
+}
+
+function Tally({ dot, n, label }: { dot: string; n: number; label: string }) {
+  return (
+    <span className="flex items-center gap-1" title={`${n} ${label}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+      {n}
+    </span>
   );
 }
 

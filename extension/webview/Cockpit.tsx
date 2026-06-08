@@ -7,7 +7,7 @@ import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
 import { PlanView } from "./PlanView";
 import { DesignView } from "./DesignView";
-import { UatView } from "./UatView";
+import { setDrag, getDrag } from "./dnd";
 import { useBoardMutations } from "./useBoardMutations";
 import { PRIORITY, StateIcon, Empty, AuditRibbon } from "./ui";
 import type {
@@ -16,6 +16,7 @@ import type {
   Spike,
   TestSummary,
   Ticket,
+  TicketState,
   Wave,
 } from "./types";
 
@@ -23,10 +24,10 @@ export function Cockpit({ init }: { init: InitPayload }) {
   const [view, setView] = useState<CockpitView>("board");
   // Optimistic write-back layers local moves over the host's board; drag is only
   // enabled in live mode (a key is set), so the board never fakes a sync.
-  const { displayWaves, syncOf, move, reorder } = useBoardMutations(init.waves);
+  const { displayWaves, syncOf, move, reorder, moveToWave } = useBoardMutations(init.waves);
   const canWrite = init.source === "live";
   const sprint = currentSprint(displayWaves);
-  // Plan/UAT read the optimistic board too, so moves reflect everywhere.
+  // Plan reads the optimistic board too, so moves reflect everywhere.
   const liveInit = { ...init, waves: displayWaves };
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
@@ -40,18 +41,33 @@ export function Cockpit({ init }: { init: InitPayload }) {
           <ReturnStrip waves={displayWaves} />
           <ActiveWork waves={displayWaves} branch={init.branch} />
           <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
-          {/* Centred, capped width so it reads well full-screen and in the rail. */}
+          {/* The sprint kanban stays pinned; only the horizon list below scrolls.
+              Drag a card down into a wave to demote it, or a wave ticket up to
+              promote it into the sprint. */}
+          {sprint && (
+            <div className="mx-auto w-full max-w-[1100px] shrink-0">
+              <SprintBoard
+                wave={sprint}
+                syncOf={syncOf}
+                canWrite={canWrite}
+                onMove={move}
+                onReorder={reorder}
+                onMoveToWave={moveToWave}
+              />
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1000px]">
-              {/* Spotlight the current sprint as a kanban; the other waves are the
-                  horizon list below (the current sprint isn't repeated there). */}
-              {sprint && (
-                <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} onReorder={reorder} />
-              )}
+            <div className="mx-auto w-full max-w-[1100px]">
               {displayWaves
                 .filter((w) => w !== sprint)
                 .map((w) => (
-                  <WaveSection key={w.name} wave={w} />
+                  <WaveSection
+                    key={w.name}
+                    wave={w}
+                    sprintLabel={sprint?.label}
+                    canWrite={canWrite}
+                    onMoveToWave={moveToWave}
+                  />
                 ))}
             </div>
           </div>
@@ -59,7 +75,6 @@ export function Cockpit({ init }: { init: InitPayload }) {
       )}
       {view === "plan" && <PlanView init={liveInit} />}
       {view === "design" && <DesignView init={init} />}
-      {view === "uat" && <UatView init={liveInit} />}
     </div>
   );
 }
@@ -68,7 +83,6 @@ const VIEW_TABS: { key: CockpitView; label: string; icon: string }[] = [
   { key: "board", label: "Board", icon: "codicon-layout" },
   { key: "plan", label: "Plan", icon: "codicon-checklist" },
   { key: "design", label: "Design", icon: "codicon-symbol-color" },
-  { key: "uat", label: "UAT", icon: "codicon-verified" },
 ];
 
 function ViewTabs({ view, setView }: { view: CockpitView; setView: (v: CockpitView) => void }) {
@@ -242,16 +256,44 @@ function stageIcon(state: PipelineStage["state"]): string {
   return "codicon-circle-large-outline";
 }
 
-function WaveSection({ wave }: { wave: Wave }) {
+function WaveSection({
+  wave,
+  sprintLabel,
+  canWrite = false,
+  onMoveToWave,
+}: {
+  wave: Wave;
+  sprintLabel?: string;
+  canWrite?: boolean;
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
+}) {
   const [open, setOpen] = useState(true);
+  const [isOver, setIsOver] = useState(false);
   const done = wave.tickets.filter((t) => t.state === "done").length;
   const doing = wave.tickets.filter((t) => t.state === "doing").length;
   const review = wave.tickets.filter((t) => t.state === "review").length;
   const todo = wave.tickets.filter((t) => t.state === "todo").length;
   const current = isCurrentSprint(wave.stage);
   const passN = wave.passN ?? 1;
+
+  // A card dropped from another wave (e.g. the sprint) moves here (demote).
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOver(false);
+    if (!canWrite || !wave.label || !onMoveToWave) return;
+    const p = getDrag(e);
+    if (p && p.fromWaveLabel !== wave.label) onMoveToWave(p.id, p.linearId, wave.label);
+  };
+
   return (
-    <section className={`border-b border-border ${current ? "bg-active/5" : ""}`}>
+    <section
+      onDragOver={canWrite && wave.label ? (e) => { e.preventDefault(); setIsOver(true); } : undefined}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={onDrop}
+      className={`border-b border-border ${current ? "bg-active/5" : ""} ${
+        isOver ? "outline outline-1 outline-link bg-active/10" : ""
+      }`}
+    >
       <button
         className="w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover text-left"
         onClick={() => setOpen((o) => !o)}
@@ -293,9 +335,12 @@ function WaveSection({ wave }: { wave: Wave }) {
       {open && (
         <div>
           {wave.tickets.map((t) => (
-            <TicketRow key={t.id} ticket={t} />
+            <TicketRow key={t.id} ticket={t} draggable={canWrite} fromWaveLabel={wave.label} />
           ))}
         </div>
+      )}
+      {isOver && sprintLabel !== wave.label && (
+        <div className="px-5 py-1 text-[10px] text-link bg-active/10">Drop to move into {wave.name}</div>
       )}
     </section>
   );
@@ -325,7 +370,15 @@ function WaveStageStrip({ stage }: { stage: string }) {
   );
 }
 
-function TicketRow({ ticket }: { ticket: Ticket }) {
+function TicketRow({
+  ticket,
+  draggable = false,
+  fromWaveLabel,
+}: {
+  ticket: Ticket;
+  draggable?: boolean;
+  fromWaveLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((o) => !o);
   return (
@@ -334,6 +387,19 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
         role="button"
         tabIndex={0}
         aria-expanded={open}
+        draggable={draggable}
+        onDragStart={
+          draggable
+            ? (e) =>
+                setDrag(e, {
+                  id: ticket.id,
+                  linearId: ticket.linearId,
+                  fromState: ticket.state,
+                  fromWaveLabel,
+                  sortOrder: ticket.sortOrder ?? 0,
+                })
+            : undefined
+        }
         onClick={toggle}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

@@ -93,6 +93,41 @@ export class LinearWriteClient {
     return res.data?.issueUpdate?.success ?? false;
   }
 
+  /** Moves an issue to a different wave by swapping its `ATR Wave …` label for
+   *  the target one (keeping all non-wave labels). Used by drag between the
+   *  sprint kanban and the horizon list. Returns true on success. */
+  async moveToWave(uuid: string, targetLabelName: string): Promise<boolean> {
+    const readLabels = `
+      query IssueLabels($id: String!) {
+        issue(id: $id) {
+          labels { nodes { id name } }
+          team { labels { nodes { id name } } }
+        }
+      }
+    `;
+    const read = await this.client.client.rawRequest<
+      { issue: { labels: { nodes: { id: string; name: string }[] }; team: { labels: { nodes: { id: string; name: string }[] } } } | null },
+      { id: string }
+    >(readLabels, { id: uuid });
+    const issue = read.data?.issue;
+    if (!issue) throw new Error(`Issue ${uuid} not found`);
+    const target = issue.team.labels.nodes.find((l) => l.name === targetLabelName);
+    if (!target) throw new Error(`Wave label "${targetLabelName}" not found in the team`);
+    // Keep every non-wave label, drop any existing ATR Wave label, add the target.
+    const kept = issue.labels.nodes.filter((l) => !/^ATR Wave/i.test(l.name)).map((l) => l.id);
+    const labelIds = Array.from(new Set([...kept, target.id]));
+    const mutation = `
+      mutation MoveWave($id: String!, $labelIds: [String!]!) {
+        issueUpdate(id: $id, input: { labelIds: $labelIds }) { success }
+      }
+    `;
+    const res = await this.client.client.rawRequest<{ issueUpdate: { success: boolean } }, { id: string; labelIds: string[] }>(
+      mutation,
+      { id: uuid, labelIds },
+    );
+    return res.data?.issueUpdate?.success ?? false;
+  }
+
   /** Posts a comment to an issue — used to file UAT findings (STO-2175/2176). */
   async addComment(issueId: string, body: string): Promise<boolean> {
     const mutation = `

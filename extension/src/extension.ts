@@ -133,6 +133,8 @@ interface InboundMessage {
   fromState?: TicketState;
   toState?: TicketState;
   sortOrder?: number;
+  /** Cross-wave drag (promote into / demote out of the sprint). */
+  toWaveLabel?: string;
   /** Design-canvas + UAT-finding fields. */
   path?: string;
   body?: string;
@@ -152,6 +154,8 @@ function wireMessages(webview: vscode.Webview): void {
       void handleMoveTicket(webview, msg);
     } else if (msg?.type === "reorderTicket") {
       void handleReorderTicket(webview, msg);
+    } else if (msg?.type === "moveToWave") {
+      void handleMoveToWave(webview, msg);
     } else if (msg?.type === "openFile" && msg.path) {
       // Open a design reference in VS Code's own editor (STO-2168).
       void vscode.window.showTextDocument(vscode.Uri.file(msg.path), { preview: true });
@@ -219,6 +223,31 @@ async function handleMoveTicket(webview: vscode.Webview, msg: InboundMessage): P
     }
     const ok = await client.setState(linearId, stateId);
     postMutationResult(webview, { id, ok });
+  } catch (e) {
+    postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/** Cross-wave drag: relabel the issue to the target wave (promote into the
+ *  sprint, or demote back to a wave), optionally set its column state, then
+ *  refresh so the ticket re-appears in its new wave. */
+async function handleMoveToWave(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { id, linearId, toWaveLabel, toState } = msg;
+  if (!id || !toWaveLabel) return;
+  const client = getWriteClient();
+  if (!client || !linearId) {
+    postMutationResult(webview, { id, ok: false, error: "No Linear API key set — board is read-only." });
+    return;
+  }
+  try {
+    await client.moveToWave(linearId, toWaveLabel);
+    if (toState) {
+      const current = await client.readIssue(linearId);
+      const stateId = resolveStateId(current.states, toState);
+      if (stateId) await client.setState(linearId, stateId);
+    }
+    postMutationResult(webview, { id, ok: true });
+    refreshAll(); // re-pull so the ticket shows under its new wave
   } catch (e) {
     postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
   }

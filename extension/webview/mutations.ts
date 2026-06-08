@@ -31,6 +31,7 @@ export const initialMutationState: MutationState = {
 export type MutationAction =
   | { type: "move"; id: string; fromState: TicketState; toState: TicketState }
   | { type: "reorder"; id: string; fromSortOrder: number; toSortOrder: number }
+  | { type: "wavemove"; id: string }
   | { type: "result"; id: string; ok: boolean; conflict?: boolean }
   | { type: "settle"; id: string }
   | { type: "reconcile" };
@@ -57,6 +58,10 @@ export function mutationReducer(s: MutationState, a: MutationAction): MutationSt
         sync: { ...s.sync, [a.id]: "syncing" },
         backupOrder: { ...s.backupOrder, [a.id]: a.fromSortOrder },
       };
+    case "wavemove":
+      // Cross-wave moves aren't optimistic (the ticket changes wave membership);
+      // we just badge it syncing and let the host's post-write refresh reposition it.
+      return { ...s, sync: { ...s.sync, [a.id]: "syncing" } };
     case "result": {
       const base = { ...s, backup: without(s.backup, a.id), backupOrder: without(s.backupOrder, a.id) };
       if (a.ok) {
