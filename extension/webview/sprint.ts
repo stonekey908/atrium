@@ -1,4 +1,4 @@
-import type { StageStatus } from "./types";
+import type { StageStatus, Ticket, Wave } from "./types";
 
 /** The Tier-1 pipeline, in order. A wave's `stage` names where it sits on it. */
 export const PIPELINE: { key: string; label: string }[] = [
@@ -33,4 +33,17 @@ export function waveStages(stage: string): WaveStage[] {
 /** The "sprint we're working on right now" is whatever wave is at the Build stage. */
 export function isCurrentSprint(stage: string | undefined): boolean {
   return stage === "build";
+}
+
+/**
+ * The ticket you're working on right now: the one whose id appears in the
+ * current git branch (e.g. `feat/sto-2181-…` → STO-2181), else the first ticket
+ * in progress, else nothing.
+ */
+export function resolveActiveTicket(waves: Wave[], branch: string): Ticket | null {
+  const tickets = waves.flatMap((w) => w.tickets);
+  const b = branch.toLowerCase();
+  const matched = tickets.find((t) => b.includes(t.id.toLowerCase()));
+  if (matched) return matched;
+  return tickets.find((t) => t.state === "doing") ?? null;
 }

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
-import { waveStages, isCurrentSprint } from "./sprint";
+import { waveStages, isCurrentSprint, resolveActiveTicket } from "./sprint";
+import { computeRollup } from "./rollup";
 import type {
   ActivityKind,
   InitPayload,
   Priority,
+  Spike,
   Stage,
   TestSummary,
   Ticket,
@@ -18,6 +20,8 @@ export function Cockpit({ init }: { init: InitPayload }) {
       <Header init={init} />
       {init.error && <LoadBanner message={init.error} />}
       <Pipeline stages={init.stages} />
+      <ActiveWork waves={init.waves} branch={init.branch} />
+      <RollupBar waves={init.waves} spikes={init.spikes ?? []} />
       {/* Centred, capped width so it reads well full-screen and in the rail. */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1000px]">
@@ -39,6 +43,66 @@ function LoadBanner({ message }: { message: string }) {
       <span className="codicon codicon-warning shrink-0" />
       <span className="truncate">{message}</span>
     </div>
+  );
+}
+
+/** Tier-2 "what am I doing right now": the ticket matched from the current branch
+ *  (or the first in-progress one). Hidden when nothing is active. */
+function ActiveWork({ waves, branch }: { waves: Wave[]; branch: string }) {
+  const active = resolveActiveTicket(waves, branch);
+  if (!active) return null;
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 text-[12px] bg-active/5">
+      <span className="codicon codicon-debug-start text-link shrink-0" />
+      <span className="uppercase text-[9px] tracking-wide text-fg-muted shrink-0">Working on</span>
+      <span className="font-mono text-[11px] text-fg-muted shrink-0">{active.id}</span>
+      <span className="truncate">{active.title}</span>
+      <span className="ml-auto shrink-0">
+        <StateIcon state={active.state} />
+      </span>
+    </div>
+  );
+}
+
+/** Project-wide "where am I overall" glance: segmented progress + counts + spikes. */
+function RollupBar({ waves, spikes }: { waves: Wave[]; spikes: Spike[] }) {
+  const r = computeRollup(waves);
+  if (r.total === 0) return null;
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border shrink-0 text-[11px] text-fg-muted">
+      <SegmentedBar done={r.done} doing={r.doing} todo={r.todo} className="flex-1 min-w-[80px]" />
+      <span className="font-mono shrink-0 text-fg">
+        {r.done}/{r.total} done
+      </span>
+      {r.doing > 0 && <span className="shrink-0">{r.doing} in progress</span>}
+      {spikes.length > 0 && (
+        <span className="flex items-center gap-1 text-orange shrink-0" title="Open spikes gating waves">
+          <span className="codicon codicon-warning" />
+          {spikes.length} spike{spikes.length > 1 ? "s" : ""}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Stacked done / doing / todo bar (todo is the uncovered remainder). */
+function SegmentedBar({
+  done,
+  doing,
+  todo,
+  className = "",
+}: {
+  done: number;
+  doing: number;
+  todo: number;
+  className?: string;
+}) {
+  const total = done + doing + todo || 1;
+  return (
+    <span className={`h-1.5 rounded-full overflow-hidden flex bg-border ${className}`}>
+      <span className="block h-full bg-green" style={{ width: `${(done / total) * 100}%` }} />
+      <span className="block h-full bg-yellow" style={{ width: `${(doing / total) * 100}%` }} />
+    </span>
   );
 }
 
@@ -104,8 +168,10 @@ function stageIcon(status: Stage["status"]): string {
 function WaveSection({ wave }: { wave: Wave }) {
   const [open, setOpen] = useState(true);
   const done = wave.tickets.filter((t) => t.state === "done").length;
-  const pct = wave.tickets.length ? Math.round((done / wave.tickets.length) * 100) : 0;
+  const doing = wave.tickets.filter((t) => t.state === "doing").length;
+  const todo = wave.tickets.filter((t) => t.state === "todo").length;
   const current = isCurrentSprint(wave.stage);
+  const passN = wave.passN ?? 1;
   return (
     <section className={`border-b border-border ${current ? "bg-active/5" : ""}`}>
       <button
@@ -120,13 +186,29 @@ function WaveSection({ wave }: { wave: Wave }) {
             Current sprint
           </span>
         )}
+        {wave.gatedBy && (
+          <span
+            className="flex items-center gap-1 px-1.5 rounded-full bg-orange/15 text-orange text-[9px] uppercase tracking-wide shrink-0"
+            title={`Blocked by spike ${wave.gatedBy}`}
+          >
+            <span className="codicon codicon-warning text-[9px]" />
+            Gated by {wave.gatedBy}
+          </span>
+        )}
+        {passN > 1 && (
+          <span
+            className="flex items-center gap-1 px-1.5 rounded-full bg-yellow/15 text-yellow text-[9px] uppercase tracking-wide shrink-0"
+            title="UAT loop-backs"
+          >
+            <span className="codicon codicon-history text-[9px]" />
+            Pass {passN}
+          </span>
+        )}
         <span className="ml-auto flex items-center gap-2 text-fg-muted text-[11px] shrink-0">
           <span className="font-mono">
             {done}/{wave.tickets.length}
           </span>
-          <span className="w-16 h-1 rounded-full bg-border overflow-hidden">
-            <span className="block h-full bg-green" style={{ width: `${pct}%` }} />
-          </span>
+          <SegmentedBar done={done} doing={doing} todo={todo} className="w-16" />
         </span>
       </button>
       {wave.stage && <WaveStageStrip stage={wave.stage} />}
@@ -174,14 +256,23 @@ const PRIORITY: Record<Priority, { label: string; cls: string }> = {
 
 function TicketRow({ ticket }: { ticket: Ticket }) {
   const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((o) => !o);
   return (
     <div>
-      <button
-        className={`w-full grid grid-cols-[16px_minmax(0,auto)_1fr_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] hover:bg-hover ${
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className={`grid grid-cols-[16px_minmax(0,auto)_1fr_auto_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] cursor-pointer hover:bg-hover ${
           open ? "bg-active text-active-fg" : ""
         }`}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
       >
         <StateIcon state={ticket.state} />
         <span className="font-mono text-[11px] text-fg-muted">{ticket.id}</span>
@@ -189,7 +280,23 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
         <span className={`text-[10px] uppercase tracking-wide ${PRIORITY[ticket.priority].cls}`}>
           {PRIORITY[ticket.priority].label}
         </span>
-      </button>
+        {ticket.url ? (
+          <button
+            type="button"
+            aria-label={`Open ${ticket.id} in Linear`}
+            title="Open in Linear"
+            className="flex items-center text-fg-muted hover:text-link"
+            onClick={(e) => {
+              e.stopPropagation();
+              vscode.postMessage({ type: "openLinear", url: ticket.url });
+            }}
+          >
+            <span className="codicon codicon-link-external text-[12px]" />
+          </button>
+        ) : (
+          <span />
+        )}
+      </div>
       {open && <TicketDetail ticket={ticket} />}
     </div>
   );

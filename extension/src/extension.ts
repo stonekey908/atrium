@@ -89,9 +89,11 @@ function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
 /** Webview <-> host channel. The webview asks once it has booted; we answer
  *  with project state. Ticket interactions are handled inside the webview. */
 function wireMessages(webview: vscode.Webview): void {
-  webview.onDidReceiveMessage((msg: { type?: string }) => {
+  webview.onDidReceiveMessage((msg: { type?: string; url?: string }) => {
     if (msg?.type === "ready" || msg?.type === "refresh") {
-      postInit(webview);
+      void postInit(webview);
+    } else if (msg?.type === "openLinear" && msg.url) {
+      void vscode.env.openExternal(vscode.Uri.parse(msg.url));
     }
   });
 }
@@ -139,6 +141,7 @@ async function buildInitPayload(): Promise<InitPayload> {
     folders,
     stages: STAGES,
     waves: board.waves,
+    spikes: board.spikes,
     error,
   };
 }

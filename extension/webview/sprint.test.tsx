@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { waveStages, isCurrentSprint } from "./sprint";
+import { waveStages, isCurrentSprint, resolveActiveTicket } from "./sprint";
+import type { TicketState, Wave } from "./types";
+
+const tk = (id: string, state: TicketState) => ({
+  id,
+  title: id,
+  priority: "med" as const,
+  state,
+  spec: [],
+  tests: { passed: 0, failed: 0, missing: 0 },
+  activity: [],
+});
+const wavesOf = (...t: ReturnType<typeof tk>[]): Wave[] => [{ name: "W", tickets: t }];
 
 describe("waveStages", () => {
   it("marks stages before the wave's stage done, the stage itself active, later ones todo", () => {
@@ -29,5 +41,21 @@ describe("isCurrentSprint", () => {
     expect(isCurrentSprint("plan")).toBe(false);
     expect(isCurrentSprint("release")).toBe(false);
     expect(isCurrentSprint(undefined)).toBe(false);
+  });
+});
+
+describe("resolveActiveTicket", () => {
+  it("matches a ticket id embedded in the current branch name", () => {
+    const waves = wavesOf(tk("STO-2181", "todo"), tk("STO-2099", "todo"));
+    expect(resolveActiveTicket(waves, "feat/sto-2181-rail")?.id).toBe("STO-2181");
+  });
+
+  it("falls back to the first doing ticket when the branch has no id", () => {
+    const waves = wavesOf(tk("STO-1", "todo"), tk("STO-2", "doing"));
+    expect(resolveActiveTicket(waves, "main")?.id).toBe("STO-2");
+  });
+
+  it("returns null when nothing matches and nothing is in progress", () => {
+    expect(resolveActiveTicket(wavesOf(tk("STO-1", "todo")), "main")).toBeNull();
   });
 });

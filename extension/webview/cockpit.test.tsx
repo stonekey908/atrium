@@ -18,14 +18,18 @@ const PAYLOAD: InitPayload = {
     { key: "build", label: "Build", status: "active" },
     { key: "uat", label: "UAT", status: "todo" },
   ],
+  spikes: [{ id: "STO-2146", code: "T-110", gatesWave: "Wave 1", state: "todo" }],
   waves: [
     {
       name: "Wave 1 · CLI bridge",
       stage: "build",
+      gatedBy: "T-110",
+      passN: 2,
       tickets: [
         {
           id: "STO-2164",
           title: "Conversation strip — stream-json renderer",
+          url: "https://linear.app/stonekey/issue/STO-2164",
           priority: "urgent",
           state: "todo",
           spec: ["Renders streaming assistant text", "Tool calls as collapsible cards"],
@@ -80,6 +84,41 @@ describe("Atrium cockpit webview", () => {
     fireEvent.click(screen.getByText(TICKET_TITLE));
     fireEvent.click(screen.getByText("tests"));
     expect(screen.getByText("3 passed")).toBeInTheDocument();
+  });
+
+  it("shows the Active Work strip for the branch-matched ticket", () => {
+    render(<App />);
+    sendInit({ ...PAYLOAD, branch: "feat/sto-2164-conversation-strip" });
+    expect(screen.getByText(/working on/i)).toBeInTheDocument();
+  });
+
+  it("opens the ticket in Linear via the host when its open button is clicked", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    fireEvent.click(screen.getByRole("button", { name: /open STO-2164 in Linear/i }));
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "openLinear",
+      url: "https://linear.app/stonekey/issue/STO-2164",
+    });
+  });
+
+  it("shows the project rollup with done/total and spike count", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText("0/1 done")).toBeInTheDocument();
+    expect(screen.getByText(/1 spike/i)).toBeInTheDocument();
+  });
+
+  it("flags a gated wave with its blocking spike", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText(/gated by T-110/i)).toBeInTheDocument();
+  });
+
+  it("shows a Pass-N badge when a wave has looped back", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText(/pass 2/i)).toBeInTheDocument();
   });
 
   it("asks the host to refresh when the Refresh button is clicked", () => {

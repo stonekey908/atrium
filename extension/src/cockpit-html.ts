@@ -37,12 +37,19 @@ export interface Stage {
   label: string;
   status: StageStatus;
 }
+export interface Spike {
+  id: string;
+  code: string;
+  gatesWave: string;
+  state: TicketState;
+}
 export interface InitPayload {
   project: string;
   branch: string;
   folders: string[];
   stages: Stage[];
   waves: Wave[];
+  spikes?: Spike[];
   /** Non-fatal load problem (e.g. malformed snapshot); webview shows a banner. */
   error?: string;
 }
