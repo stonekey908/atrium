@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Atrium tokens — identical palette to the Tauri app's src/index.css.
+ * The cockpit deliberately uses Atrium's own brand surface, not VS Code theme
+ * variables, so it reads as Atrium regardless of the user's editor theme. */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --ring: 240 5% 64.9%;
+    --subtle: 240 5% 64.9%;
+
+    --emerald: 160 56% 35%;
+    --emerald-soft: 160 50% 96%;
+    --emerald-border: 160 40% 85%;
+    --amber: 38 60% 42%;
+    --amber-soft: 38 70% 96%;
+    --amber-border: 38 50% 82%;
+    --rose: 0 60% 50%;
+    --rose-soft: 0 70% 97%;
+    --rose-border: 0 50% 88%;
+    --indigo: 218 50% 45%;
+    --indigo-soft: 218 60% 97%;
+    --indigo-border: 218 40% 88%;
+    --violet: 258 40% 50%;
+    --violet-soft: 258 60% 97%;
+    --violet-border: 258 35% 88%;
+    --orange: 20 60% 50%;
+    --orange-soft: 20 60% 97%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+  }
+}
