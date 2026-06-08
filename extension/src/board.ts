@@ -197,6 +197,8 @@ const WAVE_META: { label: string; name: string; stage: string; gatedBy: string |
   { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design canvases", stage: "plan", gatedBy: null },
   { label: "ATR Wave 4", name: "Wave 4 · Status, audit & summary", stage: "plan", gatedBy: null },
   { label: "ATR Wave 4.5", name: "Wave 4.5 · Pipeline & UAT", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 5 · SDLC flow", name: "Wave 5 · SDLC flow", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 6 · Ship & portability", name: "Wave 6 · Ship & portability", stage: "plan", gatedBy: null },
 ];
 
 // All earlier spikes (T-110/T-209/T-301) were cancelled with their waves in the
@@ -268,6 +270,19 @@ function issueToTicket(i: LinearIssueLite): Ticket {
   };
 }
 
+/**
+ * Derives a wave's pipeline stage from its ticket states (STO-2476): all done →
+ * `release`; any active (doing/review) → `build`; otherwise (nothing started) →
+ * `plan`. The `fallback` (the WAVE_META stage) is used only for an empty wave.
+ * Design/UX/UAT stages are conditional and not derived here (STO-2477).
+ */
+export function deriveStage(tickets: Ticket[], fallback: string): string {
+  if (tickets.length === 0) return fallback;
+  if (tickets.every((t) => t.state === "done")) return "release";
+  if (tickets.some((t) => t.state === "doing" || t.state === "review")) return "build";
+  return "plan";
+}
+
 /** Groups live Linear issues into the same Board shape the snapshot produces.
  *  Canceled issues are dropped; empty waves are omitted. Pure. */
 export function boardFromIssues(
@@ -276,14 +291,17 @@ export function boardFromIssues(
 ): Board {
   const live = issues.filter((i) => i.stateType !== "canceled");
 
-  const waves: Wave[] = WAVE_META.map((meta) => ({
-    name: meta.name,
-    label: meta.label,
-    stage: meta.stage,
-    passN: 1,
-    gatedBy: meta.gatedBy,
-    tickets: live.filter((i) => i.labels.includes(meta.label)).map(issueToTicket),
-  })).filter((w) => w.tickets.length > 0);
+  const waves: Wave[] = WAVE_META.map((meta) => {
+    const tickets = live.filter((i) => i.labels.includes(meta.label)).map(issueToTicket);
+    return {
+      name: meta.name,
+      label: meta.label,
+      stage: deriveStage(tickets, meta.stage),
+      passN: 1,
+      gatedBy: meta.gatedBy,
+      tickets,
+    };
+  }).filter((w) => w.tickets.length > 0);
 
   // Anything without a recognized wave label still shows — never silently dropped.
   const known = new Set(WAVE_META.map((m) => m.label));

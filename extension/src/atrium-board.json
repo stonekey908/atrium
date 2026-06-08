@@ -232,7 +232,7 @@
     {
       "name": "Wave 0.5 · Ticket detail & rollups",
       "label": "ATR Wave 0.5",
-      "stage": "plan",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -322,7 +322,7 @@
     {
       "name": "Wave 0.6 · Cockpit data",
       "label": "ATR Wave 0.6 · Cockpit data",
-      "stage": "uat",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -466,7 +466,7 @@
     {
       "name": "Wave 0.7 · Sprint board",
       "label": "ATR Wave 0.7 · Sprint board",
-      "stage": "build",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -560,7 +560,7 @@
     {
       "name": "Wave 3.5 · Plan & Design canvases",
       "label": "ATR Wave 3.5",
-      "stage": "plan",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -650,7 +650,7 @@
     {
       "name": "Wave 4 · Status, audit & summary",
       "label": "ATR Wave 4",
-      "stage": "plan",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -740,7 +740,7 @@
     {
       "name": "Wave 4.5 · Pipeline & UAT",
       "label": "ATR Wave 4.5",
-      "stage": "plan",
+      "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
@@ -851,6 +851,240 @@
           ],
           "linearId": "f27198a7-c460-4f18-b757-f563f9f6ba44",
           "sortOrder": -1793498
+        }
+      ]
+    },
+    {
+      "name": "Wave 5 · SDLC flow",
+      "label": "ATR Wave 5 · SDLC flow",
+      "stage": "plan",
+      "passN": 1,
+      "gatedBy": null,
+      "tickets": [
+        {
+          "id": "STO-2485",
+          "title": "Spike: how does the cockpit know something is &quot;in testing&quot;? (and is it worth it)",
+          "url": "https://linear.app/stonekey/issue/STO-2485/spike-how-does-the-cockpit-know-something-is-andquotin-testingandquot",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "A Linear **workflow state** — is \"In Review\" enough, or is there a dedicated \"QA\"/\"Testing\"/\"UAT\" state to map?",
+            "A **UAT label** on tickets/waves?",
+            "**Test-run results** (would need running the suite — likely too heavy for a passive cockpit)?"
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "88db7dc2-1468-486a-b4e4-421693dda738",
+          "sortOrder": -1479094
+        },
+        {
+          "id": "STO-2484",
+          "title": "UAT / testing cycle — how the flow represents build → test → release",
+          "url": "https://linear.app/stonekey/issue/STO-2484/uat-testing-cycle-how-the-flow-represents-build-test-release",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "Where testing/UAT sits in the pipeline (Plan → Build → **UAT/test** → Release) and how a wave reads while it's being tested.",
+            "Loop-back: a wave that fails UAT returns to Build/Design (Pass-N chip + return-strip already built).",
+            "Decide whether to revive the parked `UatView` (classified findings composer → Linear comment) as the testing surface, or keep it lighter."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "4c6d22df-c8c8-4ce9-9d2a-34fae7baab81",
+          "sortOrder": -1478085
+        },
+        {
+          "id": "STO-2481",
+          "title": "End-to-end dogfood — run Atrium start→finish on a real in-flight wave",
+          "url": "https://linear.app/stonekey/issue/STO-2481/end-to-end-dogfood-run-atrium-startfinish-on-a-real-in-flight-wave",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "Take one wave end-to-end through the cockpit (define the flow steps explicitly first).",
+            "Have a ticket genuinely in flight while doing it, to see how the live board + sprint behave.",
+            "Log every friction point."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "ec0576d6-eb37-4a5d-b8df-65c24a0038cf",
+          "sortOrder": -1474838
+        },
+        {
+          "id": "STO-2480",
+          "title": "Plan canvas — render the PRD + make it editable / reorderable",
+          "url": "https://linear.app/stonekey/issue/STO-2480/plan-canvas-render-the-prd-make-it-editable-reorderable",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "Render the wave's PRD doc (resolved via file-discovery) in the Plan canvas.",
+            "Reorder acceptance criteria / tickets → write back Linear `sortOrder` (the primitive already exists from the kanban).",
+            "Requirements stay as Linear tickets + the repo PRD doc; Atrium surfaces + reorders, doesn't replace Linear."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "e95f9d5a-6ae9-4ddb-a02e-c3de48b68dbe",
+          "sortOrder": -1473895
+        },
+        {
+          "id": "STO-2479",
+          "title": "Design canvas — render mockups live (preview) + edit affordance",
+          "url": "https://linear.app/stonekey/issue/STO-2479/design-canvas-render-mockups-live-preview-edit-affordance",
+          "priority": "high",
+          "state": "todo",
+          "spec": [
+            "Live-preview HTML mockups in a sandboxed iframe inside the webview (look good).",
+            "\"Open to edit in VS Code\" / \"ask Claude to edit\" affordance — editing happens on the **repo files** (agent or user); Atrium re-renders on change.",
+            "Render PRD/spec markdown nicely where relevant."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "7e61c34e-dd12-4496-b73f-ef78e55ab8b1",
+          "sortOrder": -1472985
+        },
+        {
+          "id": "STO-2478",
+          "title": "File discovery — how Atrium finds the PRD + mockups for a wave/sprint",
+          "url": "https://linear.app/stonekey/issue/STO-2478/file-discovery-how-atrium-finds-the-prd-mockups-for-a-wavesprint",
+          "priority": "high",
+          "state": "todo",
+          "spec": [
+            "Naming convention (e.g. `docs/superpowers/specs/<wave>.md`, `files/<wave>-*.html`)?",
+            "Markdown frontmatter tagging a file to a wave?",
+            "A small per-project manifest (`.atrium/waves.json`)?"
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "54dc076a-a680-4f8d-9f56-ccfc178db2d1",
+          "sortOrder": -1471913
+        },
+        {
+          "id": "STO-2477",
+          "title": "Conditional Design / UX stages — only enacted when there's design work",
+          "url": "https://linear.app/stonekey/issue/STO-2477/conditional-design-ux-stages-only-enacted-when-theres-design-work",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "**When are Design/UX enacted per wave?** Options: a `Design`/`UX` signal (label), the presence of mockup/design files for the wave (ties to file-discovery), or a manual per-wave toggle.",
+            "Default flow with no design = **Plan → Build → (UAT) → Release**; Design/UX light up only when the wave has design scope.",
+            "Pipeline only marks Design/UX active when the wave genuinely has design scope; no empty forced stages."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "1f364034-2ac7-48ec-8dcd-3785221c5ed0",
+          "sortOrder": -1471000
+        },
+        {
+          "id": "STO-2476",
+          "title": "Auto-derive wave pipeline stage from ticket states",
+          "url": "https://linear.app/stonekey/issue/STO-2476/auto-derive-wave-pipeline-stage-from-ticket-states",
+          "priority": "high",
+          "state": "done",
+          "spec": [
+            "No ticket started → **Plan**",
+            "The second any ticket is in progress / in review → **Build**",
+            "All tickets done → **Release**"
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [
+            {
+              "kind": "plan",
+              "text": "Done. deriveStage(tickets, fallback) in board.ts applied in boardFromIssues: all done →…",
+              "when": "2026-06-08"
+            }
+          ],
+          "linearId": "a7626c23-f0d3-4f2a-893d-d054d99ae4f1",
+          "sortOrder": -1799589
+        }
+      ]
+    },
+    {
+      "name": "Wave 6 · Ship & portability",
+      "label": "ATR Wave 6 · Ship & portability",
+      "stage": "plan",
+      "passN": 1,
+      "gatedBy": null,
+      "tickets": [
+        {
+          "id": "STO-2483",
+          "title": "Provider portability — formalize a BoardWriter interface + Jira adapter spike",
+          "url": "https://linear.app/stonekey/issue/STO-2483/provider-portability-formalize-a-boardwriter-interface-jira-adapter",
+          "priority": "low",
+          "state": "todo",
+          "spec": [
+            "Formalize a clean `BoardWriter` interface (setState / setSortOrder / moveToWave / addComment) alongside the existing `BoardSource` read interface.",
+            "Spike a **Jira adapter**: map Jira status-categories / labels-or-components / rank / **Sprints** (native — maps better than Linear cycles) → the cockpit model.",
+            "Document the adapter contract so a fork can implement a new provider against it."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "3fd85ae1-65c1-4203-990a-ea9ad1dc06cb",
+          "sortOrder": -1476986
+        },
+        {
+          "id": "STO-2482",
+          "title": "Distribute the .vsix — publish so others can install",
+          "url": "https://linear.app/stonekey/issue/STO-2482/distribute-the-vsix-publish-so-others-can-install",
+          "priority": "med",
+          "state": "todo",
+          "spec": [
+            "**Open VSX** (works in VS Code + forks + Theia) — preferred per the staged plan.",
+            "MS Marketplace.",
+            "Or attach the `.vsix` to a GitHub release (\"install VS Code + this .vsix\")."
+          ],
+          "tests": {
+            "passed": 0,
+            "failed": 0,
+            "missing": 0,
+            "discovered": false
+          },
+          "activity": [],
+          "linearId": "3026cfb6-06f5-418f-b3dc-ccb322d7a8f9",
+          "sortOrder": -1475934
         }
       ]
     }

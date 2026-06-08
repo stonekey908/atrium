@@ -7,8 +7,34 @@ import {
   specFromDescription,
   boardFromIssues,
   activityFromComments,
+  deriveStage,
   type LinearIssueLite,
+  type Ticket,
 } from "./board";
+
+const ticketIn = (state: Ticket["state"]): Ticket => ({
+  id: "x",
+  title: "x",
+  url: "u",
+  priority: "med",
+  state,
+  spec: [],
+  tests: { passed: 0, failed: 0, missing: 0, discovered: false },
+  activity: [],
+});
+
+describe("deriveStage", () => {
+  it("derives the pipeline stage from ticket states", () => {
+    expect(deriveStage([ticketIn("done"), ticketIn("done")], "plan")).toBe("release");
+    expect(deriveStage([ticketIn("doing"), ticketIn("todo")], "plan")).toBe("build");
+    expect(deriveStage([ticketIn("review"), ticketIn("done")], "plan")).toBe("build");
+    expect(deriveStage([ticketIn("todo"), ticketIn("todo")], "plan")).toBe("plan");
+  });
+
+  it("uses the fallback only for an empty wave", () => {
+    expect(deriveStage([], "uat")).toBe("uat");
+  });
+});
 
 /** A minimal well-formed board used across the validation tests. */
 const GOOD = {
