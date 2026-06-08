@@ -85,6 +85,8 @@ export interface LinearSourceOptions {
   apiKey: string;
   projectName: string;
   generatedAt: string;
+  /** Label prefix that marks a wave/sprint (default "ATR Wave"). */
+  wavePrefix?: string;
 }
 
 /** Pulls the board live from Linear. Falls back is handled by the caller. */
@@ -98,7 +100,11 @@ export class LinearSdkSource implements BoardSource {
       throw new Error(`No issues found for Linear project "${this.opts.projectName}" — check the project name and API key.`);
     }
     return validateBoard(
-      boardFromIssues(issues, { projectName: this.opts.projectName, generatedAt: this.opts.generatedAt }),
+      boardFromIssues(issues, {
+        projectName: this.opts.projectName,
+        generatedAt: this.opts.generatedAt,
+        wavePrefix: this.opts.wavePrefix,
+      }),
     );
   }
 }

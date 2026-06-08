@@ -4,7 +4,7 @@
   "spikes": [],
   "waves": [
     {
-      "name": "Wave 0 · Visual layer",
+      "name": "Wave 0",
       "label": "ATR Wave 0",
       "stage": "release",
       "passN": 1,
@@ -230,7 +230,7 @@
       ]
     },
     {
-      "name": "Wave 0.5 · Ticket detail & rollups",
+      "name": "Wave 0.5",
       "label": "ATR Wave 0.5",
       "stage": "release",
       "passN": 1,
@@ -558,7 +558,7 @@
       ]
     },
     {
-      "name": "Wave 3.5 · Plan & Design canvases",
+      "name": "Wave 3.5",
       "label": "ATR Wave 3.5",
       "stage": "release",
       "passN": 1,
@@ -648,7 +648,7 @@
       ]
     },
     {
-      "name": "Wave 4 · Status, audit & summary",
+      "name": "Wave 4",
       "label": "ATR Wave 4",
       "stage": "release",
       "passN": 1,
@@ -738,7 +738,7 @@
       ]
     },
     {
-      "name": "Wave 4.5 · Pipeline & UAT",
+      "name": "Wave 4.5",
       "label": "ATR Wave 4.5",
       "stage": "release",
       "passN": 1,

@@ -290,13 +290,14 @@ async function loadBoard(): Promise<{ board: Board; error?: string; source: "sna
   const cfg = vscode.workspace.getConfiguration("atrium");
   const apiKey = (cfg.get<string>("linear.apiKey") ?? "").trim();
   const projectName = (cfg.get<string>("linear.projectName") ?? "").trim() || "Atrium";
+  const wavePrefix = (cfg.get<string>("linear.wavePrefix") ?? "").trim() || undefined;
 
   if (!apiKey) return { ...loadSnapshot(), source: "snapshot" };
 
   try {
     const { LinearSdkSource } = await import("./linear-source");
     const generatedAt = new Date().toISOString().slice(0, 10);
-    const board = await new LinearSdkSource({ apiKey, projectName, generatedAt }).load();
+    const board = await new LinearSdkSource({ apiKey, projectName, generatedAt, wavePrefix }).load();
     return { board, source: "live" };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

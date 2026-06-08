@@ -171,15 +171,24 @@ describe("boardFromIssues", () => {
     expect(() => validateBoard(board)).not.toThrow();
   });
 
-  it("groups issues into named, ordered, non-empty waves with stage metadata", () => {
+  it("detects waves dynamically from labels, named from the label and ordered by number", () => {
+    // Names are derived from the labels (leading "ATR " dropped), not a hardcoded map.
     expect(board.waves.map((w) => w.name)).toEqual([
-      "Wave 0 · Visual layer",
+      "Wave 0",
       "Wave 0.6 · Cockpit data",
       "Wave 0.7 · Sprint board",
     ]);
     expect(board.waves[0].stage).toBe("release");
-    // The current sprint is whichever wave sits at the Build stage.
     expect(board.waves.find((w) => w.name === "Wave 0.7 · Sprint board")!.stage).toBe("build");
+  });
+
+  it("honours a custom wave prefix (e.g. Sprint labels)", () => {
+    const issues: LinearIssueLite[] = [
+      { id: "u", sortOrder: 1, comments: [], identifier: "STO-A", title: "a", url: "u", priority: 3, stateType: "started", stateName: "In Progress", labels: ["Sprint 2"], description: null },
+    ];
+    const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "2026-06-08", wavePrefix: "Sprint" });
+    expect(b.waves.map((w) => w.name)).toEqual(["Sprint 2"]);
+    expect(b.waves[0].stage).toBe("build");
   });
 
   it("excludes canceled issues", () => {

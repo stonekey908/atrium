@@ -2,7 +2,7 @@
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
   "description": "Linear / PRD / sprint cockpit for Claude Code — live mock-up POC running as a VS Code extension.",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "publisher": "atrium",
   "private": true,
   "license": "UNLICENSED",
@@ -64,6 +64,11 @@
           "type": "string",
           "default": "Atrium",
           "description": "Linear project name the cockpit loads when a live API key is configured."
+        },
+        "atrium.linear.wavePrefix": {
+          "type": "string",
+          "default": "ATR Wave",
+          "markdownDescription": "Label prefix that marks a **wave / sprint**. Any Linear label starting with this (case-insensitive) becomes a wave on the board — so new sprints show up automatically, no rebuild. Change it to your own convention (e.g. `Sprint`, `Wave`). The display name drops a leading `ATR `."
         },
         "atrium.linear.pollSeconds": {
           "type": "number",

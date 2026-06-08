@@ -187,23 +187,23 @@ export interface LinearIssueLite {
   comments: { body: string; createdAt: string }[];
 }
 
-/** Wave label → display name + pipeline stage + gating spike. Single source of
- *  truth for grouping; keep in sync with the snapshot generator. */
-const WAVE_META: { label: string; name: string; stage: string; gatedBy: string | null }[] = [
-  { label: "ATR Wave 0", name: "Wave 0 · Visual layer", stage: "release", gatedBy: null },
-  { label: "ATR Wave 0.5", name: "Wave 0.5 · Ticket detail & rollups", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 0.6 · Cockpit data", name: "Wave 0.6 · Cockpit data", stage: "uat", gatedBy: null },
-  { label: "ATR Wave 0.7 · Sprint board", name: "Wave 0.7 · Sprint board", stage: "build", gatedBy: null },
-  { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design canvases", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 4", name: "Wave 4 · Status, audit & summary", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 4.5", name: "Wave 4.5 · Pipeline & UAT", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 5 · SDLC flow", name: "Wave 5 · SDLC flow", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 6 · Ship & portability", name: "Wave 6 · Ship & portability", stage: "plan", gatedBy: null },
-];
+/** Default wave-label prefix. A Linear label starting with this (case-insensitive)
+ *  is treated as a wave/sprint. Overridable via the `atrium.linear.wavePrefix`
+ *  setting so the cockpit works with any labelling convention without a rebuild. */
+export const DEFAULT_WAVE_PREFIX = "ATR Wave";
 
-// All earlier spikes (T-110/T-209/T-301) were cancelled with their waves in the
-// lighter-extension prune; an empty list means no spike chips show.
-const SPIKE_META: { id: string; code: string; gatesWave: string }[] = [];
+/** Display name for a wave label: drops a leading "ATR " so "ATR Wave 5 · SDLC
+ *  flow" reads "Wave 5 · SDLC flow". Whatever you label it in Linear is the name. */
+export function waveName(label: string): string {
+  return label.replace(/^ATR\s+/i, "").trim() || label;
+}
+
+/** Sort key for a wave label: the first number in it (e.g. "ATR Wave 4.5" → 4.5).
+ *  Labels with no number sort last. */
+export function waveOrder(label: string): number {
+  const m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : Number.POSITIVE_INFINITY;
+}
 
 export function mapPriority(p: number): Priority {
   return p === 1 ? "urgent" : p === 2 ? "high" : p === 3 ? "med" : "low";
@@ -283,29 +283,34 @@ export function deriveStage(tickets: Ticket[], fallback: string): string {
   return "plan";
 }
 
-/** Groups live Linear issues into the same Board shape the snapshot produces.
- *  Canceled issues are dropped; empty waves are omitted. Pure. */
+/**
+ * Builds the Board by **detecting waves dynamically from the labels present in
+ * Linear** — any label starting with `wavePrefix` (default "ATR Wave") becomes a
+ * wave, sorted by its number, named from the label, stage derived from ticket
+ * states. No hardcoded wave list, so a new sprint label just shows up — no
+ * rebuild. Canceled issues are dropped; issues with no wave label fall into an
+ * "Unsorted" bucket so nothing is silently lost. Pure.
+ */
 export function boardFromIssues(
   issues: LinearIssueLite[],
-  opts: { projectName: string; generatedAt: string },
+  opts: { projectName: string; generatedAt: string; wavePrefix?: string },
 ): Board {
+  const prefix = (opts.wavePrefix ?? DEFAULT_WAVE_PREFIX).trim().toLowerCase();
+  const isWaveLabel = (label: string) => label.trim().toLowerCase().startsWith(prefix);
   const live = issues.filter((i) => i.stateType !== "canceled");
 
-  const waves: Wave[] = WAVE_META.map((meta) => {
-    const tickets = live.filter((i) => i.labels.includes(meta.label)).map(issueToTicket);
-    return {
-      name: meta.name,
-      label: meta.label,
-      stage: deriveStage(tickets, meta.stage),
-      passN: 1,
-      gatedBy: meta.gatedBy,
-      tickets,
-    };
-  }).filter((w) => w.tickets.length > 0);
+  // The distinct wave labels actually used on live issues, in wave-number order.
+  const waveLabels = Array.from(new Set(live.flatMap((i) => i.labels.filter(isWaveLabel)))).sort(
+    (a, b) => waveOrder(a) - waveOrder(b) || a.localeCompare(b),
+  );
 
-  // Anything without a recognized wave label still shows — never silently dropped.
-  const known = new Set(WAVE_META.map((m) => m.label));
-  const orphans = live.filter((i) => !i.labels.some((l) => known.has(l)));
+  const waves: Wave[] = waveLabels.map((label) => {
+    const tickets = live.filter((i) => i.labels.includes(label)).map(issueToTicket);
+    return { name: waveName(label), label, stage: deriveStage(tickets, "plan"), passN: 1, gatedBy: null, tickets };
+  });
+
+  // Anything with no wave label still shows — never silently dropped.
+  const orphans = live.filter((i) => !i.labels.some(isWaveLabel));
   if (orphans.length > 0) {
     waves.push({
       name: "Unsorted · No sprint",
@@ -317,12 +322,5 @@ export function boardFromIssues(
     });
   }
 
-  const spikes: Spike[] = SPIKE_META.flatMap((meta) => {
-    const issue = live.find((i) => i.identifier === meta.id);
-    return issue
-      ? [{ id: meta.id, code: meta.code, gatesWave: meta.gatesWave, state: mapState(issue.stateType, issue.stateName) }]
-      : [];
-  });
-
-  return { project: opts.projectName, generatedAt: opts.generatedAt, spikes, waves };
+  return { project: opts.projectName, generatedAt: opts.generatedAt, spikes: [], waves };
 }
