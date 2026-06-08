@@ -140,6 +140,23 @@ describe("boardFromIssues", () => {
     expect(ids).toContain("STO-2146");
   });
 
+  it("collects tickets with no recognized wave label into an Unsorted bucket", () => {
+    const issues: LinearIssueLite[] = [
+      { identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 1"], description: null },
+      { identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
+      { identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
+    ];
+    const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "2026-06-08" });
+    const unsorted = b.waves.find((w) => w.name === "Unsorted · No sprint");
+    expect(unsorted).toBeTruthy();
+    expect(unsorted!.tickets.map((t) => t.id).sort()).toEqual(["STO-2", "STO-3"]);
+    expect(unsorted!.stage).toBe("");
+  });
+
+  it("adds no Unsorted bucket when every ticket has a wave label", () => {
+    expect(board.waves.some((w) => w.name === "Unsorted · No sprint")).toBe(false);
+  });
+
   it("maps ticket fields and derives spikes from known ids present in the input", () => {
     const ticket = board.waves[0].tickets[0];
     expect(ticket).toMatchObject({ id: "STO-2095", priority: "high", state: "done" });

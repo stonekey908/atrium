@@ -248,6 +248,20 @@ export function boardFromIssues(
     tickets: live.filter((i) => i.labels.includes(meta.label)).map(issueToTicket),
   })).filter((w) => w.tickets.length > 0);
 
+  // Anything without a recognized wave label still shows — never silently dropped.
+  const known = new Set(WAVE_META.map((m) => m.label));
+  const orphans = live.filter((i) => !i.labels.some((l) => known.has(l)));
+  if (orphans.length > 0) {
+    waves.push({
+      name: "Unsorted · No sprint",
+      label: "",
+      stage: "",
+      passN: 1,
+      gatedBy: null,
+      tickets: orphans.map(issueToTicket),
+    });
+  }
+
   const spikes: Spike[] = SPIKE_META.flatMap((meta) => {
     const issue = live.find((i) => i.identifier === meta.id);
     return issue

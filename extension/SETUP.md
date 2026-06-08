@@ -38,6 +38,13 @@ You need a Linear **personal API key**. This is a one-time setup.
   Command Palette).
 - The cockpit re-queries Linear and re-renders in place — no relaunch.
 
+### Optional: auto-refresh
+
+By default the cockpit only refreshes when you ask it to. To auto-refresh on a
+timer, set **Atrium › Linear: Poll Seconds** (in the same settings screen) to a
+number of seconds — e.g. `120`. `0` (the default) keeps it **off**. This only
+does useful work when a live API key is set.
+
 ### What happens if something's wrong
 
 - **No key set** → the cockpit silently uses the committed snapshot. Nothing breaks.

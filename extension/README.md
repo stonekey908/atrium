@@ -67,7 +67,9 @@ extension/
    `spec[]` = up to 3 acceptance-criteria bullets from the description;
    `tests` = `{0,0,0,discovered:false}` (real counts await test discovery).
 4. Group by `ATR Wave *` label into the ordered `waves[]`; set `gatedBy` to the
-   spike code for Waves 1/2/3 (`T-110`/`T-209`/`T-301`); `passN: 1`.
+   spike code for Waves 1/2/3 (`T-110`/`T-209`/`T-301`); `passN: 1`. Any
+   non-canceled issue with no `ATR Wave *` label goes into a trailing
+   `Unsorted · No sprint` wave (`stage: ""`) so nothing is dropped.
 5. Write the JSON to `src/atrium-board.json` and run `bun run test` —
    `board.test.ts` + the live-file load will flag any schema drift.
 

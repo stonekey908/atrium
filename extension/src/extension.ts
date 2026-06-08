@@ -43,6 +43,33 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("atrium.refreshBoard", () => refreshAll()),
   );
+
+  // 4. Optional auto-refresh (off by default). Restarts when the setting changes.
+  setupPolling();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("atrium.linear.pollSeconds")) setupPolling();
+    }),
+    { dispose: stopPolling },
+  );
+}
+
+let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+function stopPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = undefined;
+  }
+}
+
+/** Reads `atrium.linear.pollSeconds` (0 = off) and (re)arms the auto-refresh
+ *  interval. Most useful with a live API key; on the snapshot it's a harmless
+ *  re-read. */
+function setupPolling(): void {
+  stopPolling();
+  const seconds = vscode.workspace.getConfiguration("atrium").get<number>("linear.pollSeconds") ?? 0;
+  if (seconds > 0) pollTimer = setInterval(() => refreshAll(), seconds * 1000);
 }
 
 /** Live cockpit webviews (Activity-Bar view + any dashboard tabs) so the
