@@ -1,0 +1,315 @@
+import { useEffect, useRef, useState } from "react";
+import { vscode } from "./vscode";
+import { boardToColumns, type KanbanColumn } from "./sprint";
+import { setDrag, getDrag } from "./dnd";
+import { PRIORITY } from "./ui";
+import type { SyncState, Ticket, TicketState, Wave, WriteState } from "./types";
+
+export interface SprintBoardCallbacks {
+  /** True when a live Linear key is set; gates all drag interactions. */
+  canWrite?: boolean;
+  /** Drag a card to another column (STO-2469). */
+  onMove?: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
+  /** Drag a card within its column to reprioritize (STO-2470). */
+  onReorder?: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
+  /** A card from another wave was dropped in — promote it into this wave. */
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
+}
+
+/**
+ * The spotlight kanban for the current sprint. Drag-to-status across columns
+ * (STO-2469), drag-to-reorder within a column (STO-2470), and — new — drag a
+ * ticket up from the horizon list to promote it into the sprint (relabels it to
+ * this wave). Read-only without a live key (STO-2468).
+ */
+export function SprintBoard({
+  wave,
+  syncOf,
+  canWrite = false,
+  onMove,
+  onReorder,
+  onMoveToWave,
+  pinned = false,
+  onUnpin,
+}: {
+  wave: Wave;
+  syncOf?: (id: string) => SyncState;
+  /** True when this wave is the current sprint by a manual pin (vs auto). */
+  pinned?: boolean;
+  onUnpin?: () => void;
+} & SprintBoardCallbacks) {
+  const columns = boardToColumns(wave);
+  const [overCol, setOverCol] = useState<TicketState | null>(null);
+  const count = (k: TicketState) => columns.find((c) => c.key === k)!.tickets.length;
+
+  // Auto-collapse a finished sprint: collapsed by default if every ticket is
+  // done on first render, and it folds itself when the last card lands in Done.
+  // The user can still expand it; we only auto-fold on the transition to all-done.
+  const allDone = wave.tickets.length > 0 && wave.tickets.every((t) => t.state === "done");
+  const [collapsed, setCollapsed] = useState(allDone);
+  const wasAllDone = useRef(allDone);
+  useEffect(() => {
+    if (allDone && !wasAllDone.current) setCollapsed(true);
+    wasAllDone.current = allDone;
+  }, [allDone]);
+
+  return (
+    <section className="border-b border-border shrink-0 bg-active/[0.03]">
+      <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 text-[12px]">
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand sprint board" : "Collapse sprint board"}
+          className="flex items-center gap-2 min-w-0 hover:text-fg"
+        >
+          <span className={`codicon ${collapsed ? "codicon-chevron-right" : "codicon-chevron-down"} text-fg-muted`} />
+          <span className="codicon codicon-layout text-link" />
+          <span className="uppercase text-[9px] tracking-wide text-fg-muted">Current sprint</span>
+          <span className="font-semibold truncate">{wave.name}</span>
+        </button>
+        {pinned && (
+          <span
+            className="flex items-center gap-1 px-1.5 rounded-full bg-active/20 text-[9px] uppercase tracking-wide shrink-0"
+            title="Pinned manually as the current sprint"
+          >
+            <span className="codicon codicon-pin text-[9px]" />
+            pinned
+            <button
+              type="button"
+              onClick={onUnpin}
+              title="Unpin — return to automatic"
+              aria-label="Unpin current sprint"
+              className="flex items-center hover:text-link"
+            >
+              <span className="codicon codicon-close text-[9px]" />
+            </button>
+          </span>
+        )}
+        {!canWrite && (
+          <span
+            className="flex items-center gap-1 text-fg-muted text-[10px] shrink-0"
+            title="Set atrium.linear.apiKey to drag cards and sync to Linear (SETUP.md)"
+          >
+            <span className="codicon codicon-lock text-[10px]" />
+            read-only
+          </span>
+        )}
+        {/* Wave-plan breakdown (STO-2173): done / in flight / in review / to do. */}
+        <span className="ml-auto flex items-center gap-2.5 font-mono text-[10px] text-fg-muted shrink-0">
+          <Tally dot="bg-green" n={count("done")} label="done" />
+          <Tally dot="bg-yellow" n={count("doing")} label="in flight" />
+          <Tally dot="bg-blue" n={count("review")} label="in review" />
+          <Tally dot="bg-border" n={count("todo")} label="to do" />
+        </span>
+      </div>
+      {!collapsed && (
+        <>
+          <div className="grid grid-cols-4 gap-2 px-3 pb-2">
+            {columns.map((col) => (
+              <Column
+                key={col.key}
+                col={col}
+                waveLabel={wave.label}
+                canWrite={canWrite}
+                syncOf={syncOf}
+                isOver={overCol === col.key}
+                setOver={setOverCol}
+                onMove={onMove}
+                onReorder={onReorder}
+                onMoveToWave={onMoveToWave}
+              />
+            ))}
+          </div>
+          {/* UAT phase row (STO-2173): the wave's acceptance pass after Build. */}
+          <div className="flex items-center gap-2 mx-3 mb-3 px-2 py-1 rounded bg-yellow/10 text-[11px] text-yellow">
+            <span className="codicon codicon-question text-[12px]" />
+            <span className="uppercase text-[9px] tracking-wide">UAT</span>
+            <span className="text-fg-muted">{wave.name} · acceptance pass after Build</span>
+            <span className="ml-auto px-1.5 rounded-full bg-yellow/20 text-[9px] uppercase tracking-wide">Phase</span>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Column({
+  col,
+  waveLabel,
+  canWrite,
+  syncOf,
+  isOver,
+  setOver,
+  onMove,
+  onReorder,
+  onMoveToWave,
+}: {
+  col: KanbanColumn;
+  waveLabel?: string;
+  canWrite: boolean;
+  syncOf?: (id: string) => SyncState;
+  isOver: boolean;
+  setOver: (s: TicketState | null) => void;
+} & SprintBoardCallbacks) {
+  /** A card from another wave was dropped → promote it into this sprint wave. */
+  const promote = (id: string, linearId: string | undefined): boolean => {
+    if (waveLabel && onMoveToWave) {
+      onMoveToWave(id, linearId, waveLabel, col.key);
+      return true;
+    }
+    return false;
+  };
+
+  const onColumnDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setOver(null);
+    if (!canWrite) return;
+    const p = getDrag(e);
+    if (!p) return;
+    if (p.fromWaveLabel !== waveLabel) {
+      promote(p.id, p.linearId);
+    } else if (p.fromState !== col.key) {
+      onMove?.(p.id, p.linearId, p.fromState, col.key);
+    }
+  };
+
+  const onCardDrop = (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOver(null);
+    if (!canWrite) return;
+    const p = getDrag(e);
+    if (!p) return;
+    if (p.fromWaveLabel !== waveLabel) {
+      promote(p.id, p.linearId);
+      return;
+    }
+    if (p.fromState !== col.key) {
+      onMove?.(p.id, p.linearId, p.fromState, col.key);
+      return;
+    }
+    const target = col.tickets[index];
+    if (p.id === target.id) return;
+    const targetOrder = target.sortOrder ?? 0;
+    const above = col.tickets[index - 1];
+    const newOrder = index === 0 ? targetOrder - 1 : ((above.sortOrder ?? 0) + targetOrder) / 2;
+    onReorder?.(p.id, p.linearId, p.sortOrder, newOrder);
+  };
+
+  return (
+    <div className="flex flex-col min-w-0">
+      <div className="flex items-center gap-1.5 px-1 pb-1.5 text-[10px] uppercase tracking-wide text-fg-muted">
+        <span className="truncate">{col.label}</span>
+        <span className="font-mono">{col.tickets.length}</span>
+      </div>
+      <div
+        data-col={col.key}
+        onDragOver={(e) => {
+          if (!canWrite) return;
+          e.preventDefault();
+          setOver(col.key);
+        }}
+        onDragLeave={() => setOver(null)}
+        onDrop={onColumnDrop}
+        className={`flex flex-col gap-1.5 min-h-[40px] rounded p-1 transition-colors ${
+          isOver ? "bg-active/20 outline outline-1 outline-link" : "bg-bg/40"
+        }`}
+      >
+        {col.tickets.map((t, i) => (
+          <KanbanCard
+            key={t.id}
+            ticket={t}
+            sync={syncOf?.(t.id) ?? "idle"}
+            draggable={canWrite}
+            fromState={col.key}
+            fromWaveLabel={waveLabel}
+            onDrop={(e) => onCardDrop(i, e)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function KanbanCard({
+  ticket,
+  sync = "idle",
+  draggable = false,
+  fromState,
+  fromWaveLabel,
+  onDrop,
+}: {
+  ticket: Ticket;
+  sync?: SyncState;
+  draggable?: boolean;
+  fromState?: TicketState;
+  fromWaveLabel?: string;
+  onDrop?: (e: React.DragEvent) => void;
+}) {
+  const onDragStart = (e: React.DragEvent) => {
+    setDrag(e, {
+      id: ticket.id,
+      linearId: ticket.linearId,
+      fromState: fromState ?? ticket.state,
+      fromWaveLabel,
+      sortOrder: ticket.sortOrder ?? 0,
+    });
+  };
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragOver={draggable ? (e) => e.preventDefault() : undefined}
+      onDrop={draggable ? onDrop : undefined}
+      className={`group rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      }`}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-[10px] text-fg-muted shrink-0">{ticket.id}</span>
+        <SyncBadge sync={sync} />
+        <span className={`ml-auto text-[9px] uppercase tracking-wide shrink-0 ${PRIORITY[ticket.priority].cls}`}>
+          {PRIORITY[ticket.priority].label}
+        </span>
+        {ticket.url && (
+          <button
+            type="button"
+            aria-label={`Open ${ticket.id} in Linear`}
+            title="Open in Linear"
+            className="flex items-center text-fg-muted hover:text-link opacity-0 group-hover:opacity-100 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              vscode.postMessage({ type: "openLinear", url: ticket.url });
+            }}
+          >
+            <span className="codicon codicon-link-external text-[11px]" />
+          </button>
+        )}
+      </div>
+      <div className="mt-0.5 leading-snug line-clamp-2">{ticket.title}</div>
+    </div>
+  );
+}
+
+function Tally({ dot, n, label }: { dot: string; n: number; label: string }) {
+  return (
+    <span className="flex items-center gap-1" title={`${n} ${label}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+      {n}
+    </span>
+  );
+}
+
+/** Tiny write-back indicator. Hidden when idle; driven by useBoardMutations. */
+function SyncBadge({ sync }: { sync: SyncState }) {
+  if (sync === "idle") return null;
+  const map: Record<Exclude<SyncState, "idle">, { icon: string; cls: string; title: string }> = {
+    syncing: { icon: "codicon-sync codicon-modifier-spin", cls: "text-fg-muted", title: "syncing to Linear…" },
+    synced: { icon: "codicon-check", cls: "text-green", title: "synced to Linear" },
+    failed: { icon: "codicon-error", cls: "text-red", title: "sync failed — reverted" },
+    conflict: { icon: "codicon-warning", cls: "text-orange", title: "changed in Linear — refresh" },
+  };
+  const m = map[sync];
+  return <span className={`codicon ${m.icon} text-[11px] ${m.cls} shrink-0`} title={m.title} />;
+}

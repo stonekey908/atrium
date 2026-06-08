@@ -1,0 +1,16 @@
+.vscode/**
+src/**
+webview/**
+node_modules/**
+bun.lock
+*.vsix
+**/tsconfig*.json
+vite.config.mts
+vitest.config.mts
+vitest.setup.ts
+tailwind.config.ts
+postcss.config.cjs
+**/*.test.*
+**/*.map
+.gitignore
+README.md

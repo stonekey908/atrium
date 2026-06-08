@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Native VS Code look: adopt the editor theme, font, and size so the cockpit
+ * is identical in feel to the Claude Code panel. Colours come from the theme
+ * variables mapped in tailwind.config.ts. */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    font-family: var(--vscode-font-family, -apple-system, system-ui, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground, #cccccc);
+    background: var(--vscode-editor-background, #1e1e1e);
+  }
+  /* Keep codicons crisp and vertically centred next to text. */
+  .codicon {
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: text-bottom;
+  }
+}

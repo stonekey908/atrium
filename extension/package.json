@@ -1,0 +1,111 @@
+{
+  "name": "atrium-cockpit",
+  "displayName": "Atrium Cockpit",
+  "description": "Linear / PRD / sprint cockpit for Claude Code — live mock-up POC running as a VS Code extension.",
+  "version": "0.0.13",
+  "publisher": "atrium",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stonekey908/atrium.git",
+    "directory": "extension"
+  },
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "atrium.openDashboard",
+        "title": "Atrium: Open Cockpit",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "atrium.refreshBoard",
+        "title": "Atrium: Refresh Board",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "atrium.refreshBoard",
+          "when": "activeWebviewPanelId == atrium.dashboard",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "atrium.openDashboard",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
+      }
+    ],
+    "configuration": {
+      "title": "Atrium",
+      "properties": {
+        "atrium.openOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the Atrium cockpit automatically as an editor tab when VS Code finishes starting. Turn off if you'd rather open it on demand via the status-bar button, the `Atrium: Open Cockpit` command, or `⌘⌥A`."
+        },
+        "atrium.linear.apiKey": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "Linear personal API key. When set, the cockpit pulls the board **live** from Linear on refresh; otherwise it uses the committed snapshot. Create one at [linear.app/settings/api](https://linear.app/settings/api)."
+        },
+        "atrium.linear.projectName": {
+          "type": "string",
+          "default": "Atrium",
+          "description": "Linear project name the cockpit loads when a live API key is configured."
+        },
+        "atrium.linear.pollSeconds": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "Auto-refresh the cockpit from Linear every N seconds. **0 = off (default).** Only meaningful with a live API key set — try 60–300 for a gentle live sync."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "vite build && node esbuild.host.mjs && cp src/atrium-board.json dist/",
+    "build:webview": "vite build",
+    "build:host": "node esbuild.host.mjs && cp src/atrium-board.json dist/",
+    "watch:webview": "vite build --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "vscode:prepublish": "vite build && node esbuild.host.mjs && cp src/atrium-board.json dist/"
+  },
+  "dependencies": {
+    "@linear/sdk": "^86.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@types/vscode": "^1.98.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "@vscode/codicons": "^0.0.36",
+    "autoprefixer": "^10",
+    "esbuild": "^0.28.0",
+    "jsdom": "^26",
+    "postcss": "^8",
+    "tailwindcss": "^3.4",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4",
+    "vitest": "^4.1.5"
+  }
+}
