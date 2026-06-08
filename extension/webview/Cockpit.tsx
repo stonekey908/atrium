@@ -20,6 +20,14 @@ import type {
   WriteState,
 } from "./types";
 
+/** Collapse-set sentinel for the "Completed" group. */
+const COMPLETED_KEY = "__completed__";
+
+/** A wave with tickets, all of them done — bundled into the Completed group. */
+function isWaveDone(wave: Wave): boolean {
+  return wave.tickets.length > 0 && wave.tickets.every((t) => t.state === "done");
+}
+
 /** Persisted (per-webview) manual current-sprint override; null = auto. */
 function readSprintOverride(): string | null {
   const s = vscode.getState() as { sprintOverride?: string | null } | undefined;
@@ -61,6 +69,37 @@ export function Cockpit({ init }: { init: InitPayload }) {
   const sprint = currentSprint(displayWaves, sprintOverride);
   const pinned = !!sprintOverride && sprint?.name === sprintOverride;
   const hasWork = displayWaves.some((w) => w.tickets.length > 0);
+
+  // Split waves: active (outstanding tickets) vs completed (all done). Completed
+  // ones get bundled under one "Completed" group so active work has room.
+  const activeWaves = displayWaves.filter((w) => !isWaveDone(w));
+  const completedWaves = displayWaves.filter(isWaveDone);
+
+  // Controlled collapse for the whole list. Seed: the Completed group, every
+  // completed wave, and the current sprint start collapsed (auto-collapse done +
+  // the spotlighted sprint); the user can toggle individually or all at once.
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => new Set([COMPLETED_KEY, ...completedWaves.map((w) => w.name), sprint?.name].filter(Boolean) as string[]),
+  );
+  const isOpen = (name: string) => !collapsed.has(name);
+  const toggleWave = (name: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  const allActiveCollapsed = activeWaves.length > 0 && activeWaves.every((w) => collapsed.has(w.name));
+  const toggleAllActive = () =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      for (const w of activeWaves) {
+        if (allActiveCollapsed) next.delete(w.name);
+        else next.add(w.name);
+      }
+      return next;
+    });
+
   // Plan reads the optimistic board too, so moves reflect everywhere.
   const liveInit = { ...init, waves: displayWaves };
   return (
@@ -97,19 +136,47 @@ export function Cockpit({ init }: { init: InitPayload }) {
           ) : null}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1100px]">
-              {/* Keep every wave in the list — including the current sprint (badged,
+              {/* Collapse/expand all active waves at once. */}
+              {activeWaves.length > 1 && (
+                <div className="flex items-center gap-2 px-2 h-7 border-b border-border text-fg-muted">
+                  <span className="uppercase tracking-wide text-[9px]">Waves</span>
+                  <button
+                    type="button"
+                    onClick={toggleAllActive}
+                    className="ml-auto flex items-center gap-1 text-[11px] hover:text-fg"
+                  >
+                    <span className={`codicon ${allActiveCollapsed ? "codicon-unfold" : "codicon-fold"} text-[12px]`} />
+                    {allActiveCollapsed ? "Expand all" : "Collapse all"}
+                  </button>
+                </div>
+              )}
+              {/* Every wave stays in the list — including the current sprint (badged,
                   collapsed by default) so it's never confusingly missing; the kanban
                   above is just a spotlight on it. */}
-              {displayWaves.map((w) => (
+              {activeWaves.map((w) => (
                 <WaveSection
                   key={w.name}
                   wave={w}
+                  open={isOpen(w.name)}
+                  onToggle={() => toggleWave(w.name)}
                   isCurrent={w === sprint}
                   canWrite={canWrite}
                   onMoveToWave={moveToWave}
                   onPinSprint={w === sprint ? undefined : () => setOverride(w.name)}
                 />
-                ))}
+              ))}
+              {completedWaves.length > 0 && (
+                <CompletedGroup
+                  waves={completedWaves}
+                  open={isOpen(COMPLETED_KEY)}
+                  onToggleGroup={() => toggleWave(COMPLETED_KEY)}
+                  isOpen={isOpen}
+                  onToggleWave={toggleWave}
+                  canWrite={canWrite}
+                  onMoveToWave={moveToWave}
+                  onPinSprint={setOverride}
+                />
+              )}
             </div>
           </div>
         </>
@@ -299,20 +366,22 @@ function stageIcon(state: PipelineStage["state"]): string {
 
 function WaveSection({
   wave,
+  open,
+  onToggle,
   isCurrent = false,
   canWrite = false,
   onMoveToWave,
   onPinSprint,
 }: {
   wave: Wave;
+  /** Controlled collapse — the parent owns it (for collapse-all / auto-collapse). */
+  open: boolean;
+  onToggle: () => void;
   isCurrent?: boolean;
   canWrite?: boolean;
   onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
   onPinSprint?: () => void;
 }) {
-  // The current sprint is spotlighted in the kanban above, so start it collapsed
-  // here — present in the list, but not doubling up all its cards.
-  const [open, setOpen] = useState(!isCurrent);
   const [isOver, setIsOver] = useState(false);
   const done = wave.tickets.filter((t) => t.state === "done").length;
   const doing = wave.tickets.filter((t) => t.state === "doing").length;
@@ -348,7 +417,7 @@ function WaveSection({
       }`}
     >
       <div className="group w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover">
-        <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left" onClick={() => setOpen((o) => !o)}>
+        <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left" onClick={onToggle}>
           <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
           <span className="font-semibold text-[11px] uppercase tracking-wide truncate">{wave.name}</span>
           {isCurrent && (
@@ -402,6 +471,63 @@ function WaveSection({
         <div>
           {wave.tickets.map((t) => (
             <TicketRow key={t.id} ticket={t} draggable={canWrite} fromWaveLabel={wave.label} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Bundles all fully-done waves under one collapsible "Completed" group, so the
+ *  active waves above have room. Collapsed by default; each wave inside is also
+ *  individually collapsible. */
+function CompletedGroup({
+  waves,
+  open,
+  onToggleGroup,
+  isOpen,
+  onToggleWave,
+  canWrite,
+  onMoveToWave,
+  onPinSprint,
+}: {
+  waves: Wave[];
+  open: boolean;
+  onToggleGroup: () => void;
+  isOpen: (name: string) => boolean;
+  onToggleWave: (name: string) => void;
+  canWrite: boolean;
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
+  onPinSprint: (name: string) => void;
+}) {
+  const tickets = waves.reduce((n, w) => n + w.tickets.length, 0);
+  return (
+    <section className="border-b border-border">
+      <button
+        type="button"
+        onClick={onToggleGroup}
+        aria-expanded={open}
+        className="w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover text-left"
+      >
+        <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
+        <span className="codicon codicon-check-all text-green" />
+        <span className="font-semibold text-[11px] uppercase tracking-wide">Completed</span>
+        <span className="ml-auto flex items-center gap-2 text-fg-muted text-[11px] font-mono">
+          {waves.length} wave{waves.length > 1 ? "s" : ""} · {tickets} done
+        </span>
+      </button>
+      {open && (
+        <div className="border-l-2 border-green/30 ml-2">
+          {waves.map((w) => (
+            <WaveSection
+              key={w.name}
+              wave={w}
+              open={isOpen(w.name)}
+              onToggle={() => onToggleWave(w.name)}
+              canWrite={canWrite}
+              onMoveToWave={onMoveToWave}
+              onPinSprint={() => onPinSprint(w.name)}
+            />
           ))}
         </div>
       )}

@@ -234,6 +234,46 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/All shipped/i)).toBeInTheDocument();
   });
 
+  it("collapses and expands all active waves at once", () => {
+    render(<App />);
+    sendInit(PAYLOAD); // two active waves → the collapse-all toolbar shows
+    expect(screen.getByText("STO-2164")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /collapse all/i }));
+    expect(screen.queryByText("STO-2164")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /expand all/i }));
+    expect(screen.getByText("STO-2164")).toBeInTheDocument();
+  });
+
+  it("bundles fully-done waves under a collapsed Completed group", () => {
+    render(<App />);
+    sendInit({
+      ...PAYLOAD,
+      spikes: [],
+      waves: [
+        {
+          name: "Wave 9 · Active",
+          stage: "build",
+          tickets: [
+            { id: "STO-A", title: "active one", priority: "med", state: "doing", spec: [], tests: { passed: 0, failed: 0, missing: 0 }, activity: [] },
+          ],
+        },
+        {
+          name: "Wave 1 · Shipped",
+          stage: "release",
+          tickets: [
+            { id: "STO-DONE", title: "shipped one", priority: "med", state: "done", spec: [], tests: { passed: 0, failed: 0, missing: 0 }, activity: [] },
+          ],
+        },
+      ],
+    });
+    // The completed wave is hidden inside a collapsed Completed group by default.
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByText("Wave 1 · Shipped")).toBeNull();
+    // Expanding the group reveals the done wave.
+    fireEvent.click(screen.getByText("Completed"));
+    expect(screen.getByText("Wave 1 · Shipped")).toBeInTheDocument();
+  });
+
   it("opens a kanban card in Linear via the host", () => {
     render(<App />);
     sendInit(PAYLOAD);
