@@ -97,16 +97,18 @@ export function Cockpit({ init }: { init: InitPayload }) {
           ) : null}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1100px]">
-              {displayWaves
-                .filter((w) => w !== sprint)
-                .map((w) => (
-                  <WaveSection
-                    key={w.name}
-                    wave={w}
-                    canWrite={canWrite}
-                    onMoveToWave={moveToWave}
-                    onPinSprint={() => setOverride(w.name)}
-                  />
+              {/* Keep every wave in the list — including the current sprint (badged,
+                  collapsed by default) so it's never confusingly missing; the kanban
+                  above is just a spotlight on it. */}
+              {displayWaves.map((w) => (
+                <WaveSection
+                  key={w.name}
+                  wave={w}
+                  isCurrent={w === sprint}
+                  canWrite={canWrite}
+                  onMoveToWave={moveToWave}
+                  onPinSprint={w === sprint ? undefined : () => setOverride(w.name)}
+                />
                 ))}
             </div>
           </div>
@@ -297,16 +299,20 @@ function stageIcon(state: PipelineStage["state"]): string {
 
 function WaveSection({
   wave,
+  isCurrent = false,
   canWrite = false,
   onMoveToWave,
   onPinSprint,
 }: {
   wave: Wave;
+  isCurrent?: boolean;
   canWrite?: boolean;
   onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
   onPinSprint?: () => void;
 }) {
-  const [open, setOpen] = useState(true);
+  // The current sprint is spotlighted in the kanban above, so start it collapsed
+  // here — present in the list, but not doubling up all its cards.
+  const [open, setOpen] = useState(!isCurrent);
   const [isOver, setIsOver] = useState(false);
   const done = wave.tickets.filter((t) => t.state === "done").length;
   const doing = wave.tickets.filter((t) => t.state === "doing").length;
@@ -345,6 +351,15 @@ function WaveSection({
         <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left" onClick={() => setOpen((o) => !o)}>
           <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
           <span className="font-semibold text-[11px] uppercase tracking-wide truncate">{wave.name}</span>
+          {isCurrent && (
+            <span
+              className="flex items-center gap-1 px-1.5 rounded-full bg-active text-active-fg text-[9px] uppercase tracking-wide shrink-0"
+              title="Current sprint — spotlighted in the kanban above"
+            >
+              <span className="codicon codicon-layout text-[9px]" />
+              Current sprint
+            </span>
+          )}
           {wave.gatedBy && (
             <span
               className="flex items-center gap-1 px-1.5 rounded-full bg-orange/15 text-orange text-[9px] uppercase tracking-wide shrink-0"

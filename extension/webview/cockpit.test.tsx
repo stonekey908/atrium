@@ -183,7 +183,16 @@ describe("Atrium cockpit webview", () => {
   it("marks the Build-stage wave as the current sprint", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    expect(screen.getByText(/current sprint/i)).toBeInTheDocument();
+    // "Current sprint" shows in the kanban spotlight AND as a badge on the wave's
+    // list entry (the sprint is kept in the list, not removed).
+    expect(screen.getAllByText(/current sprint/i).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the current sprint in the wave list (badged), not just the kanban", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    // The sprint's name appears in both the kanban header and its list entry.
+    expect(screen.getAllByText("Wave 0.7 · Sprint board").length).toBeGreaterThanOrEqual(2);
   });
 
   it("spotlights the current sprint in the kanban with its four columns", () => {
