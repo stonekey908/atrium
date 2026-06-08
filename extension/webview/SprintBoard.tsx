@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { vscode } from "./vscode";
 import { boardToColumns, type KanbanColumn } from "./sprint";
 import { setDrag, getDrag } from "./dnd";
 import { PRIORITY } from "./ui";
-import type { SyncState, Ticket, TicketState, Wave } from "./types";
+import type { SyncState, Ticket, TicketState, Wave, WriteState } from "./types";
 
 export interface SprintBoardCallbacks {
   /** True when a live Linear key is set; gates all drag interactions. */
@@ -13,7 +13,7 @@ export interface SprintBoardCallbacks {
   /** Drag a card within its column to reprioritize (STO-2470). */
   onReorder?: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
   /** A card from another wave was dropped in — promote it into this wave. */
-  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
 }
 
 /**
@@ -32,8 +32,18 @@ export function SprintBoard({
 }: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
   const count = (k: TicketState) => columns.find((c) => c.key === k)!.tickets.length;
+
+  // Auto-collapse a finished sprint: collapsed by default if every ticket is
+  // done on first render, and it folds itself when the last card lands in Done.
+  // The user can still expand it; we only auto-fold on the transition to all-done.
+  const allDone = wave.tickets.length > 0 && wave.tickets.every((t) => t.state === "done");
+  const [collapsed, setCollapsed] = useState(allDone);
+  const wasAllDone = useRef(allDone);
+  useEffect(() => {
+    if (allDone && !wasAllDone.current) setCollapsed(true);
+    wasAllDone.current = allDone;
+  }, [allDone]);
 
   return (
     <section className="border-b border-border shrink-0 bg-active/[0.03]">

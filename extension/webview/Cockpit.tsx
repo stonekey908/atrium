@@ -16,8 +16,8 @@ import type {
   Spike,
   TestSummary,
   Ticket,
-  TicketState,
   Wave,
+  WriteState,
 } from "./types";
 
 export function Cockpit({ init }: { init: InitPayload }) {
@@ -257,7 +257,7 @@ function WaveSection({
 }: {
   wave: Wave;
   canWrite?: boolean;
-  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
+  onMoveToWave?: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [isOver, setIsOver] = useState(false);

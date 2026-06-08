@@ -48,9 +48,9 @@ describe("loopBacks", () => {
 });
 
 describe("demoteState", () => {
-  it("un-starts active work but leaves done/todo unchanged", () => {
-    expect(demoteState("review")).toBe("todo");
-    expect(demoteState("doing")).toBe("todo");
+  it("sends active work back to backlog but leaves done/todo unchanged", () => {
+    expect(demoteState("review")).toBe("backlog");
+    expect(demoteState("doing")).toBe("backlog");
     expect(demoteState("done")).toBeUndefined();
     expect(demoteState("todo")).toBeUndefined();
   });

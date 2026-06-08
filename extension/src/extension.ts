@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
-import { LinearWriteClient, resolveStateId } from "./linear-writes";
+import { LinearWriteClient, resolveStateId, type WriteState } from "./linear-writes";
 import { getGitStatus } from "./git";
 import { getTestFileCount, getDesignRefs } from "./discover";
 
@@ -131,7 +131,7 @@ interface InboundMessage {
   id?: string;
   linearId?: string;
   fromState?: TicketState;
-  toState?: TicketState;
+  toState?: WriteState;
   sortOrder?: number;
   /** Cross-wave drag (promote into / demote out of the sprint). */
   toWaveLabel?: string;

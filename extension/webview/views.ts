@@ -1,5 +1,5 @@
 import { PIPELINE } from "./sprint";
-import type { Ticket, TicketState, Wave } from "./types";
+import type { Ticket, TicketState, Wave, WriteState } from "./types";
 
 /** Top-level cockpit views (the canvas switcher). */
 export type CockpitView = "board" | "plan" | "design" | "uat";
@@ -37,12 +37,13 @@ export function loopBacks(waves: Wave[]): Wave[] {
 
 /**
  * The state a ticket should land in when demoted out of the sprint back to a
- * wave: active work (doing/review) un-starts to `todo`; done/todo keep their
+ * wave: active work (doing/review) drops to `backlog`; done/todo keep their
  * state (returns undefined = leave unchanged). Keeps a demoted ticket from
- * lingering "In Review" in Linear.
+ * lingering "In Review" in Linear, and sends it back to the backlog rather than
+ * the Todo column.
  */
-export function demoteState(fromState: TicketState): TicketState | undefined {
-  return fromState === "review" || fromState === "doing" ? "todo" : undefined;
+export function demoteState(fromState: TicketState): WriteState | undefined {
+  return fromState === "review" || fromState === "doing" ? "backlog" : undefined;
 }
 
 // ── UAT cases from acceptance criteria (STO-2187) ────────────────────────────

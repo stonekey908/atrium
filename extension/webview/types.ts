@@ -1,5 +1,8 @@
 export type Priority = "urgent" | "high" | "med" | "low";
 export type TicketState = "todo" | "doing" | "review" | "done";
+/** A write target for moves: the four columns plus an explicit `backlog`, used
+ *  when demoting a ticket out of the sprint (distinct from the todo column). */
+export type WriteState = TicketState | "backlog";
 export type StageStatus = "done" | "active" | "todo";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 

@@ -18,18 +18,25 @@ export interface WorkflowState {
   type: string;
 }
 
+/** Write target — the four kanban columns plus an explicit `backlog` used when
+ *  demoting a ticket out of the sprint (distinct from the `todo`/unstarted column). */
+export type WriteState = TicketState | "backlog";
+
 /**
- * Maps one of our four kanban columns onto a team's workflow-state id. Resolved
- * from the team's real states (not hardcoded) so custom names work:
- *   done   → first `completed`
- *   todo   → first `unstarted`, else first `backlog`
- *   review → the `started` state whose name matches /review/i, else first started
- *   doing  → the other `started` (not /review/i), else first started
+ * Maps a write target onto a team's workflow-state id. Resolved from the team's
+ * real states (not hardcoded) so custom names work:
+ *   done    → first `completed`
+ *   backlog → first `backlog`, else first `unstarted`
+ *   todo    → first `unstarted`, else first `backlog`
+ *   review  → the `started` state whose name matches /review/i, else first started
+ *   doing   → the other `started` (not /review/i), else first started
  * Returns null if the team has no state of the needed type.
  */
-export function resolveStateId(states: WorkflowState[], target: TicketState): string | null {
+export function resolveStateId(states: WorkflowState[], target: WriteState): string | null {
   const started = states.filter((s) => s.type === "started");
   if (target === "done") return states.find((s) => s.type === "completed")?.id ?? null;
+  if (target === "backlog")
+    return (states.find((s) => s.type === "backlog") ?? states.find((s) => s.type === "unstarted"))?.id ?? null;
   if (target === "todo")
     return (states.find((s) => s.type === "unstarted") ?? states.find((s) => s.type === "backlog"))?.id ?? null;
   if (target === "review") return (started.find((s) => /review/i.test(s.name)) ?? started[0])?.id ?? null;

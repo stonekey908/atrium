@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import { vscode } from "./vscode";
 import { mutationReducer, applyOverrides, applyOrder, initialMutationState } from "./mutations";
-import type { SyncState, TicketState, Wave } from "./types";
+import type { SyncState, TicketState, Wave, WriteState } from "./types";
 
 /** How long a `synced` badge lingers before fading back to idle. */
 const SETTLE_MS = 1400;
@@ -17,7 +17,7 @@ export interface BoardMutations {
   reorder: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
   /** Move a ticket into/out of a wave (promote to / demote from the sprint);
    *  relabels in Linear, then the host refreshes to reposition it. */
-  moveToWave: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: TicketState) => void;
+  moveToWave: (id: string, linearId: string | undefined, toWaveLabel: string, toState?: WriteState) => void;
 }
 
 /**

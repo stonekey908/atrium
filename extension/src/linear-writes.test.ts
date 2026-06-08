@@ -45,6 +45,13 @@ describe("resolveStateId", () => {
     expect(resolveStateId(backlogOnly, "todo")).toBe("bk");
   });
 
+  it("resolves the explicit backlog target to the backlog state (for demote)", () => {
+    expect(resolveStateId(STATES, "backlog")).toBe("s-backlog");
+    // Falls back to unstarted when the team has no backlog state.
+    const noBacklog: WorkflowState[] = [{ id: "u", name: "Todo", type: "unstarted" }];
+    expect(resolveStateId(noBacklog, "backlog")).toBe("u");
+  });
+
   it("returns null when the needed state type is absent", () => {
     const started: WorkflowState[] = [{ id: "x", name: "Doing", type: "started" }];
     expect(resolveStateId(started, "done")).toBeNull();
