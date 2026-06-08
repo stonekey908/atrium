@@ -28,6 +28,8 @@ export interface Ticket {
 export interface Wave {
   name: string;
   tickets: Ticket[];
+  /** Where this wave sits on the Tier-1 pipeline (plan…release). */
+  stage?: string;
 }
 
 export interface Stage {
@@ -42,4 +44,6 @@ export interface InitPayload {
   folders: string[];
   stages: Stage[];
   waves: Wave[];
+  /** Non-fatal load problem (e.g. malformed snapshot); cockpit shows a banner. */
+  error?: string;
 }

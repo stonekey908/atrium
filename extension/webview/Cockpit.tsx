@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { vscode } from "./vscode";
+import { waveStages, isCurrentSprint } from "./sprint";
 import type {
   ActivityKind,
   InitPayload,
@@ -14,6 +16,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
       <Header init={init} />
+      {init.error && <LoadBanner message={init.error} />}
       <Pipeline stages={init.stages} />
       {/* Centred, capped width so it reads well full-screen and in the rail. */}
       <div className="flex-1 overflow-y-auto">
@@ -23,6 +26,18 @@ export function Cockpit({ init }: { init: InitPayload }) {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function LoadBanner({ message }: { message: string }) {
+  return (
+    <div
+      role="alert"
+      className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-yellow/10 text-[12px] text-yellow shrink-0"
+    >
+      <span className="codicon codicon-warning shrink-0" />
+      <span className="truncate">{message}</span>
     </div>
   );
 }
@@ -41,6 +56,15 @@ function Header({ init }: { init: InitPayload }) {
         <span className="codicon codicon-folder-opened" />
         <span className="text-[11px]">{init.folders.length}</span>
       </span>
+      <button
+        type="button"
+        aria-label="Refresh board"
+        title="Refresh board"
+        className="flex items-center text-fg-muted hover:text-fg"
+        onClick={() => vscode.postMessage({ type: "refresh" })}
+      >
+        <span className="codicon codicon-refresh" />
+      </button>
     </div>
   );
 }
@@ -80,15 +104,22 @@ function stageIcon(status: Stage["status"]): string {
 function WaveSection({ wave }: { wave: Wave }) {
   const [open, setOpen] = useState(true);
   const done = wave.tickets.filter((t) => t.state === "done").length;
-  const pct = Math.round((done / wave.tickets.length) * 100);
+  const pct = wave.tickets.length ? Math.round((done / wave.tickets.length) * 100) : 0;
+  const current = isCurrentSprint(wave.stage);
   return (
-    <section className="border-b border-border">
+    <section className={`border-b border-border ${current ? "bg-active/5" : ""}`}>
       <button
         className="w-full flex items-center gap-1.5 px-2 h-7 hover:bg-hover text-left"
         onClick={() => setOpen((o) => !o)}
       >
         <span className={`codicon ${open ? "codicon-chevron-down" : "codicon-chevron-right"} text-fg-muted`} />
         <span className="font-semibold text-[11px] uppercase tracking-wide truncate">{wave.name}</span>
+        {current && (
+          <span className="flex items-center gap-1 px-1.5 rounded-full bg-active text-active-fg text-[9px] uppercase tracking-wide shrink-0">
+            <span className="codicon codicon-debug-start text-[9px]" />
+            Current sprint
+          </span>
+        )}
         <span className="ml-auto flex items-center gap-2 text-fg-muted text-[11px] shrink-0">
           <span className="font-mono">
             {done}/{wave.tickets.length}
@@ -98,6 +129,7 @@ function WaveSection({ wave }: { wave: Wave }) {
           </span>
         </span>
       </button>
+      {wave.stage && <WaveStageStrip stage={wave.stage} />}
       {open && (
         <div>
           {wave.tickets.map((t) => (
@@ -106,6 +138,30 @@ function WaveSection({ wave }: { wave: Wave }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Per-sprint mini-pipeline: where this wave sits on Plan → … → Release. */
+function WaveStageStrip({ stage }: { stage: string }) {
+  return (
+    <div className="flex items-center gap-1 pl-5 pr-3 pb-1.5 -mt-0.5 overflow-x-auto">
+      {waveStages(stage).map((s, i) => (
+        <span key={s.key} className="flex items-center shrink-0">
+          <span
+            className={`text-[9px] uppercase tracking-wide ${
+              s.status === "active"
+                ? "text-link font-semibold"
+                : s.status === "done"
+                  ? "text-fg-muted"
+                  : "text-fg-muted/50"
+            }`}
+          >
+            {s.label}
+          </span>
+          {i < 5 && <span className="codicon codicon-chevron-right text-fg-muted/30 text-[9px]" />}
+        </span>
+      ))}
+    </div>
   );
 }
 

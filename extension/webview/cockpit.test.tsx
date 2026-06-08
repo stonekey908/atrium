@@ -21,6 +21,7 @@ const PAYLOAD: InitPayload = {
   waves: [
     {
       name: "Wave 1 · CLI bridge",
+      stage: "build",
       tickets: [
         {
           id: "STO-2164",
@@ -60,7 +61,7 @@ describe("Atrium cockpit webview", () => {
   it("renders the pipeline, waves, tickets and folder count after init", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    expect(screen.getByText("Build")).toBeInTheDocument(); // pipeline stage
+    expect(screen.getAllByText("Build").length).toBeGreaterThan(0); // pipeline stage (also appears in the wave strip)
     expect(screen.getByText("Wave 1 · CLI bridge")).toBeInTheDocument();
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // open folder count
@@ -79,6 +80,25 @@ describe("Atrium cockpit webview", () => {
     fireEvent.click(screen.getByText(TICKET_TITLE));
     fireEvent.click(screen.getByText("tests"));
     expect(screen.getByText("3 passed")).toBeInTheDocument();
+  });
+
+  it("asks the host to refresh when the Refresh button is clicked", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(postMessage).toHaveBeenCalledWith({ type: "refresh" });
+  });
+
+  it("marks the Build-stage wave as the current sprint", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText(/current sprint/i)).toBeInTheDocument();
+  });
+
+  it("surfaces a non-fatal banner when the host reports a load error", () => {
+    render(<App />);
+    sendInit({ ...PAYLOAD, waves: [], error: "Couldn't load board snapshot: boom" });
+    expect(screen.getByText(/Couldn't load board snapshot/i)).toBeInTheDocument();
   });
 
   it("collapses a wave, hiding its tickets", () => {

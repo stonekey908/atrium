@@ -40,10 +40,20 @@
         "command": "atrium.openDashboard",
         "title": "Atrium: Open Dashboard (full screen)",
         "icon": "$(screen-full)"
+      },
+      {
+        "command": "atrium.refreshBoard",
+        "title": "Atrium: Refresh Board",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "atrium.refreshBoard",
+          "when": "view == atrium.cockpit",
+          "group": "navigation"
+        },
         {
           "command": "atrium.openDashboard",
           "when": "view == atrium.cockpit",
@@ -60,15 +70,15 @@
     ]
   },
   "scripts": {
-    "build": "vite build && tsc -p tsconfig.json",
+    "build": "vite build && tsc -p tsconfig.json && cp src/atrium-board.json dist/",
     "build:webview": "vite build",
-    "build:host": "tsc -p tsconfig.json",
+    "build:host": "tsc -p tsconfig.json && cp src/atrium-board.json dist/",
     "watch:webview": "vite build --watch",
     "watch:host": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "vscode:prepublish": "vite build && tsc -p tsconfig.json"
+    "vscode:prepublish": "vite build && tsc -p tsconfig.json && cp src/atrium-board.json dist/"
   },
   "dependencies": {
     "react": "^19.1.0",

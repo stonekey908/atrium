@@ -43,6 +43,8 @@ export interface InitPayload {
   folders: string[];
   stages: Stage[];
   waves: Wave[];
+  /** Non-fatal load problem (e.g. malformed snapshot); webview shows a banner. */
+  error?: string;
 }
 
 /** Tier-1 pipeline. Real status comes from wave rollups later. */
