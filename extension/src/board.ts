@@ -191,11 +191,11 @@ export interface LinearIssueLite {
  *  truth for grouping; keep in sync with the snapshot generator. */
 const WAVE_META: { label: string; name: string; stage: string; gatedBy: string | null }[] = [
   { label: "ATR Wave 0", name: "Wave 0 · Visual layer", stage: "release", gatedBy: null },
-  { label: "ATR Wave 0.5", name: "Wave 0.5 · Wave & ticket rail", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 0.5", name: "Wave 0.5 · Ticket detail & rollups", stage: "plan", gatedBy: null },
   { label: "ATR Wave 0.6 · Cockpit data", name: "Wave 0.6 · Cockpit data", stage: "uat", gatedBy: null },
   { label: "ATR Wave 0.7 · Sprint board", name: "Wave 0.7 · Sprint board", stage: "build", gatedBy: null },
-  { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design", stage: "plan", gatedBy: null },
-  { label: "ATR Wave 4", name: "Wave 4 · Rails & palette", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 3.5", name: "Wave 3.5 · Plan & Design canvases", stage: "plan", gatedBy: null },
+  { label: "ATR Wave 4", name: "Wave 4 · Status, audit & summary", stage: "plan", gatedBy: null },
   { label: "ATR Wave 4.5", name: "Wave 4.5 · Pipeline & UAT", stage: "plan", gatedBy: null },
 ];
 
