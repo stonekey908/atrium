@@ -31,6 +31,8 @@ export interface Ticket {
   url?: string;
   /** Linear's internal UUID — present on a live pull; the write target. */
   linearId?: string;
+  /** Linear sortOrder — drives kanban ordering + drag-to-reorder. Live only. */
+  sortOrder?: number;
 }
 
 export interface Wave {

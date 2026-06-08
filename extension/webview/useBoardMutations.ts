@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
 import { vscode } from "./vscode";
-import { mutationReducer, applyOverrides, initialMutationState } from "./mutations";
+import { mutationReducer, applyOverrides, applyOrder, initialMutationState } from "./mutations";
 import type { SyncState, TicketState, Wave } from "./types";
 
 /** How long a `synced` badge lingers before fading back to idle. */
@@ -14,7 +14,7 @@ export interface BoardMutations {
   /** Optimistically move a ticket to a new column and ask the host to write it. */
   move: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
   /** Reorder a ticket within its column (STO-2470); writes Linear sortOrder. */
-  reorder: (id: string, linearId: string | undefined, sortOrder: number) => void;
+  reorder: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
 }
 
 /**
@@ -56,12 +56,14 @@ export function useBoardMutations(waves: Wave[]): BoardMutations {
     vscode.postMessage({ type: "moveTicket", id, linearId, fromState, toState });
   };
 
-  const reorder: BoardMutations["reorder"] = (id, linearId, sortOrder) => {
-    vscode.postMessage({ type: "reorderTicket", id, linearId, sortOrder });
+  const reorder: BoardMutations["reorder"] = (id, linearId, fromSortOrder, toSortOrder) => {
+    if (fromSortOrder === toSortOrder) return;
+    dispatch({ type: "reorder", id, fromSortOrder, toSortOrder });
+    vscode.postMessage({ type: "reorderTicket", id, linearId, sortOrder: toSortOrder });
   };
 
   return {
-    displayWaves: applyOverrides(waves, state.overrides),
+    displayWaves: applyOrder(applyOverrides(waves, state.overrides), state.order),
     syncOf: (id) => state.sync[id] ?? "idle",
     move,
     reorder,

@@ -9,43 +9,43 @@ interface DragPayload {
   id: string;
   linearId?: string;
   fromState: TicketState;
+  sortOrder: number;
+}
+
+function parseDrag(e: React.DragEvent): DragPayload | null {
+  const raw = e.dataTransfer.getData(DND_MIME);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as DragPayload;
+  } catch {
+    return null;
+  }
+}
+
+export interface SprintBoardCallbacks {
+  /** True when a live Linear key is set; gates all drag interactions. */
+  canWrite?: boolean;
+  /** Drag a card to another column (STO-2469). */
+  onMove?: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
+  /** Drag a card within its column to reprioritize (STO-2470). */
+  onReorder?: (id: string, linearId: string | undefined, fromSortOrder: number, toSortOrder: number) => void;
 }
 
 /**
  * The spotlight kanban for the current sprint. Read-only layout over
- * `boardToColumns`, plus drag-to-status when a live key is set: dragging a card
- * to another column calls `onMove`, which optimistically moves it and asks the
- * host to write the new state to Linear (STO-2469). Without a key the board is
- * read-only and cards aren't draggable (STO-2468).
+ * `boardToColumns`, plus, when a live key is set, drag-to-status across columns
+ * (STO-2469) and drag-to-reorder within a column (STO-2470). Without a key the
+ * board is read-only and cards aren't draggable (STO-2468).
  */
 export function SprintBoard({
   wave,
   syncOf,
   canWrite = false,
   onMove,
-}: {
-  wave: Wave;
-  syncOf?: (id: string) => SyncState;
-  /** True when a live Linear key is set; gates all drag interactions. */
-  canWrite?: boolean;
-  onMove?: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
-}) {
+  onReorder,
+}: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
-
-  const onDrop = (toState: TicketState, e: React.DragEvent) => {
-    e.preventDefault();
-    setOverCol(null);
-    if (!canWrite || !onMove) return;
-    const raw = e.dataTransfer.getData(DND_MIME);
-    if (!raw) return;
-    try {
-      const p = JSON.parse(raw) as DragPayload;
-      if (p.fromState !== toState) onMove(p.id, p.linearId, p.fromState, toState);
-    } catch {
-      /* ignore malformed drag data */
-    }
-  };
 
   return (
     <section className="border-b border-border shrink-0 bg-active/[0.03]">
@@ -72,13 +72,9 @@ export function SprintBoard({
             canWrite={canWrite}
             syncOf={syncOf}
             isOver={overCol === col.key}
-            onDragOver={(e) => {
-              if (!canWrite) return;
-              e.preventDefault();
-              setOverCol(col.key);
-            }}
-            onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
-            onDrop={(e) => onDrop(col.key, e)}
+            setOver={setOverCol}
+            onMove={onMove}
+            onReorder={onReorder}
           />
         ))}
       </div>
@@ -91,18 +87,45 @@ function Column({
   canWrite,
   syncOf,
   isOver,
-  onDragOver,
-  onDragLeave,
-  onDrop,
+  setOver,
+  onMove,
+  onReorder,
 }: {
   col: KanbanColumn;
   canWrite: boolean;
   syncOf?: (id: string) => SyncState;
   isOver: boolean;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent) => void;
-}) {
+  setOver: (s: TicketState | null) => void;
+} & SprintBoardCallbacks) {
+  /** Drop on the column body (not on a card) → move a card here from elsewhere. */
+  const onColumnDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setOver(null);
+    if (!canWrite) return;
+    const p = parseDrag(e);
+    if (p && p.fromState !== col.key) onMove?.(p.id, p.linearId, p.fromState, col.key);
+  };
+
+  /** Drop on a card → reorder before it (same column) or move into this column. */
+  const onCardDrop = (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOver(null);
+    if (!canWrite) return;
+    const p = parseDrag(e);
+    if (!p) return;
+    if (p.fromState !== col.key) {
+      onMove?.(p.id, p.linearId, p.fromState, col.key);
+      return;
+    }
+    const target = col.tickets[index];
+    if (p.id === target.id) return;
+    const targetOrder = target.sortOrder ?? 0;
+    const above = col.tickets[index - 1];
+    const newOrder = index === 0 ? targetOrder - 1 : ((above.sortOrder ?? 0) + targetOrder) / 2;
+    onReorder?.(p.id, p.linearId, p.sortOrder, newOrder);
+  };
+
   return (
     <div className="flex flex-col min-w-0">
       <div className="flex items-center gap-1.5 px-1 pb-1.5 text-[10px] uppercase tracking-wide text-fg-muted">
@@ -111,15 +134,26 @@ function Column({
       </div>
       <div
         data-col={col.key}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        onDragOver={(e) => {
+          if (!canWrite) return;
+          e.preventDefault();
+          setOver(col.key);
+        }}
+        onDragLeave={() => setOver(null)}
+        onDrop={onColumnDrop}
         className={`flex flex-col gap-1.5 min-h-[40px] rounded p-1 transition-colors ${
           isOver ? "bg-active/20 outline outline-1 outline-link" : "bg-bg/40"
         }`}
       >
-        {col.tickets.map((t) => (
-          <KanbanCard key={t.id} ticket={t} sync={syncOf?.(t.id) ?? "idle"} draggable={canWrite} fromState={col.key} />
+        {col.tickets.map((t, i) => (
+          <KanbanCard
+            key={t.id}
+            ticket={t}
+            sync={syncOf?.(t.id) ?? "idle"}
+            draggable={canWrite}
+            fromState={col.key}
+            onDrop={(e) => onCardDrop(i, e)}
+          />
         ))}
       </div>
     </div>
@@ -131,14 +165,21 @@ export function KanbanCard({
   sync = "idle",
   draggable = false,
   fromState,
+  onDrop,
 }: {
   ticket: Ticket;
   sync?: SyncState;
   draggable?: boolean;
   fromState?: TicketState;
+  onDrop?: (e: React.DragEvent) => void;
 }) {
   const onDragStart = (e: React.DragEvent) => {
-    const payload: DragPayload = { id: ticket.id, linearId: ticket.linearId, fromState: fromState ?? ticket.state };
+    const payload: DragPayload = {
+      id: ticket.id,
+      linearId: ticket.linearId,
+      fromState: fromState ?? ticket.state,
+      sortOrder: ticket.sortOrder ?? 0,
+    };
     e.dataTransfer.setData(DND_MIME, JSON.stringify(payload));
     e.dataTransfer.effectAllowed = "move";
   };
@@ -146,6 +187,8 @@ export function KanbanCard({
     <div
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
+      onDragOver={draggable ? (e) => e.preventDefault() : undefined}
+      onDrop={draggable ? onDrop : undefined}
       className={`group rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted ${
         draggable ? "cursor-grab active:cursor-grabbing" : ""
       }`}

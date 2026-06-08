@@ -22,6 +22,7 @@ const ISSUES_QUERY = `
         title
         url
         priority
+        sortOrder
         state { type name }
         labels { nodes { name } }
         description
@@ -39,6 +40,7 @@ interface IssuesResponse {
       title: string;
       url: string;
       priority: number;
+      sortOrder: number;
       state: { type: string; name: string };
       labels: { nodes: { name: string }[] };
       description: string | null;
@@ -64,6 +66,7 @@ async function fetchAllIssues(client: LinearClient, projectName: string): Promis
         title: n.title,
         url: n.url,
         priority: n.priority,
+        sortOrder: n.sortOrder,
         stateType: n.state.type,
         stateName: n.state.name,
         labels: n.labels.nodes.map((l) => l.name),

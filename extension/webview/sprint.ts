@@ -14,12 +14,15 @@ export interface KanbanColumn {
   tickets: Ticket[];
 }
 
-/** Groups a wave's tickets into the four ordered kanban columns by state.
- *  Pure — the SprintBoard is just layout over this. */
+/** Groups a wave's tickets into the four ordered kanban columns by state, each
+ *  column ordered by Linear sortOrder (ascending) so drag-to-reorder is stable.
+ *  Tickets without a sortOrder keep their incoming order. Pure. */
 export function boardToColumns(wave: Wave): KanbanColumn[] {
   return KANBAN_COLUMNS.map((c) => ({
     ...c,
-    tickets: wave.tickets.filter((t) => t.state === c.key),
+    tickets: wave.tickets
+      .filter((t) => t.state === c.key)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
   }));
 }
 

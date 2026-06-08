@@ -9,7 +9,7 @@ vi.mock("./vscode", () => ({
 import { SprintBoard } from "./SprintBoard";
 import type { Ticket, Wave } from "./types";
 
-const ticket = (id: string, state: Ticket["state"]): Ticket => ({
+const ticket = (id: string, state: Ticket["state"], sortOrder = 1): Ticket => ({
   id,
   title: `Title of ${id}`,
   priority: "med",
@@ -19,6 +19,7 @@ const ticket = (id: string, state: Ticket["state"]): Ticket => ({
   activity: [],
   url: `https://linear.app/x/${id}`,
   linearId: `uuid-${id}`,
+  sortOrder,
 });
 
 const WAVE: Wave = { name: "Wave 0.7", stage: "build", tickets: [ticket("STO-1", "todo")] };
@@ -55,6 +56,21 @@ describe("SprintBoard drag-to-status", () => {
     fireEvent.dragStart(card, { dataTransfer: dt });
     fireEvent.drop(container.querySelector('[data-col="todo"]')!, { dataTransfer: dt });
     expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("calls onReorder with a midpoint sortOrder when a card is dropped on another in the same column", () => {
+    const onReorder = vi.fn();
+    const wave: Wave = {
+      name: "Wave 0.7",
+      stage: "build",
+      tickets: [ticket("STO-1", "todo", 10), ticket("STO-2", "todo", 20), ticket("STO-3", "todo", 30)],
+    };
+    const { getByText } = render(<SprintBoard wave={wave} canWrite onMove={vi.fn()} onReorder={onReorder} />);
+    const dt = dataTransfer();
+    fireEvent.dragStart(getByText("STO-3").closest("[draggable='true']")!, { dataTransfer: dt });
+    // Drop on STO-1 (column index 0) → newOrder = targetOrder(10) - 1 = 9.
+    fireEvent.drop(getByText("STO-1").closest("[draggable='true']")!, { dataTransfer: dt });
+    expect(onReorder).toHaveBeenCalledWith("STO-3", "uuid-STO-3", 30, 9);
   });
 
   it("is read-only without a key: cards aren't draggable and drops are ignored", () => {

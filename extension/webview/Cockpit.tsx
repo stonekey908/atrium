@@ -18,7 +18,7 @@ import type {
 export function Cockpit({ init }: { init: InitPayload }) {
   // Optimistic write-back layers local moves over the host's board; drag is only
   // enabled in live mode (a key is set), so the board never fakes a sync.
-  const { displayWaves, syncOf, move } = useBoardMutations(init.waves);
+  const { displayWaves, syncOf, move, reorder } = useBoardMutations(init.waves);
   const canWrite = init.source === "live";
   const sprint = currentSprint(displayWaves);
   return (
@@ -33,7 +33,9 @@ export function Cockpit({ init }: { init: InitPayload }) {
         <div className="mx-auto w-full max-w-[1000px]">
           {/* Spotlight the current sprint as a kanban; the other waves are the
               horizon list below (the current sprint isn't repeated there). */}
-          {sprint && <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} />}
+          {sprint && (
+            <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} onReorder={reorder} />
+          )}
           {displayWaves
             .filter((w) => w !== sprint)
             .map((w) => (

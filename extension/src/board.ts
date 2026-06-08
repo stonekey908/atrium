@@ -39,6 +39,9 @@ export interface Ticket {
   /** Linear's internal issue UUID — present only on a live pull; the write-back
    *  (STO-2469/2470) targets this. Absent in the committed snapshot. */
   linearId?: string;
+  /** Linear sortOrder (priority within the project) — drives kanban ordering and
+   *  is the write target for drag-to-reorder (STO-2470). Live pull only. */
+  sortOrder?: number;
 }
 
 export interface Wave {
@@ -114,6 +117,8 @@ function validateTicket(raw: unknown, where: string): Ticket {
   raw.activity.forEach((a, i) => validateActivity(a, `${where}.activity[${i}]`));
   if (raw.linearId !== undefined && typeof raw.linearId !== "string")
     fail(`${where}.linearId must be a string when present`);
+  if (raw.sortOrder !== undefined && typeof raw.sortOrder !== "number")
+    fail(`${where}.sortOrder must be a number when present`);
   return raw as unknown as Ticket;
 }
 
@@ -174,6 +179,7 @@ export interface LinearIssueLite {
   title: string;
   url: string;
   priority: number;
+  sortOrder: number;
   stateType: string;
   stateName: string;
   labels: string[];
@@ -229,6 +235,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
     activity: [],
     linearId: i.id,
+    sortOrder: i.sortOrder,
   };
 }
 

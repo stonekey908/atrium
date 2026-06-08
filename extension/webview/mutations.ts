@@ -2,52 +2,77 @@ import type { SyncState, TicketState, Wave } from "./types";
 
 /**
  * Optimistic write-back bookkeeping for the sprint kanban. Pure + framework-free
- * so the move/synced/failed/conflict/reconcile transitions unit-test without
- * React. `useBoardMutations` wraps this with postMessage + the synced→idle timer.
+ * so the move/reorder/synced/failed/conflict/reconcile transitions unit-test
+ * without React. `useBoardMutations` wraps this with postMessage + the
+ * synced→idle timer.
  *
- *   overrides — ticketId → optimistic state, layered over the host's board
+ *   overrides — ticketId → optimistic state (drag-to-status, STO-2469)
+ *   order     — ticketId → optimistic sortOrder (drag-to-reorder, STO-2470)
  *   sync      — ticketId → badge (syncing/synced/failed/conflict); absent = idle
- *   backup    — ticketId → state before the move, used to revert on failure
+ *   backup    — pre-move state, used to revert on failure
+ *   backupOrder — pre-reorder sortOrder, used to revert on failure
  */
 export interface MutationState {
   overrides: Record<string, TicketState>;
+  order: Record<string, number>;
   sync: Record<string, SyncState>;
   backup: Record<string, TicketState>;
+  backupOrder: Record<string, number>;
 }
 
-export const initialMutationState: MutationState = { overrides: {}, sync: {}, backup: {} };
+export const initialMutationState: MutationState = {
+  overrides: {},
+  order: {},
+  sync: {},
+  backup: {},
+  backupOrder: {},
+};
 
 export type MutationAction =
   | { type: "move"; id: string; fromState: TicketState; toState: TicketState }
+  | { type: "reorder"; id: string; fromSortOrder: number; toSortOrder: number }
   | { type: "result"; id: string; ok: boolean; conflict?: boolean }
   | { type: "settle"; id: string }
   | { type: "reconcile" };
+
+function without<T>(rec: Record<string, T>, id: string): Record<string, T> {
+  const copy = { ...rec };
+  delete copy[id];
+  return copy;
+}
 
 export function mutationReducer(s: MutationState, a: MutationAction): MutationState {
   switch (a.type) {
     case "move":
       return {
+        ...s,
         overrides: { ...s.overrides, [a.id]: a.toState },
         sync: { ...s.sync, [a.id]: "syncing" },
         backup: { ...s.backup, [a.id]: a.fromState },
       };
+    case "reorder":
+      return {
+        ...s,
+        order: { ...s.order, [a.id]: a.toSortOrder },
+        sync: { ...s.sync, [a.id]: "syncing" },
+        backupOrder: { ...s.backupOrder, [a.id]: a.fromSortOrder },
+      };
     case "result": {
-      const backup = { ...s.backup };
-      delete backup[a.id];
+      const base = { ...s, backup: without(s.backup, a.id), backupOrder: without(s.backupOrder, a.id) };
       if (a.ok) {
-        // Keep the override (it now matches Linear); show a brief synced badge.
-        return { overrides: s.overrides, sync: { ...s.sync, [a.id]: "synced" }, backup };
+        // Keep the optimistic value (it now matches Linear); brief synced badge.
+        return { ...base, sync: { ...s.sync, [a.id]: "synced" } };
       }
-      // Failure or conflict: revert the optimistic move, flag the card.
-      const overrides = { ...s.overrides };
-      delete overrides[a.id];
-      return { overrides, sync: { ...s.sync, [a.id]: a.conflict ? "conflict" : "failed" }, backup };
+      // Failure or conflict: revert whichever optimistic change was pending.
+      return {
+        ...base,
+        overrides: without(s.overrides, a.id),
+        order: without(s.order, a.id),
+        sync: { ...s.sync, [a.id]: a.conflict ? "conflict" : "failed" },
+      };
     }
-    case "settle": {
-      const sync = { ...s.sync };
-      delete sync[a.id];
-      return { ...s, sync };
-    }
+    case "settle":
+      return { ...s, sync: without(s.sync, a.id) };
     case "reconcile":
       // A fresh board arrived from the host — it's the truth; drop all local state.
       return initialMutationState;
@@ -62,5 +87,14 @@ export function applyOverrides(waves: Wave[], overrides: Record<string, TicketSt
   return waves.map((w) => ({
     ...w,
     tickets: w.tickets.map((t) => (overrides[t.id] ? { ...t, state: overrides[t.id] } : t)),
+  }));
+}
+
+/** Layers optimistic sortOrder overrides onto the host's waves for display. */
+export function applyOrder(waves: Wave[], order: Record<string, number>): Wave[] {
+  if (Object.keys(order).length === 0) return waves;
+  return waves.map((w) => ({
+    ...w,
+    tickets: w.tickets.map((t) => (t.id in order ? { ...t, sortOrder: order[t.id] } : t)),
   }));
 }
