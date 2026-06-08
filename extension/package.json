@@ -5,6 +5,12 @@
   "version": "0.0.1",
   "publisher": "atrium",
   "private": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stonekey908/atrium.git",
+    "directory": "extension"
+  },
   "engines": {
     "vscode": "^1.98.0"
   },
@@ -43,6 +49,8 @@
     "watch:webview": "vite build --watch",
     "watch:host": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "vscode:prepublish": "vite build && tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -50,6 +58,9 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -59,6 +70,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.4",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^4.1.5",
+    "jsdom": "^26"
   }
 }
