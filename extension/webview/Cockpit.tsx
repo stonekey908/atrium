@@ -3,6 +3,7 @@ import { vscode } from "./vscode";
 import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
 import { SprintBoard } from "./SprintBoard";
+import { useBoardMutations } from "./useBoardMutations";
 import { PRIORITY, StateIcon, Empty } from "./ui";
 import type {
   ActivityKind,
@@ -15,21 +16,25 @@ import type {
 } from "./types";
 
 export function Cockpit({ init }: { init: InitPayload }) {
-  const sprint = currentSprint(init.waves);
+  // Optimistic write-back layers local moves over the host's board; drag is only
+  // enabled in live mode (a key is set), so the board never fakes a sync.
+  const { displayWaves, syncOf, move } = useBoardMutations(init.waves);
+  const canWrite = init.source === "live";
+  const sprint = currentSprint(displayWaves);
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
       <Header init={init} />
       {init.error && <LoadBanner message={init.error} />}
       <Pipeline stages={init.stages} />
-      <ActiveWork waves={init.waves} branch={init.branch} />
-      <RollupBar waves={init.waves} spikes={init.spikes ?? []} />
+      <ActiveWork waves={displayWaves} branch={init.branch} />
+      <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
       {/* Centred, capped width so it reads well full-screen and in the rail. */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1000px]">
           {/* Spotlight the current sprint as a kanban; the other waves are the
               horizon list below (the current sprint isn't repeated there). */}
-          {sprint && <SprintBoard wave={sprint} />}
-          {init.waves
+          {sprint && <SprintBoard wave={sprint} syncOf={syncOf} canWrite={canWrite} onMove={move} />}
+          {displayWaves
             .filter((w) => w !== sprint)
             .map((w) => (
               <WaveSection key={w.name} wave={w} />

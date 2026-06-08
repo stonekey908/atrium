@@ -36,6 +36,9 @@ export interface Ticket {
   spec: string[];
   tests: TestSummary;
   activity: ActivityItem[];
+  /** Linear's internal issue UUID — present only on a live pull; the write-back
+   *  (STO-2469/2470) targets this. Absent in the committed snapshot. */
+  linearId?: string;
 }
 
 export interface Wave {
@@ -109,6 +112,8 @@ function validateTicket(raw: unknown, where: string): Ticket {
   validateTests(raw.tests, where);
   if (!Array.isArray(raw.activity)) fail(`${where}.activity must be an array`);
   raw.activity.forEach((a, i) => validateActivity(a, `${where}.activity[${i}]`));
+  if (raw.linearId !== undefined && typeof raw.linearId !== "string")
+    fail(`${where}.linearId must be a string when present`);
   return raw as unknown as Ticket;
 }
 
@@ -163,6 +168,8 @@ export const EMPTY_BOARD: Board = { project: "", generatedAt: "", spikes: [], wa
 
 /** The flattened shape the live source extracts from a Linear issue. */
 export interface LinearIssueLite {
+  /** Linear's internal UUID (write target). */
+  id: string;
   identifier: string;
   title: string;
   url: string;
@@ -221,6 +228,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     spec: specFromDescription(i.description),
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
     activity: [],
+    linearId: i.id,
   };
 }
 

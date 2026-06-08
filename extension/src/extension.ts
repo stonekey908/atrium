@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
-import { validateBoard, EMPTY_BOARD, type Board } from "./board";
+import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
+import { LinearWriteClient, resolveStateId } from "./linear-writes";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
@@ -121,16 +122,94 @@ function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
   };
 }
 
+interface InboundMessage {
+  type?: string;
+  url?: string;
+  /** Sprint-kanban write-back fields. */
+  id?: string;
+  linearId?: string;
+  fromState?: TicketState;
+  toState?: TicketState;
+  sortOrder?: number;
+}
+
 /** Webview <-> host channel. The webview asks once it has booted; we answer
- *  with project state. Ticket interactions are handled inside the webview. */
+ *  with project state. Drag interactions post mutation intents we write to
+ *  Linear and acknowledge with a `mutationResult`. */
 function wireMessages(webview: vscode.Webview): void {
-  webview.onDidReceiveMessage((msg: { type?: string; url?: string }) => {
+  webview.onDidReceiveMessage((msg: InboundMessage) => {
     if (msg?.type === "ready" || msg?.type === "refresh") {
       void postInit(webview);
     } else if (msg?.type === "openLinear" && msg.url) {
       void vscode.env.openExternal(vscode.Uri.parse(msg.url));
+    } else if (msg?.type === "moveTicket") {
+      void handleMoveTicket(webview, msg);
+    } else if (msg?.type === "reorderTicket") {
+      void handleReorderTicket(webview, msg);
     }
   });
+}
+
+/** One write client per API key, reused so workflow-state lookups stay cached. */
+let writeClient: { key: string; client: LinearWriteClient } | undefined;
+
+function getWriteClient(): LinearWriteClient | null {
+  const key = (vscode.workspace.getConfiguration("atrium").get<string>("linear.apiKey") ?? "").trim();
+  if (!key) return null;
+  if (writeClient?.key !== key) writeClient = { key, client: new LinearWriteClient(key) };
+  return writeClient.client;
+}
+
+function postMutationResult(
+  webview: vscode.Webview,
+  result: { id: string; ok: boolean; conflict?: boolean; error?: string },
+): void {
+  void webview.postMessage({ type: "mutationResult", ...result });
+}
+
+/** Drag-to-status: read-before-write (conflict guard), resolve our column onto
+ *  the team's real workflow-state id, then `updateIssue`. */
+async function handleMoveTicket(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { id, linearId, fromState, toState } = msg;
+  if (!id || !toState) return;
+  const client = getWriteClient();
+  if (!client || !linearId) {
+    postMutationResult(webview, { id, ok: false, error: "No Linear API key set — board is read-only." });
+    return;
+  }
+  try {
+    const current = await client.readIssue(linearId);
+    if (fromState && current.state !== fromState) {
+      postMutationResult(webview, { id, ok: false, conflict: true });
+      return;
+    }
+    const stateId = resolveStateId(current.states, toState);
+    if (!stateId) {
+      postMutationResult(webview, { id, ok: false, error: `No "${toState}" state in this team's workflow.` });
+      return;
+    }
+    const ok = await client.setState(linearId, stateId);
+    postMutationResult(webview, { id, ok });
+  } catch (e) {
+    postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/** Drag-to-reorder: write the new Linear sortOrder. */
+async function handleReorderTicket(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { id, linearId, sortOrder } = msg;
+  if (!id || typeof sortOrder !== "number") return;
+  const client = getWriteClient();
+  if (!client || !linearId) {
+    postMutationResult(webview, { id, ok: false, error: "No Linear API key set — board is read-only." });
+    return;
+  }
+  try {
+    const ok = await client.setSortOrder(linearId, sortOrder);
+    postMutationResult(webview, { id, ok });
+  } catch (e) {
+    postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 /** Reads the committed snapshot copied next to the compiled host (dist/). On any

@@ -17,6 +17,7 @@ const ISSUES_QUERY = `
   query AtriumIssues($project: String!, $after: String) {
     issues(filter: { project: { name: { eq: $project } } }, first: 100, after: $after) {
       nodes {
+        id
         identifier
         title
         url
@@ -33,6 +34,7 @@ const ISSUES_QUERY = `
 interface IssuesResponse {
   issues: {
     nodes: {
+      id: string;
       identifier: string;
       title: string;
       url: string;
@@ -57,6 +59,7 @@ async function fetchAllIssues(client: LinearClient, projectName: string): Promis
     if (!conn) break;
     for (const n of conn.nodes) {
       out.push({
+        id: n.id,
         identifier: n.identifier,
         title: n.title,
         url: n.url,

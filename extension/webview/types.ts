@@ -29,6 +29,8 @@ export interface Ticket {
   activity: ActivityItem[];
   /** Linear issue URL, for click-through. */
   url?: string;
+  /** Linear's internal UUID — present on a live pull; the write target. */
+  linearId?: string;
 }
 
 export interface Wave {

@@ -112,10 +112,10 @@ describe("specFromDescription", () => {
 
 describe("boardFromIssues", () => {
   const ISSUES: LinearIssueLite[] = [
-    { identifier: "STO-2095", title: "AppShell", url: "u1", priority: 2, stateType: "completed", stateName: "Done", labels: ["ATR Wave 0"], description: "- a\n- b\n- c\n- d" },
-    { identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "started", stateName: "In Review", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
-    { identifier: "STO-2468", title: "Read-only kanban", url: "u3", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
-    { identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
+    { id: "uuid", identifier: "STO-2095", title: "AppShell", url: "u1", priority: 2, stateType: "completed", stateName: "Done", labels: ["ATR Wave 0"], description: "- a\n- b\n- c\n- d" },
+    { id: "uuid", identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "started", stateName: "In Review", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
+    { id: "uuid", identifier: "STO-2468", title: "Read-only kanban", url: "u3", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
+    { id: "uuid", identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
   ];
   const board = boardFromIssues(ISSUES, { projectName: "Atrium", generatedAt: "2026-06-08" });
 
@@ -142,9 +142,9 @@ describe("boardFromIssues", () => {
 
   it("collects tickets with no recognized wave label into an Unsorted bucket", () => {
     const issues: LinearIssueLite[] = [
-      { identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0"], description: null },
-      { identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
-      { identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
+      { id: "uuid", identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0"], description: null },
+      { id: "uuid", identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
+      { id: "uuid", identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
     ];
     const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "2026-06-08" });
     const unsorted = b.waves.find((w) => w.name === "Unsorted · No sprint");

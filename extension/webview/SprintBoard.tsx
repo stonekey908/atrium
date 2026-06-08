@@ -1,59 +1,155 @@
+import { useState } from "react";
 import { vscode } from "./vscode";
 import { boardToColumns, type KanbanColumn } from "./sprint";
 import { PRIORITY } from "./ui";
-import type { SyncState, Ticket, Wave } from "./types";
+import type { SyncState, Ticket, TicketState, Wave } from "./types";
+
+const DND_MIME = "application/x-atrium-card";
+interface DragPayload {
+  id: string;
+  linearId?: string;
+  fromState: TicketState;
+}
 
 /**
- * The spotlight kanban for the current sprint. Slice 1 is read-only layout over
- * `boardToColumns`; slice 2 adds drag-to-status + per-card sync badges, slice 3
- * adds drag-to-reorder. Sits above the W0.6 wave list (the "horizon").
+ * The spotlight kanban for the current sprint. Read-only layout over
+ * `boardToColumns`, plus drag-to-status when a live key is set: dragging a card
+ * to another column calls `onMove`, which optimistically moves it and asks the
+ * host to write the new state to Linear (STO-2469). Without a key the board is
+ * read-only and cards aren't draggable (STO-2468).
  */
 export function SprintBoard({
   wave,
   syncOf,
+  canWrite = false,
+  onMove,
 }: {
   wave: Wave;
-  /** Per-ticket write-back status (slice 2). Defaults to idle for now. */
   syncOf?: (id: string) => SyncState;
+  /** True when a live Linear key is set; gates all drag interactions. */
+  canWrite?: boolean;
+  onMove?: (id: string, linearId: string | undefined, fromState: TicketState, toState: TicketState) => void;
 }) {
   const columns = boardToColumns(wave);
-  const total = wave.tickets.length;
+  const [overCol, setOverCol] = useState<TicketState | null>(null);
+
+  const onDrop = (toState: TicketState, e: React.DragEvent) => {
+    e.preventDefault();
+    setOverCol(null);
+    if (!canWrite || !onMove) return;
+    const raw = e.dataTransfer.getData(DND_MIME);
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw) as DragPayload;
+      if (p.fromState !== toState) onMove(p.id, p.linearId, p.fromState, toState);
+    } catch {
+      /* ignore malformed drag data */
+    }
+  };
+
   return (
     <section className="border-b border-border shrink-0 bg-active/[0.03]">
       <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 text-[12px]">
         <span className="codicon codicon-layout text-link" />
         <span className="uppercase text-[9px] tracking-wide text-fg-muted">Current sprint</span>
         <span className="font-semibold truncate">{wave.name}</span>
-        <span className="ml-auto font-mono text-[11px] text-fg-muted shrink-0">{total} tickets</span>
+        {!canWrite && (
+          <span
+            className="flex items-center gap-1 text-fg-muted text-[10px] shrink-0"
+            title="Set atrium.linear.apiKey to drag cards and sync to Linear (SETUP.md)"
+          >
+            <span className="codicon codicon-lock text-[10px]" />
+            read-only
+          </span>
+        )}
+        <span className="ml-auto font-mono text-[11px] text-fg-muted shrink-0">{wave.tickets.length} tickets</span>
       </div>
       <div className="grid grid-cols-4 gap-2 px-3 pb-3">
         {columns.map((col) => (
-          <Column key={col.key} col={col} syncOf={syncOf} />
+          <Column
+            key={col.key}
+            col={col}
+            canWrite={canWrite}
+            syncOf={syncOf}
+            isOver={overCol === col.key}
+            onDragOver={(e) => {
+              if (!canWrite) return;
+              e.preventDefault();
+              setOverCol(col.key);
+            }}
+            onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
+            onDrop={(e) => onDrop(col.key, e)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function Column({ col, syncOf }: { col: KanbanColumn; syncOf?: (id: string) => SyncState }) {
+function Column({
+  col,
+  canWrite,
+  syncOf,
+  isOver,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  col: KanbanColumn;
+  canWrite: boolean;
+  syncOf?: (id: string) => SyncState;
+  isOver: boolean;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+}) {
   return (
     <div className="flex flex-col min-w-0">
       <div className="flex items-center gap-1.5 px-1 pb-1.5 text-[10px] uppercase tracking-wide text-fg-muted">
         <span className="truncate">{col.label}</span>
         <span className="font-mono">{col.tickets.length}</span>
       </div>
-      <div className="flex flex-col gap-1.5 min-h-[40px] rounded bg-bg/40 p-1">
+      <div
+        data-col={col.key}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        className={`flex flex-col gap-1.5 min-h-[40px] rounded p-1 transition-colors ${
+          isOver ? "bg-active/20 outline outline-1 outline-link" : "bg-bg/40"
+        }`}
+      >
         {col.tickets.map((t) => (
-          <KanbanCard key={t.id} ticket={t} sync={syncOf?.(t.id) ?? "idle"} />
+          <KanbanCard key={t.id} ticket={t} sync={syncOf?.(t.id) ?? "idle"} draggable={canWrite} fromState={col.key} />
         ))}
       </div>
     </div>
   );
 }
 
-export function KanbanCard({ ticket, sync = "idle" }: { ticket: Ticket; sync?: SyncState }) {
+export function KanbanCard({
+  ticket,
+  sync = "idle",
+  draggable = false,
+  fromState,
+}: {
+  ticket: Ticket;
+  sync?: SyncState;
+  draggable?: boolean;
+  fromState?: TicketState;
+}) {
+  const onDragStart = (e: React.DragEvent) => {
+    const payload: DragPayload = { id: ticket.id, linearId: ticket.linearId, fromState: fromState ?? ticket.state };
+    e.dataTransfer.setData(DND_MIME, JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = "move";
+  };
   return (
-    <div className="group rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted">
+    <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      className={`group rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      }`}
+    >
       <div className="flex items-center gap-1.5">
         <span className="font-mono text-[10px] text-fg-muted shrink-0">{ticket.id}</span>
         <SyncBadge sync={sync} />
@@ -80,7 +176,7 @@ export function KanbanCard({ ticket, sync = "idle" }: { ticket: Ticket; sync?: S
   );
 }
 
-/** Tiny write-back indicator. Hidden when idle; slice 2 drives the rest. */
+/** Tiny write-back indicator. Hidden when idle; driven by useBoardMutations. */
 function SyncBadge({ sync }: { sync: SyncState }) {
   if (sync === "idle") return null;
   const map: Record<Exclude<SyncState, "idle">, { icon: string; cls: string; title: string }> = {
