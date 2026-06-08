@@ -155,6 +155,18 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/current sprint/i)).toBeInTheDocument();
   });
 
+  it("shows a live badge when the board came from Linear", () => {
+    render(<App />);
+    sendInit({ ...PAYLOAD, source: "live", generatedAt: "2026-06-08" });
+    expect(screen.getByText(/live/i)).toBeInTheDocument();
+  });
+
+  it("shows the snapshot date when the board came from the committed file", () => {
+    render(<App />);
+    sendInit({ ...PAYLOAD, source: "snapshot", generatedAt: "2026-06-08" });
+    expect(screen.getByText(/snapshot · 2026-06-08/i)).toBeInTheDocument();
+  });
+
   it("surfaces a non-fatal banner when the host reports a load error", () => {
     render(<App />);
     sendInit({ ...PAYLOAD, waves: [], error: "Couldn't load board snapshot: boom" });

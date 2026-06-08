@@ -46,6 +46,28 @@ function LoadBanner({ message }: { message: string }) {
   );
 }
 
+/** Where the board data came from + how fresh it is. Live = a green dot;
+ *  snapshot = the date so you know whether to Refresh / regenerate. */
+function SourceChip({ source, generatedAt }: { source?: "snapshot" | "live"; generatedAt?: string }) {
+  if (!source) return null;
+  if (source === "live") {
+    return (
+      <span className="flex items-center gap-1 text-green text-[11px]" title="Pulled live from Linear">
+        <span className="w-1.5 h-1.5 rounded-full bg-green" />
+        live
+      </span>
+    );
+  }
+  return (
+    <span
+      className="text-fg-muted text-[11px]"
+      title="Committed snapshot — Refresh after I regenerate it, or set a Linear API key (SETUP.md) for live data"
+    >
+      snapshot{generatedAt ? ` · ${generatedAt}` : ""}
+    </span>
+  );
+}
+
 /** Tier-2 "what am I doing right now": the ticket matched from the current branch
  *  (or the first in-progress one). Hidden when nothing is active. */
 function ActiveWork({ waves, branch }: { waves: Wave[]; branch: string }) {
@@ -130,6 +152,7 @@ function Header({ init }: { init: InitPayload }) {
         <span className="codicon codicon-folder-opened" />
         <span className="text-[11px]">{init.folders.length}</span>
       </span>
+      <SourceChip source={init.source} generatedAt={init.generatedAt} />
       <button
         type="button"
         aria-label="Refresh board"

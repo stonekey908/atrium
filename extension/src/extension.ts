@@ -114,27 +114,31 @@ function loadSnapshot(): { board: Board; error?: string } {
 /** Picks the data source from settings. With `atrium.linear.apiKey` set we pull
  *  live from Linear (SDK loaded lazily); on any live failure we fall back to the
  *  committed snapshot and tell the user why. Without a key we use the snapshot. */
-async function loadBoard(): Promise<{ board: Board; error?: string }> {
+async function loadBoard(): Promise<{ board: Board; error?: string; source: "snapshot" | "live" }> {
   const cfg = vscode.workspace.getConfiguration("atrium");
   const apiKey = (cfg.get<string>("linear.apiKey") ?? "").trim();
   const projectName = (cfg.get<string>("linear.projectName") ?? "").trim() || "Atrium";
 
-  if (!apiKey) return loadSnapshot();
+  if (!apiKey) return { ...loadSnapshot(), source: "snapshot" };
 
   try {
     const { LinearSdkSource } = await import("./linear-source");
     const generatedAt = new Date().toISOString().slice(0, 10);
     const board = await new LinearSdkSource({ apiKey, projectName, generatedAt }).load();
-    return { board };
+    return { board, source: "live" };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return { ...loadSnapshot(), error: `Live Linear fetch failed (${message}); showing the committed snapshot.` };
+    return {
+      ...loadSnapshot(),
+      error: `Live Linear fetch failed (${message}); showing the committed snapshot.`,
+      source: "snapshot",
+    };
   }
 }
 
 async function buildInitPayload(): Promise<InitPayload> {
   const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.name);
-  const { board, error } = await loadBoard();
+  const { board, error, source } = await loadBoard();
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     branch: "claude/vs-plugin-architecture",
@@ -142,6 +146,8 @@ async function buildInitPayload(): Promise<InitPayload> {
     stages: STAGES,
     waves: board.waves,
     spikes: board.spikes,
+    source,
+    generatedAt: board.generatedAt || undefined,
     error,
   };
 }

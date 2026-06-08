@@ -50,6 +50,9 @@ export interface InitPayload {
   stages: Stage[];
   waves: Wave[];
   spikes?: Spike[];
+  /** Where the board came from + how fresh it is (shown as a header chip). */
+  source?: "snapshot" | "live";
+  generatedAt?: string;
   /** Non-fatal load problem (e.g. malformed snapshot); webview shows a banner. */
   error?: string;
 }
