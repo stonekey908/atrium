@@ -26,6 +26,7 @@ const ISSUES_QUERY = `
         state { type name }
         labels { nodes { name } }
         description
+        comments { nodes { body createdAt } }
       }
       pageInfo { hasNextPage endCursor }
     }
@@ -44,6 +45,7 @@ interface IssuesResponse {
       state: { type: string; name: string };
       labels: { nodes: { name: string }[] };
       description: string | null;
+      comments: { nodes: { body: string; createdAt: string }[] };
     }[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
@@ -71,6 +73,7 @@ async function fetchAllIssues(client: LinearClient, projectName: string): Promis
         stateName: n.state.name,
         labels: n.labels.nodes.map((l) => l.name),
         description: n.description,
+        comments: n.comments.nodes.map((c) => ({ body: c.body, createdAt: c.createdAt })),
       });
     }
     after = conn.pageInfo.hasNextPage ? (conn.pageInfo.endCursor ?? undefined) : undefined;

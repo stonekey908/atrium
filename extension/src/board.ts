@@ -184,6 +184,7 @@ export interface LinearIssueLite {
   stateName: string;
   labels: string[];
   description: string | null;
+  comments: { body: string; createdAt: string }[];
 }
 
 /** Wave label → display name + pipeline stage + gating spike. Single source of
@@ -224,6 +225,34 @@ export function specFromDescription(description: string | null): string[] {
     .slice(0, 3);
 }
 
+/** Maps a comment body onto an audit-trail kind by keyword (first match wins).
+ *  Our real comments don't use rigid `Pickup:` headers, so this is heuristic. */
+const KIND_PATTERNS: [ActivityKind, RegExp][] = [
+  ["close", /\b(clos|merg|shipped|follow-?up)/i],
+  ["plan", /\b(plan|approach|locked)\b/i],
+  ["pickup", /\b(start|pick(ing|ed)? up|kick(ing|ed)? off)/i],
+  ["phase", /\b(complete|done|slice|phase|implement|uat|blocked|verif|fix)/i],
+];
+
+function kindOfComment(body: string): ActivityKind {
+  for (const [kind, re] of KIND_PATTERNS) if (re.test(body)) return kind;
+  return "phase";
+}
+
+/** First non-empty line of a comment, stripped of markdown emphasis, truncated. */
+function firstLine(body: string): string {
+  const line = body.split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+  const plain = line.replace(/[*_`#]/g, "").trim();
+  return plain.length > 90 ? `${plain.slice(0, 87)}…` : plain;
+}
+
+/** Derives the audit-trail activity (Pickup / Plan / Phase / Close) from a
+ *  ticket's Linear comments. Pure — drives the audit ribbon (STO-2172) and the
+ *  ticket Activity tab. */
+export function activityFromComments(comments: { body: string; createdAt: string }[]): ActivityItem[] {
+  return comments.map((c) => ({ kind: kindOfComment(c.body), text: firstLine(c.body), when: c.createdAt.slice(0, 10) }));
+}
+
 function issueToTicket(i: LinearIssueLite): Ticket {
   return {
     id: i.identifier,
@@ -233,7 +262,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     state: mapState(i.stateType, i.stateName),
     spec: specFromDescription(i.description),
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
-    activity: [],
+    activity: activityFromComments(i.comments),
     linearId: i.id,
     sortOrder: i.sortOrder,
   };

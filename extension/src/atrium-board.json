@@ -27,7 +27,28 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "Merged to main. feat/sto-2099-titlebar-git-status → main via --no-ff (merge commit 1b59…",
+              "when": "2026-05-06"
+            },
+            {
+              "kind": "close",
+              "text": "Closed. Live git status now drives the title-bar BranchChip — branch name, dirty dot, a…",
+              "when": "2026-05-06"
+            },
+            {
+              "kind": "plan",
+              "text": "Plan locked. Approach: shell out to git CLI from Rust (matches ticket spec literally), …",
+              "when": "2026-05-06"
+            },
+            {
+              "kind": "close",
+              "text": "Starting work. Will update with approach before implementation.",
+              "when": "2026-05-06"
+            }
+          ],
           "linearId": "1078cbc1-8637-4428-bb81-f0b9538d5c00",
           "sortOrder": -1559644
         },
@@ -48,7 +69,18 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "UAT passed — closing.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "plan",
+              "text": "Implementation complete — ready for UAT.",
+              "when": "2026-05-05"
+            }
+          ],
           "linearId": "f2252812-b0d2-40bf-9ec4-dfabf0be4e07",
           "sortOrder": -1545813
         },
@@ -69,7 +101,18 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "UAT passed — closing.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "phase",
+              "text": "Implementation complete — ready for UAT.",
+              "when": "2026-05-05"
+            }
+          ],
           "linearId": "d2245bb5-26a5-4784-a63a-3dc40ae605e0",
           "sortOrder": -1544895
         },
@@ -90,7 +133,18 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "UAT passed — closing.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "phase",
+              "text": "Implementation complete — ready for UAT.",
+              "when": "2026-05-05"
+            }
+          ],
           "linearId": "f8253273-1ec9-4fee-80a2-efb62a77946e",
           "sortOrder": -1543884
         },
@@ -111,7 +165,18 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "UAT passed — closing.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "plan",
+              "text": "Implementation complete — ready for UAT.",
+              "when": "2026-05-05"
+            }
+          ],
           "linearId": "6d268b16-1282-4fb3-b83b-c872c18b59f8",
           "sortOrder": -1542981
         },
@@ -132,7 +197,33 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "close",
+              "text": "UAT passed — closing.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "plan",
+              "text": "Implementation complete — ready for UAT.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "close",
+              "text": "Plan locked.",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "plan",
+              "text": "Starting work. Bootstrap ticket — repo doesn't exist yet, so there's a small pre-flight…",
+              "when": "2026-05-05"
+            },
+            {
+              "kind": "plan",
+              "text": "Kickoff context — this is the entry-point ticket for Wave 0. Pick this up first.",
+              "when": "2026-05-03"
+            }
+          ],
           "linearId": "86077864-2534-463f-980c-f1ac2d33c460",
           "sortOrder": -1537925
         }
@@ -234,7 +325,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implemented + committed (690ea67): each ticket row gets an open-in-Linear button → host…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "fa47e111-55a7-4b42-81c5-4ecc3f7236bc",
           "sortOrder": -7932
         },
@@ -255,7 +352,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implemented + committed (690ea67): spike-gate chips on gated waves (the real board ligh…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "318a60f9-cc97-4949-96bd-fc7dd2be35c8",
           "sortOrder": -6857
         },
@@ -276,7 +379,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implemented + committed (690ea67): Active Work strip — \"Working on\" the ticket matched …",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "d82c127b-51b5-4001-9132-d68ff9c61e43",
           "sortOrder": -5838
         },
@@ -297,7 +406,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implemented + committed (690ea67): project rollup bar — done/total + in-progress + spik…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "017db5b1-a545-4730-a605-2a69fa0f867e",
           "sortOrder": -4790
         },
@@ -318,7 +433,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Implemented + committed on claude/vs-plugin-architecture-FyCiv. Real board snapshot beh…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "92664e58-5e14-4d3d-a5ff-fe84e918b279",
           "sortOrder": -3827
         }
@@ -347,7 +468,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Slice 3 complete. Drag a card onto another in the same column → optimistic reorder + ho…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "b7de0e1a-2cff-4498-8950-91e1c651f368",
           "sortOrder": -31238
         },
@@ -368,7 +495,13 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Slice 2 complete — first live write to Linear. Drag a card across columns → optimistic …",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "fffe5577-c7c4-4e36-be8c-c5d8c6094308",
           "sortOrder": -30284
         },
@@ -389,7 +522,18 @@
             "missing": 0,
             "discovered": false
           },
-          "activity": [],
+          "activity": [
+            {
+              "kind": "phase",
+              "text": "Slice 1 complete. Read-only SprintBoard kanban spotlights the current sprint (Build-sta…",
+              "when": "2026-06-08"
+            },
+            {
+              "kind": "plan",
+              "text": "Starting work as the W0.7 sprint-board build (with STO-2469 drag-to-status + STO-2470 d…",
+              "when": "2026-06-08"
+            }
+          ],
           "linearId": "95e6e93c-c0fe-439a-a2cc-52f22856e026",
           "sortOrder": -32169
         }
@@ -479,7 +623,7 @@
           "title": "Wave plan summary on Build — ticket pipeline + UAT phase row",
           "url": "https://linear.app/stonekey/issue/STO-2173/wave-plan-summary-on-build-ticket-pipeline-uat-phase-row",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Heading**: wave name + meta (`N tickets · ~Xm elapsed · ~Ym remaining`)",
             "**Breakdown legend** (right-aligned): coloured dots for `N done · N live · N next · UAT after`",
@@ -493,14 +637,14 @@
           },
           "activity": [],
           "linearId": "195e7943-9bc5-48d7-bcbf-52ae6a9fedc0",
-          "sortOrder": -1288386
+          "sortOrder": -35195
         },
         {
           "id": "STO-2172",
           "title": "Audit-trail timeline — Pickup / Plan locked / Phase end / Close",
           "url": "https://linear.app/stonekey/issue/STO-2172/audit-trail-timeline-pickup-plan-locked-phase-end-close",
           "priority": "low",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Filled (green)** — Linear comment exists for that step",
             "**Empty (outline)** — required but missing",
@@ -514,7 +658,7 @@
           },
           "activity": [],
           "linearId": "28cf63fb-4216-4792-8df8-613b358cb37c",
-          "sortOrder": -1287382
+          "sortOrder": -34153
         },
         {
           "id": "STO-2171",
@@ -542,7 +686,7 @@
           "title": "Session Status rail — persistent across all Tier-2 canvases",
           "url": "https://linear.app/stonekey/issue/STO-2170/session-status-rail-persistent-across-all-tier-2-canvases",
           "priority": "high",
-          "state": "todo",
+          "state": "doing",
           "spec": [
             "**Branch** — name + dirty/clean dot (`feat/<ticket-id>-<desc>` validation)",
             "**Ahead** — unpushed commit count (amber if > 0)",
@@ -556,7 +700,7 @@
           },
           "activity": [],
           "linearId": "2ca48bd0-9bc5-4067-b844-cc48b6a26286",
-          "sortOrder": -1285463
+          "sortOrder": -33083
         }
       ]
     },

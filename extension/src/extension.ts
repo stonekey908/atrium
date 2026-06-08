@@ -4,6 +4,7 @@ import { join } from "path";
 import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
 import { LinearWriteClient, resolveStateId } from "./linear-writes";
+import { getGitStatus } from "./git";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
@@ -251,11 +252,15 @@ async function loadBoard(): Promise<{ board: Board; error?: string; source: "sna
 }
 
 async function buildInitPayload(): Promise<InitPayload> {
-  const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.name);
+  const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+  const folders = workspaceFolders.map((f) => f.name);
+  const root = workspaceFolders[0]?.uri.fsPath;
+  const git = root ? await getGitStatus(root) : null;
   const { board, error, source } = await loadBoard();
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
-    branch: "claude/vs-plugin-architecture",
+    branch: git?.branch || "(no branch)",
+    git: git ?? undefined,
     folders,
     stages: STAGES,
     waves: board.waves,

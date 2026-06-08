@@ -43,6 +43,13 @@ export interface Spike {
   gatesWave: string;
   state: TicketState;
 }
+export interface GitInfo {
+  branch: string;
+  dirty: boolean;
+  ahead: number;
+  behind: number;
+}
+
 export interface InitPayload {
   project: string;
   branch: string;
@@ -50,6 +57,9 @@ export interface InitPayload {
   stages: Stage[];
   waves: Wave[];
   spikes?: Spike[];
+  /** Real workspace git status for the status strip (STO-2170); absent if the
+   *  workspace isn't a git repo. */
+  git?: GitInfo;
   /** Where the board came from + how fresh it is (shown as a header chip). */
   source?: "snapshot" | "live";
   generatedAt?: string;

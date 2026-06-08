@@ -3,8 +3,9 @@ import { vscode } from "./vscode";
 import { waveStages, isCurrentSprint, resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
 import { SprintBoard } from "./SprintBoard";
+import { StatusStrip } from "./StatusStrip";
 import { useBoardMutations } from "./useBoardMutations";
-import { PRIORITY, StateIcon, Empty } from "./ui";
+import { PRIORITY, StateIcon, Empty, AuditRibbon } from "./ui";
 import type {
   ActivityKind,
   InitPayload,
@@ -24,6 +25,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
   return (
     <div className="flex flex-col h-full bg-bg text-fg select-none">
       <Header init={init} />
+      <StatusStrip init={init} />
       {init.error && <LoadBanner message={init.error} />}
       <Pipeline stages={init.stages} />
       <ActiveWork waves={displayWaves} branch={init.branch} />
@@ -56,28 +58,6 @@ function LoadBanner({ message }: { message: string }) {
       <span className="codicon codicon-warning shrink-0" />
       <span className="truncate">{message}</span>
     </div>
-  );
-}
-
-/** Where the board data came from + how fresh it is. Live = a green dot;
- *  snapshot = the date so you know whether to Refresh / regenerate. */
-function SourceChip({ source, generatedAt }: { source?: "snapshot" | "live"; generatedAt?: string }) {
-  if (!source) return null;
-  if (source === "live") {
-    return (
-      <span className="flex items-center gap-1 text-green text-[11px]" title="Pulled live from Linear">
-        <span className="w-1.5 h-1.5 rounded-full bg-green" />
-        live
-      </span>
-    );
-  }
-  return (
-    <span
-      className="text-fg-muted text-[11px]"
-      title="Committed snapshot — Refresh after I regenerate it, or set a Linear API key (SETUP.md) for live data"
-    >
-      snapshot{generatedAt ? ` · ${generatedAt}` : ""}
-    </span>
   );
 }
 
@@ -157,20 +137,11 @@ function Header({ init }: { init: InitPayload }) {
       <span className="codicon codicon-symbol-structure text-link" />
       <span className="font-semibold">Atrium</span>
       <span className="text-fg-muted truncate">{init.project}</span>
-      <span className="ml-auto flex items-center gap-1 text-fg-muted" title="Current branch">
-        <span className="codicon codicon-source-control" />
-        <span className="font-mono text-[11px]">{init.branch}</span>
-      </span>
-      <span className="flex items-center gap-1 text-fg-muted" title="Open workspace folders">
-        <span className="codicon codicon-folder-opened" />
-        <span className="text-[11px]">{init.folders.length}</span>
-      </span>
-      <SourceChip source={init.source} generatedAt={init.generatedAt} />
       <button
         type="button"
         aria-label="Refresh board"
         title="Refresh board"
-        className="flex items-center text-fg-muted hover:text-fg"
+        className="ml-auto flex items-center text-fg-muted hover:text-fg"
         onClick={() => vscode.postMessage({ type: "refresh" })}
       >
         <span className="codicon codicon-refresh" />
@@ -310,7 +281,7 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
             toggle();
           }
         }}
-        className={`grid grid-cols-[16px_minmax(0,auto)_1fr_auto_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] cursor-pointer hover:bg-hover ${
+        className={`grid grid-cols-[16px_minmax(0,auto)_1fr_auto_auto_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] cursor-pointer hover:bg-hover ${
           open
             ? "bg-active text-active-fg"
             : ticket.state === "review"
@@ -323,6 +294,8 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
         <StateIcon state={ticket.state} />
         <span className="font-mono text-[11px] text-fg-muted">{ticket.id}</span>
         <span className="truncate">{ticket.title}</span>
+        {/* Audit-trail ribbon (STO-2172) — only when the ticket has a trail. */}
+        {ticket.activity.length > 0 ? <AuditRibbon activity={ticket.activity} /> : <span />}
         <span className={`text-[10px] uppercase tracking-wide ${PRIORITY[ticket.priority].cls}`}>
           {PRIORITY[ticket.priority].label}
         </span>
@@ -421,15 +394,20 @@ const ACTIVITY_ICON: Record<ActivityKind, string> = {
 function Activity({ items }: { items: Ticket["activity"] }) {
   if (items.length === 0) return <Empty>No activity yet.</Empty>;
   return (
-    <ul className="flex flex-col gap-1.5 text-[12px]">
-      {items.map((a, i) => (
-        <li key={i} className="flex items-center gap-2">
-          <span className={`codicon ${ACTIVITY_ICON[a.kind]} text-fg-muted shrink-0`} />
-          <span className="flex-1">{a.text}</span>
-          <span className="text-fg-muted text-[10px] font-mono shrink-0">{a.when}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2">
+      <div className="pb-1.5 border-b border-border">
+        <AuditRibbon activity={items} labeled />
+      </div>
+      <ul className="flex flex-col gap-1.5 text-[12px]">
+        {items.map((a, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <span className={`codicon ${ACTIVITY_ICON[a.kind]} text-fg-muted shrink-0`} />
+            <span className="flex-1">{a.text}</span>
+            <span className="text-fg-muted text-[10px] font-mono shrink-0">{a.when}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -46,6 +46,7 @@ export function SprintBoard({
 }: { wave: Wave; syncOf?: (id: string) => SyncState } & SprintBoardCallbacks) {
   const columns = boardToColumns(wave);
   const [overCol, setOverCol] = useState<TicketState | null>(null);
+  const count = (k: TicketState) => columns.find((c) => c.key === k)!.tickets.length;
 
   return (
     <section className="border-b border-border shrink-0 bg-active/[0.03]">
@@ -62,9 +63,15 @@ export function SprintBoard({
             read-only
           </span>
         )}
-        <span className="ml-auto font-mono text-[11px] text-fg-muted shrink-0">{wave.tickets.length} tickets</span>
+        {/* Wave-plan breakdown (STO-2173): done / in flight / in review / to do. */}
+        <span className="ml-auto flex items-center gap-2.5 font-mono text-[10px] text-fg-muted shrink-0">
+          <Tally dot="bg-green" n={count("done")} label="done" />
+          <Tally dot="bg-yellow" n={count("doing")} label="in flight" />
+          <Tally dot="bg-blue" n={count("review")} label="in review" />
+          <Tally dot="bg-border" n={count("todo")} label="to do" />
+        </span>
       </div>
-      <div className="grid grid-cols-4 gap-2 px-3 pb-3">
+      <div className="grid grid-cols-4 gap-2 px-3 pb-2">
         {columns.map((col) => (
           <Column
             key={col.key}
@@ -78,7 +85,23 @@ export function SprintBoard({
           />
         ))}
       </div>
+      {/* UAT phase row (STO-2173): the wave's acceptance pass after Build. */}
+      <div className="flex items-center gap-2 mx-3 mb-3 px-2 py-1 rounded bg-yellow/10 text-[11px] text-yellow">
+        <span className="codicon codicon-question text-[12px]" />
+        <span className="uppercase text-[9px] tracking-wide">UAT</span>
+        <span className="text-fg-muted">{wave.name} · acceptance pass after Build</span>
+        <span className="ml-auto px-1.5 rounded-full bg-yellow/20 text-[9px] uppercase tracking-wide">Phase</span>
+      </div>
     </section>
+  );
+}
+
+function Tally({ dot, n, label }: { dot: string; n: number; label: string }) {
+  return (
+    <span className="flex items-center gap-1" title={`${n} ${label}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+      {n}
+    </span>
   );
 }
 

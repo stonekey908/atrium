@@ -6,6 +6,7 @@ import {
   mapState,
   specFromDescription,
   boardFromIssues,
+  activityFromComments,
   type LinearIssueLite,
 } from "./board";
 
@@ -110,12 +111,33 @@ describe("specFromDescription", () => {
   });
 });
 
+describe("activityFromComments", () => {
+  it("maps comment bodies onto the four audit-trail kinds", () => {
+    const items = activityFromComments([
+      { body: "Starting work on this", createdAt: "2026-06-08T10:00:00.000Z" },
+      { body: "**Plan locked** — three slices", createdAt: "2026-06-08T11:00:00.000Z" },
+      { body: "Slice 1 complete", createdAt: "2026-06-08T12:00:00.000Z" },
+      { body: "Closed · merged to main", createdAt: "2026-06-08T13:00:00.000Z" },
+    ]);
+    expect(items.map((i) => i.kind)).toEqual(["pickup", "plan", "phase", "close"]);
+    expect(items[0].text).toBe("Starting work on this");
+    expect(items[1].text).toBe("Plan locked — three slices"); // markdown stripped
+    expect(items[0].when).toBe("2026-06-08");
+  });
+
+  it("falls back to phase for an unrecognized body", () => {
+    expect(activityFromComments([{ body: "a random note", createdAt: "2026-06-08T00:00:00.000Z" }])[0].kind).toBe(
+      "phase",
+    );
+  });
+});
+
 describe("boardFromIssues", () => {
   const ISSUES: LinearIssueLite[] = [
-    { id: "uuid", sortOrder: 1, identifier: "STO-2095", title: "AppShell", url: "u1", priority: 2, stateType: "completed", stateName: "Done", labels: ["ATR Wave 0"], description: "- a\n- b\n- c\n- d" },
-    { id: "uuid", sortOrder: 1, identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "started", stateName: "In Review", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
-    { id: "uuid", sortOrder: 1, identifier: "STO-2468", title: "Read-only kanban", url: "u3", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
-    { id: "uuid", sortOrder: 1, identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
+    { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-2095", title: "AppShell", url: "u1", priority: 2, stateType: "completed", stateName: "Done", labels: ["ATR Wave 0"], description: "- a\n- b\n- c\n- d" },
+    { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-2461", title: "Board snapshot", url: "u2", priority: 1, stateType: "started", stateName: "In Review", labels: ["ATR Wave 0.6 · Cockpit data"], description: "scope" },
+    { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-2468", title: "Read-only kanban", url: "u3", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
+    { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-9999", title: "Dead", url: "u4", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 0.7 · Sprint board"], description: null },
   ];
   const board = boardFromIssues(ISSUES, { projectName: "Atrium", generatedAt: "2026-06-08" });
 
@@ -142,9 +164,9 @@ describe("boardFromIssues", () => {
 
   it("collects tickets with no recognized wave label into an Unsorted bucket", () => {
     const issues: LinearIssueLite[] = [
-      { id: "uuid", sortOrder: 1, identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0"], description: null },
-      { id: "uuid", sortOrder: 1, identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
-      { id: "uuid", sortOrder: 1, identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
+      { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-1", title: "in a wave", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["ATR Wave 0"], description: null },
+      { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-2", title: "odd label", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: ["Some Other Label"], description: null },
+      { id: "uuid", sortOrder: 1, comments: [], identifier: "STO-3", title: "no labels", url: "u", priority: 3, stateType: "backlog", stateName: "Backlog", labels: [], description: null },
     ];
     const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "2026-06-08" });
     const unsorted = b.waves.find((w) => w.name === "Unsorted · No sprint");
