@@ -70,11 +70,17 @@ function RollupBar({ waves, spikes }: { waves: Wave[]; spikes: Spike[] }) {
   if (r.total === 0) return null;
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border shrink-0 text-[11px] text-fg-muted">
-      <SegmentedBar done={r.done} doing={r.doing} todo={r.todo} className="flex-1 min-w-[80px]" />
-      <span className="font-mono shrink-0 text-fg">
+      <span className="font-mono text-fg text-[12px] shrink-0">{r.pct}%</span>
+      <SegmentedBar done={r.done} doing={r.doing} review={r.review} todo={r.todo} className="flex-1 min-w-[80px]" />
+      <span className="font-mono shrink-0">
         {r.done}/{r.total} done
       </span>
-      {r.doing > 0 && <span className="shrink-0">{r.doing} in progress</span>}
+      {r.active > 0 && (
+        <span className="flex items-center gap-1 text-blue shrink-0" title="In progress + in review">
+          <span className="codicon codicon-sync" />
+          {r.active} active
+        </span>
+      )}
       {spikes.length > 0 && (
         <span className="flex items-center gap-1 text-orange shrink-0" title="Open spikes gating waves">
           <span className="codicon codicon-warning" />
@@ -89,19 +95,23 @@ function RollupBar({ waves, spikes }: { waves: Wave[]; spikes: Spike[] }) {
 function SegmentedBar({
   done,
   doing,
+  review,
   todo,
   className = "",
 }: {
   done: number;
   doing: number;
+  review: number;
   todo: number;
   className?: string;
 }) {
-  const total = done + doing + todo || 1;
+  const total = done + doing + review + todo || 1;
+  const seg = (n: number) => `${(n / total) * 100}%`;
   return (
     <span className={`h-1.5 rounded-full overflow-hidden flex bg-border ${className}`}>
-      <span className="block h-full bg-green" style={{ width: `${(done / total) * 100}%` }} />
-      <span className="block h-full bg-yellow" style={{ width: `${(doing / total) * 100}%` }} />
+      <span className="block h-full bg-green" style={{ width: seg(done) }} />
+      <span className="block h-full bg-yellow" style={{ width: seg(doing) }} />
+      <span className="block h-full bg-blue" style={{ width: seg(review) }} />
     </span>
   );
 }
@@ -169,6 +179,7 @@ function WaveSection({ wave }: { wave: Wave }) {
   const [open, setOpen] = useState(true);
   const done = wave.tickets.filter((t) => t.state === "done").length;
   const doing = wave.tickets.filter((t) => t.state === "doing").length;
+  const review = wave.tickets.filter((t) => t.state === "review").length;
   const todo = wave.tickets.filter((t) => t.state === "todo").length;
   const current = isCurrentSprint(wave.stage);
   const passN = wave.passN ?? 1;
@@ -208,7 +219,7 @@ function WaveSection({ wave }: { wave: Wave }) {
           <span className="font-mono">
             {done}/{wave.tickets.length}
           </span>
-          <SegmentedBar done={done} doing={doing} todo={todo} className="w-16" />
+          <SegmentedBar done={done} doing={doing} review={review} todo={todo} className="w-16" />
         </span>
       </button>
       {wave.stage && <WaveStageStrip stage={wave.stage} />}
@@ -271,7 +282,13 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
           }
         }}
         className={`grid grid-cols-[16px_minmax(0,auto)_1fr_auto_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] cursor-pointer hover:bg-hover ${
-          open ? "bg-active text-active-fg" : ""
+          open
+            ? "bg-active text-active-fg"
+            : ticket.state === "review"
+              ? "bg-blue/[0.07]"
+              : ticket.state === "doing"
+                ? "bg-yellow/[0.07]"
+                : ""
         }`}
       >
         <StateIcon state={ticket.state} />
@@ -304,6 +321,8 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
 
 function StateIcon({ state }: { state: TicketState }) {
   if (state === "done") return <span className="codicon codicon-pass-filled text-green" title="done" />;
+  if (state === "review")
+    return <span className="codicon codicon-git-pull-request text-blue" title="in review" />;
   if (state === "doing")
     return <span className="codicon codicon-sync text-yellow" title="in progress" />;
   return <span className="codicon codicon-circle-large-outline text-fg-muted" title="todo" />;

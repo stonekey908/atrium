@@ -442,7 +442,7 @@
           "title": "W0.6-5 — Click-through to Linear + real ticket detail depth",
           "url": "https://linear.app/stonekey/issue/STO-2465/w06-5-click-through-to-linear-real-ticket-detail-depth",
           "priority": "med",
-          "state": "todo",
+          "state": "review",
           "spec": [
             "TicketRow gains an ↗ open-in-Linear button → webview posts openLinear → host vscode.env.openExternal(ticket.url).",
             "(Optional) revealBranch host message — best-effort.",
@@ -461,7 +461,7 @@
           "title": "W0.6-4 — Spike-gate map + per-wave Pass-N badge",
           "url": "https://linear.app/stonekey/issue/STO-2464/w06-4-spike-gate-map-per-wave-pass-n-badge",
           "priority": "high",
-          "state": "todo",
+          "state": "review",
           "spec": [
             "SpikeGateMap — renders the wave sequence with ⚠ gate chips on blocked waves (\"gated by T-110\"). Driven by board.spikes[] + each wave's gatedBy. Lives in the rollup region.",
             "Per-wave Pass-N / UAT-loop-back badge in WaveSection — appears only when wave.passN > 1 (the loop-back machinery, <issue id=\"c0abf9c0-2500-4b97-9863-cd69267… (truncated, use get_issue for full description)"
@@ -479,7 +479,7 @@
           "title": "W0.6-3 — Active Work strip (branch → ticket resolution)",
           "url": "https://linear.app/stonekey/issue/STO-2463/w06-3-active-work-strip-branch-ticket-resolution",
           "priority": "high",
-          "state": "todo",
+          "state": "review",
           "spec": [
             "ActiveWork — collapsible strip showing the active ticket, its branch, state, and a next-action hint.",
             "resolveActiveTicket(board, branch) in board.ts: match the current git branch name against ticket ids (e.g. branch …sto-2181… → <issue id=\"008188a0-e48e-4d95-91eb-f1748c4d2482\" href=\"https://linear.app/stonekey/issue/STO-2181/new-a-left-rail-mode-toggle-waves-files-1-resize-ha… (truncated, use get_issue for full description)"
@@ -497,7 +497,7 @@
           "title": "W0.6-2 — Project rollup bar + segmented progress bars",
           "url": "https://linear.app/stonekey/issue/STO-2462/w06-2-project-rollup-bar-segmented-progress-bars",
           "priority": "high",
-          "state": "todo",
+          "state": "review",
           "spec": [
             "RollupBar component at the top of the cockpit: counts by state (done / doing / todo), spike count, overall progress.",
             "Segmented state bar (done/doing/todo as colored segments) — far more scannable than a bare %. Project-level in RollupBar and per-wave in WaveSection (replaces the current bare % bar).",
@@ -516,7 +516,7 @@
           "title": "W0.6-1 — Board snapshot source + BoardSource loader (replace STUB_WAVES)",
           "url": "https://linear.app/stonekey/issue/STO-2461/w06-1-board-snapshot-source-boardsource-loader-replace-stub-waves",
           "priority": "urgent",
-          "state": "todo",
+          "state": "review",
           "spec": [],
           "tests": {
             "passed": 0,

@@ -62,7 +62,8 @@ extension/
    `mcp__linear__list_comments` to build the `activity[]` timeline.
 3. Map each issue to the schema in `src/board.ts` (`Board` → `waves[]` →
    `tickets[]`): `priority` 1/2/3/4 → `urgent/high/med/low`; state
-   `Backlog|Todo → todo`, `In Progress|In Review → doing`, `Done → done`;
+   `Backlog|Todo → todo`, `In Progress → doing`, `In Review → review`,
+   `Done → done`;
    `spec[]` = up to 3 acceptance-criteria bullets from the description;
    `tests` = `{0,0,0,discovered:false}` (real counts await test discovery).
 4. Group by `ATR Wave *` label into the ordered `waves[]`; set `gatedBy` to the

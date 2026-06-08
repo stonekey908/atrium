@@ -1,5 +1,5 @@
 export type Priority = "urgent" | "high" | "med" | "low";
-export type TicketState = "todo" | "doing" | "done";
+export type TicketState = "todo" | "doing" | "review" | "done";
 export type StageStatus = "done" | "active" | "todo";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 

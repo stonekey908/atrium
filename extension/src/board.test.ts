@@ -89,9 +89,10 @@ describe("mapPriority", () => {
 });
 
 describe("mapState", () => {
-  it("maps Linear workflow-state types onto todo/doing/done", () => {
+  it("maps Linear workflow-state types onto todo/doing/review/done", () => {
     expect(mapState("completed")).toBe("done");
-    expect(mapState("started")).toBe("doing");
+    expect(mapState("started", "In Progress")).toBe("doing");
+    expect(mapState("started", "In Review")).toBe("review");
     expect(mapState("backlog")).toBe("todo");
     expect(mapState("unstarted")).toBe("todo");
   });

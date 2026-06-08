@@ -10,7 +10,7 @@
  */
 
 export type Priority = "urgent" | "high" | "med" | "low";
-export type TicketState = "todo" | "doing" | "done";
+export type TicketState = "todo" | "doing" | "review" | "done";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
 export interface TestSummary {
@@ -69,7 +69,7 @@ export interface BoardSource {
 }
 
 const PRIORITIES = new Set<Priority>(["urgent", "high", "med", "low"]);
-const STATES = new Set<TicketState>(["todo", "doing", "done"]);
+const STATES = new Set<TicketState>(["todo", "doing", "review", "done"]);
 const KINDS = new Set<ActivityKind>(["pickup", "plan", "phase", "close", "commit"]);
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -200,9 +200,9 @@ export function mapPriority(p: number): Priority {
   return p === 1 ? "urgent" : p === 2 ? "high" : p === 3 ? "med" : "low";
 }
 
-export function mapState(stateType: string): TicketState {
+export function mapState(stateType: string, stateName = ""): TicketState {
   if (stateType === "completed") return "done";
-  if (stateType === "started") return "doing";
+  if (stateType === "started") return /review/i.test(stateName) ? "review" : "doing";
   return "todo";
 }
 
@@ -224,7 +224,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     title: i.title,
     url: i.url,
     priority: mapPriority(i.priority),
-    state: mapState(i.stateType),
+    state: mapState(i.stateType, i.stateName),
     spec: specFromDescription(i.description),
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
     activity: [],
@@ -251,7 +251,7 @@ export function boardFromIssues(
   const spikes: Spike[] = SPIKE_META.flatMap((meta) => {
     const issue = live.find((i) => i.identifier === meta.id);
     return issue
-      ? [{ id: meta.id, code: meta.code, gatesWave: meta.gatesWave, state: mapState(issue.stateType) }]
+      ? [{ id: meta.id, code: meta.code, gatesWave: meta.gatesWave, state: mapState(issue.stateType, issue.stateName) }]
       : [];
   });
 

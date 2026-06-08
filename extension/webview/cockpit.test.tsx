@@ -102,6 +102,27 @@ describe("Atrium cockpit webview", () => {
     });
   });
 
+  it("shows percent done and counts in-review / in-progress as active", () => {
+    render(<App />);
+    sendInit({
+      ...PAYLOAD,
+      spikes: [],
+      waves: [
+        {
+          name: "W",
+          stage: "build",
+          tickets: [
+            { id: "A", title: "a", priority: "med", state: "done", spec: [], tests: { passed: 0, failed: 0, missing: 0 }, activity: [] },
+            { id: "B", title: "b", priority: "med", state: "review", spec: [], tests: { passed: 0, failed: 0, missing: 0 }, activity: [] },
+          ],
+        },
+      ],
+    });
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText(/1 active/i)).toBeInTheDocument();
+    expect(screen.getByTitle("in review")).toBeInTheDocument();
+  });
+
   it("shows the project rollup with done/total and spike count", () => {
     render(<App />);
     sendInit(PAYLOAD);
