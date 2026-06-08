@@ -7,44 +7,35 @@ import { validateBoard, EMPTY_BOARD, type Board } from "./board";
 /**
  * Atrium Cockpit — VS Code extension host (POC).
  *
- * The cockpit UI is a React webview (built by Vite into dist/webview). All
- * editor / git / terminal / extension-ecosystem features are VS Code's own —
- * this extension only adds the Linear/PRD/sprint cockpit on top and brokers
- * project state to the webview (real Linear-MCP / `claude` calls land in Wave 1).
+ * The cockpit is a React webview (built by Vite into dist/webview) that opens
+ * as a single full-size editor tab — never a cramped sidebar dock. All
+ * editor / file-tree / git / terminal / extension-ecosystem features are VS
+ * Code's own; this extension only adds the Linear/PRD/sprint cockpit on top.
+ *
+ * Entry points (one click each, no second step to "go full screen"):
+ *   - a status-bar button ("$(rocket) Atrium")
+ *   - the `Atrium: Open Cockpit` command
+ *   - ⌘⌥A
+ *   - auto-open on startup (atrium.openOnStartup, default on)
  */
 export function activate(context: vscode.ExtensionContext): void {
-  // 1. Cockpit in the Activity Bar.
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      CockpitViewProvider.viewType,
-      new CockpitViewProvider(context.extensionUri),
-      { webviewOptions: { retainContextWhenHidden: true } },
-    ),
-  );
+  const extensionUri = context.extensionUri;
 
-  // 2. Same cockpit as a full editor-area tab — the full-screen surface.
+  // Open the cockpit as a single editor tab (reused if already open).
   context.subscriptions.push(
-    vscode.commands.registerCommand("atrium.openDashboard", () => {
-      const panel = vscode.window.createWebviewPanel(
-        "atrium.dashboard",
-        "Atrium · Cockpit",
-        vscode.ViewColumn.Active,
-        { ...webviewOptions(context.extensionUri), retainContextWhenHidden: true },
-      );
-      panel.webview.html = getHtml(panel.webview, context.extensionUri);
-      trackWebview(panel.webview);
-      wireMessages(panel.webview);
-      panel.onDidDispose(() => activeWebviews.delete(panel.webview));
-    }),
-  );
-
-  // 3. Refresh re-reads the board snapshot and re-renders every open cockpit
-  //    in place — no relaunch, no new window.
-  context.subscriptions.push(
+    vscode.commands.registerCommand("atrium.openDashboard", () => openCockpit(extensionUri)),
     vscode.commands.registerCommand("atrium.refreshBoard", () => refreshAll()),
   );
 
-  // 4. Optional auto-refresh (off by default). Restarts when the setting changes.
+  // Persistent one-click entry point in the status bar.
+  const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+  statusItem.text = "$(rocket) Atrium";
+  statusItem.tooltip = "Open the Atrium cockpit";
+  statusItem.command = "atrium.openDashboard";
+  statusItem.show();
+  context.subscriptions.push(statusItem);
+
+  // Optional auto-refresh (off by default). Restarts when the setting changes.
   setupPolling();
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -52,6 +43,37 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     { dispose: stopPolling },
   );
+
+  // Auto-open on startup so the cockpit is just there when you open the project.
+  const openOnStartup =
+    vscode.workspace.getConfiguration("atrium").get<boolean>("openOnStartup") ?? true;
+  if (openOnStartup) openCockpit(extensionUri);
+}
+
+/** The single cockpit editor tab. Reused across every entry point so we never
+ *  stack duplicate tabs. */
+let dashboardPanel: vscode.WebviewPanel | undefined;
+
+function openCockpit(extensionUri: vscode.Uri): void {
+  if (dashboardPanel) {
+    dashboardPanel.reveal(vscode.ViewColumn.Active);
+    return;
+  }
+
+  const panel = vscode.window.createWebviewPanel(
+    "atrium.dashboard",
+    "Atrium · Cockpit",
+    vscode.ViewColumn.Active,
+    { ...webviewOptions(extensionUri), retainContextWhenHidden: true },
+  );
+  panel.webview.html = getHtml(panel.webview, extensionUri);
+  trackWebview(panel.webview);
+  wireMessages(panel.webview);
+  dashboardPanel = panel;
+  panel.onDidDispose(() => {
+    activeWebviews.delete(panel.webview);
+    if (dashboardPanel === panel) dashboardPanel = undefined;
+  });
 }
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -72,8 +94,8 @@ function setupPolling(): void {
   if (seconds > 0) pollTimer = setInterval(() => refreshAll(), seconds * 1000);
 }
 
-/** Live cockpit webviews (Activity-Bar view + any dashboard tabs) so the
- *  refresh command can re-post init to all of them. */
+/** Live cockpit webviews (currently just the dashboard tab) so the refresh
+ *  command can re-post init to all of them. */
 const activeWebviews = new Set<vscode.Webview>();
 
 function trackWebview(webview: vscode.Webview): void {
@@ -90,20 +112,6 @@ function refreshAll(): void {
 
 export function deactivate(): void {
   // no-op
-}
-
-class CockpitViewProvider implements vscode.WebviewViewProvider {
-  static readonly viewType = "atrium.cockpit";
-
-  constructor(private readonly extensionUri: vscode.Uri) {}
-
-  resolveWebviewView(view: vscode.WebviewView): void {
-    view.webview.options = webviewOptions(this.extensionUri);
-    view.webview.html = getHtml(view.webview, this.extensionUri);
-    trackWebview(view.webview);
-    wireMessages(view.webview);
-    view.onDidDispose(() => activeWebviews.delete(view.webview));
-  }
 }
 
 function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {

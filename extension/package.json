@@ -2,7 +2,7 @@
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
   "description": "Linear / PRD / sprint cockpit for Claude Code — live mock-up POC running as a VS Code extension.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "atrium",
   "private": true,
   "license": "UNLICENSED",
@@ -16,30 +16,13 @@
   },
   "categories": ["Other"],
   "main": "./dist/extension.js",
+  "activationEvents": ["onStartupFinished"],
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "atrium",
-          "title": "Atrium",
-          "icon": "media/atrium.svg"
-        }
-      ]
-    },
-    "views": {
-      "atrium": [
-        {
-          "id": "atrium.cockpit",
-          "name": "Cockpit",
-          "type": "webview"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "atrium.openDashboard",
-        "title": "Atrium: Open Dashboard (full screen)",
-        "icon": "$(screen-full)"
+        "title": "Atrium: Open Cockpit",
+        "icon": "$(rocket)"
       },
       {
         "command": "atrium.refreshBoard",
@@ -48,15 +31,10 @@
       }
     ],
     "menus": {
-      "view/title": [
+      "editor/title": [
         {
           "command": "atrium.refreshBoard",
-          "when": "view == atrium.cockpit",
-          "group": "navigation"
-        },
-        {
-          "command": "atrium.openDashboard",
-          "when": "view == atrium.cockpit",
+          "when": "activeWebviewPanelId == atrium.dashboard",
           "group": "navigation"
         }
       ]
@@ -71,6 +49,11 @@
     "configuration": {
       "title": "Atrium",
       "properties": {
+        "atrium.openOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the Atrium cockpit automatically as an editor tab when VS Code finishes starting. Turn off if you'd rather open it on demand via the status-bar button, the `Atrium: Open Cockpit` command, or `⌘⌥A`."
+        },
         "atrium.linear.apiKey": {
           "type": "string",
           "default": "",
