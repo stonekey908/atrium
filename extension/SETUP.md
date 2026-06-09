@@ -60,3 +60,37 @@ does useful work when a live API key is set.
   criteria. Per-ticket **activity timelines** still come from the snapshot only
   (live activity is a follow-up); the Tests tab shows "not discovered yet" until
   test discovery lands.
+
+## Linking PRDs + mockups to waves (optional)
+
+The **Plan** and **Design** views can show each wave's PRD/spec doc and mockup
+files. Atrium resolves them from your repo two ways — use either or both:
+
+### Option A — naming convention (zero config)
+
+1. Put the wave's PRD at `docs/waves/wave-<n>.md` (e.g. `docs/waves/wave-5.md`).
+2. Name mockups `wave-<n>-<anything>.html` (or `.png`/`.jpg`/`.fig`) and put
+   them in `files/`, `docs/`, `mockups/` or `design/`
+   (e.g. `files/wave-5-board.html`).
+3. Refresh the cockpit — the files appear on that wave in Plan and Design.
+
+`<n>` is the wave's number from its Linear label: `ATR Wave 0.7 · Sprint board`
+→ `wave-0.7`.
+
+### Option B — manifest (for files that already exist with other names)
+
+Create `.atrium/waves.json` in the repo root, keyed by wave number:
+
+```json
+{
+  "0.7": {
+    "prd": "docs/superpowers/specs/2026-06-08-sprint-cards-linear-sync-design.md",
+    "mockups": ["files/atrium-sprint-horizon.html"]
+  }
+}
+```
+
+Paths are relative to the repo root. A manifest entry **wins over the
+convention** for that wave (per field). Entries pointing at deleted files are
+skipped, falling back to the convention. Files no wave claims show under
+**Project-wide** in the Design view — visible, never lost.

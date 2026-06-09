@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
 import { waveUatRollup, waveTouchesUi } from "./views";
-import type { InitPayload, Wave } from "./types";
+import type { InitPayload, Wave, WaveFileRef } from "./types";
 
 /**
  * Plan canvas (STO-2167): the source-of-truth acceptance criteria for each wave,
@@ -81,6 +81,7 @@ function WavePlan({ wave, collapsed, onToggle }: { wave: Wave; collapsed: boolea
       </button>
       {!collapsed && (
         <div className="flex flex-col gap-4 px-6 py-4">
+          {wave.files?.prd && <PrdChip prd={wave.files.prd} />}
           {tickets.map((t) => (
             <div key={t.id} className="grid grid-cols-[88px_1fr] gap-x-4 gap-y-1.5 items-start">
               <a
@@ -110,6 +111,24 @@ function WavePlan({ wave, collapsed, onToggle }: { wave: Wave; collapsed: boolea
         </div>
       )}
     </section>
+  );
+}
+
+/** The wave's PRD/spec doc, resolved from the repo (STO-2478) — icon-only link
+ *  that opens it in VS Code; editing stays a repo-file concern, Atrium only
+ *  surfaces it. */
+function PrdChip({ prd }: { prd: WaveFileRef }) {
+  return (
+    <button
+      type="button"
+      onClick={() => vscode.postMessage({ type: "openFile", path: prd.path })}
+      className="self-start flex items-center gap-1 text-[11px] text-fg-muted hover:text-link"
+      aria-label={`Open ${prd.name} in VS Code`}
+      title={`PRD · open ${prd.name} in VS Code`}
+    >
+      <span className="codicon codicon-book text-[13px]" />
+      <span className="uppercase tracking-wide text-[9px]">PRD</span>
+    </button>
   );
 }
 

@@ -1,0 +1,9 @@
+{
+  "0.6": {
+    "prd": "docs/superpowers/specs/2026-06-08-atrium-cockpit-linear-data-design.md"
+  },
+  "0.7": {
+    "prd": "docs/superpowers/specs/2026-06-08-sprint-cards-linear-sync-design.md",
+    "mockups": ["files/atrium-sprint-horizon.html"]
+  }
+}
