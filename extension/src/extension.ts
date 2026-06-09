@@ -63,8 +63,14 @@ let dashboardPanel: vscode.WebviewPanel | undefined;
 
 function openCockpit(extensionUri: vscode.Uri): void {
   if (dashboardPanel) {
-    dashboardPanel.reveal(vscode.ViewColumn.Active);
-    return;
+    // A stale reference (panel disposed without our cleanup running) must not
+    // brick the button — drop it and fall through to create a fresh panel.
+    try {
+      dashboardPanel.reveal(vscode.ViewColumn.Active);
+      return;
+    } catch {
+      dashboardPanel = undefined;
+    }
   }
 
   const panel = vscode.window.createWebviewPanel(
@@ -73,12 +79,16 @@ function openCockpit(extensionUri: vscode.Uri): void {
     vscode.ViewColumn.Active,
     { ...webviewOptions(extensionUri), retainContextWhenHidden: true },
   );
-  panel.webview.html = getHtml(panel.webview, extensionUri);
-  trackWebview(panel.webview);
-  wireMessages(panel.webview);
+  // Capture the webview now: the `panel.webview` getter THROWS "Webview is
+  // disposed" once the panel is closed, so reading it inside onDidDispose would
+  // kill the cleanup and leave dashboardPanel pointing at a dead panel.
+  const webview = panel.webview;
+  webview.html = getHtml(webview, extensionUri);
+  trackWebview(webview);
+  wireMessages(webview);
   dashboardPanel = panel;
   panel.onDidDispose(() => {
-    activeWebviews.delete(panel.webview);
+    activeWebviews.delete(webview);
     if (dashboardPanel === panel) dashboardPanel = undefined;
   });
 }
@@ -110,7 +120,13 @@ function trackWebview(webview: vscode.Webview): void {
 }
 
 async function postInit(webview: vscode.Webview): Promise<void> {
-  void webview.postMessage({ type: "init", payload: await buildInitPayload() });
+  const payload = await buildInitPayload();
+  try {
+    await webview.postMessage({ type: "init", payload });
+  } catch {
+    // Disposed mid-flight (tab closed during a refresh) — forget it.
+    activeWebviews.delete(webview);
+  }
 }
 
 function refreshAll(): void {
