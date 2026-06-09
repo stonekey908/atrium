@@ -43,7 +43,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("atrium.linear.pollSeconds")) setupPolling();
+      // Key / project / wave-prefix edits change what the board shows — re-pull.
+      else if (e.affectsConfiguration("atrium.linear")) refreshAll();
     }),
+    // A folder added/removed can change which Linear project this workspace maps to.
+    vscode.workspace.onDidChangeWorkspaceFolders(() => refreshAll()),
     { dispose: stopPolling },
   );
 
@@ -139,6 +143,8 @@ interface InboundMessage {
   path?: string;
   body?: string;
   verdict?: string;
+  /** Header project-picker selection (STO-2486). */
+  name?: string;
 }
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
@@ -161,8 +167,20 @@ function wireMessages(webview: vscode.Webview): void {
       void vscode.window.showTextDocument(vscode.Uri.file(msg.path), { preview: true });
     } else if (msg?.type === "addFinding") {
       void handleAddFinding(webview, msg);
+    } else if (msg?.type === "selectProject" && msg.name) {
+      void handleSelectProject(msg.name);
     }
   });
+}
+
+/** Pins the picked Linear project for THIS workspace (.vscode/settings.json), so
+ *  every window maps to its own board. The config-change listener re-pulls. */
+async function handleSelectProject(name: string): Promise<void> {
+  const target =
+    (vscode.workspace.workspaceFolders?.length ?? 0) > 0
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global;
+  await vscode.workspace.getConfiguration("atrium").update("linear.projectName", name, target);
 }
 
 /** Files a UAT finding as a Linear comment on the target ticket (STO-2175/2176). */
@@ -283,28 +301,94 @@ function loadSnapshot(): { board: Board; error?: string } {
   }
 }
 
-/** Picks the data source from settings. With `atrium.linear.apiKey` set we pull
- *  live from Linear (SDK loaded lazily); on any live failure we fall back to the
- *  committed snapshot and tell the user why. Without a key we use the snapshot. */
-async function loadBoard(): Promise<{ board: Board; error?: string; source: "snapshot" | "live" }> {
+/** Linear project names cached per API key so every refresh doesn't re-pull
+ *  the full list; 5 minutes matches a "projects rarely change" cadence. */
+let projectsCache: { key: string; names: string[]; fetchedAt: number } | undefined;
+
+async function getProjectNames(
+  apiKey: string,
+  fetcher: (key: string) => Promise<string[]>,
+): Promise<string[]> {
+  const now = Date.now();
+  if (projectsCache && projectsCache.key === apiKey && now - projectsCache.fetchedAt < 5 * 60_000) {
+    return projectsCache.names;
+  }
+  const names = await fetcher(apiKey);
+  projectsCache = { key: apiKey, names, fetchedAt: now };
+  return names;
+}
+
+interface LoadedBoard {
+  board: Board;
+  error?: string;
+  source: "snapshot" | "live";
+  projects?: string[];
+  projectSource?: "setting" | "detected" | "none";
+}
+
+/** Picks the data source from settings. Without a key: the committed snapshot
+ *  (demo mode). With a key: resolve which Linear project this WORKSPACE maps to
+ *  — explicit `atrium.linear.projectName` setting wins, else the folder name is
+ *  matched against the live project list (STO-2486) — then pull that board. The
+ *  bundled snapshot is only ever a fallback for its own project, so a window on
+ *  another repo never shows Atrium's tickets. */
+async function loadBoard(folders: string[]): Promise<LoadedBoard> {
   const cfg = vscode.workspace.getConfiguration("atrium");
   const apiKey = (cfg.get<string>("linear.apiKey") ?? "").trim();
-  const projectName = (cfg.get<string>("linear.projectName") ?? "").trim() || "Atrium";
+  const explicit = (cfg.get<string>("linear.projectName") ?? "").trim();
   const wavePrefix = (cfg.get<string>("linear.wavePrefix") ?? "").trim() || undefined;
 
   if (!apiKey) return { ...loadSnapshot(), source: "snapshot" };
 
+  const { LinearSdkSource, fetchProjectNames } = await import("./linear-source");
+  const { matchProject } = await import("./project-match");
+
+  let projects: string[] = [];
+  let listError: string | undefined;
   try {
-    const { LinearSdkSource } = await import("./linear-source");
+    projects = await getProjectNames(apiKey, fetchProjectNames);
+  } catch (e) {
+    listError = e instanceof Error ? e.message : String(e);
+  }
+
+  const detected = explicit ? null : matchProject(folders, projects);
+  const projectName = explicit || detected;
+  const projectSource: LoadedBoard["projectSource"] = explicit ? "setting" : detected ? "detected" : "none";
+
+  if (!projectName) {
+    return {
+      board: EMPTY_BOARD,
+      source: "live",
+      projects,
+      projectSource,
+      error: listError
+        ? `Couldn't list Linear projects (${listError}).`
+        : `No Linear project matches this workspace (${folders.join(", ") || "no folder open"}) — pick one from the project menu in the header.`,
+    };
+  }
+
+  try {
     const generatedAt = new Date().toISOString().slice(0, 10);
     const board = await new LinearSdkSource({ apiKey, projectName, generatedAt, wavePrefix }).load();
-    return { board, source: "live" };
+    return { board, source: "live", projects, projectSource };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const snap = loadSnapshot();
+    if (snap.board.project === projectName) {
+      return {
+        ...snap,
+        source: "snapshot",
+        projects,
+        projectSource,
+        error: `Live Linear fetch failed (${message}); showing the committed snapshot.`,
+      };
+    }
     return {
-      ...loadSnapshot(),
-      error: `Live Linear fetch failed (${message}); showing the committed snapshot.`,
-      source: "snapshot",
+      board: EMPTY_BOARD,
+      source: "live",
+      projects,
+      projectSource,
+      error: `Live Linear fetch failed for "${projectName}": ${message}`,
     };
   }
 }
@@ -314,9 +398,11 @@ async function buildInitPayload(): Promise<InitPayload> {
   const folders = workspaceFolders.map((f) => f.name);
   const root = workspaceFolders[0]?.uri.fsPath;
   const git = root ? await getGitStatus(root) : null;
-  const { board, error, source } = await loadBoard();
+  const { board, error, source, projects, projectSource } = await loadBoard(folders);
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
+    projects,
+    projectSource,
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
     testFiles: root ? getTestFileCount(root) : undefined,

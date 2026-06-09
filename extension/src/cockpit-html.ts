@@ -75,6 +75,11 @@ export interface InitPayload {
   generatedAt?: string;
   /** Non-fatal load problem (e.g. malformed snapshot); webview shows a banner. */
   error?: string;
+  /** All Linear project names (live mode) — feeds the header project picker (STO-2486). */
+  projects?: string[];
+  /** How the shown project was chosen: pinned setting, folder-name auto-detect,
+   *  or nothing matched (empty board + banner + picker). */
+  projectSource?: "setting" | "detected" | "none";
 }
 
 /** Tier-1 pipeline. Real status comes from wave rollups later. */

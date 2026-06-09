@@ -81,6 +81,38 @@ async function fetchAllIssues(client: LinearClient, projectName: string): Promis
   return out;
 }
 
+const PROJECTS_QUERY = `
+  query AtriumProjects($after: String) {
+    projects(first: 100, after: $after) {
+      nodes { name }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+interface ProjectsResponse {
+  projects: {
+    nodes: { name: string }[];
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+  };
+}
+
+/** All Linear project names in the workspace — feeds workspace→project
+ *  auto-detection and the manual header picker (STO-2486). */
+export async function fetchProjectNames(apiKey: string): Promise<string[]> {
+  const client = new LinearClient({ apiKey });
+  const out: string[] = [];
+  let after: string | undefined;
+  do {
+    const res = await client.client.rawRequest<ProjectsResponse, { after?: string }>(PROJECTS_QUERY, { after });
+    const conn = res.data?.projects;
+    if (!conn) break;
+    out.push(...conn.nodes.map((n) => n.name));
+    after = conn.pageInfo.hasNextPage ? (conn.pageInfo.endCursor ?? undefined) : undefined;
+  } while (after);
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
 export interface LinearSourceOptions {
   apiKey: string;
   projectName: string;

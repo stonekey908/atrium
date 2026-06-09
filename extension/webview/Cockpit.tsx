@@ -316,7 +316,7 @@ function Header({ init }: { init: InitPayload }) {
     <div className="flex items-center gap-2 px-3 h-9 border-b border-border shrink-0 text-[12px]">
       <span className="codicon codicon-symbol-structure text-link" />
       <span className="font-semibold">Atrium</span>
-      <span className="text-fg-muted truncate">{init.project}</span>
+      <ProjectPicker init={init} />
       <button
         type="button"
         aria-label="Refresh board"
@@ -327,6 +327,53 @@ function Header({ init }: { init: InitPayload }) {
         <span className="codicon codicon-refresh" />
       </button>
     </div>
+  );
+}
+
+/** Which Linear project this window shows (STO-2486). In live mode it's a
+ *  dropdown over every Linear project — for when auto-detect picks wrong or
+ *  can't relate the folder to a project; picking one pins it for THIS workspace.
+ *  Snapshot mode (no list) keeps the plain label. */
+function ProjectPicker({ init }: { init: InitPayload }) {
+  const projects = init.projects ?? [];
+  if (projects.length === 0) {
+    return <span className="text-fg-muted truncate">{init.project}</span>;
+  }
+  const matched = projects.includes(init.project);
+  return (
+    <span className="flex items-center gap-1 min-w-0">
+      <select
+        aria-label="Linear project"
+        value={matched ? init.project : ""}
+        onChange={(e) => {
+          if (e.target.value) vscode.postMessage({ type: "selectProject", name: e.target.value });
+        }}
+        className="bg-transparent border border-transparent hover:border-border rounded px-1 py-0.5 text-[12px] text-fg-muted hover:text-fg cursor-pointer max-w-[260px] truncate focus:outline-none focus:border-link"
+      >
+        {!matched && (
+          <option value="" disabled>
+            Choose project…
+          </option>
+        )}
+        {projects.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
+      {init.projectSource === "detected" && (
+        <span
+          className="codicon codicon-sparkle text-[11px] text-fg-muted shrink-0"
+          title="Auto-detected from the workspace folder — pick another to pin it for this workspace"
+        />
+      )}
+      {init.projectSource === "setting" && (
+        <span
+          className="codicon codicon-pin text-[11px] text-fg-muted shrink-0"
+          title="Pinned via atrium.linear.projectName (workspace settings)"
+        />
+      )}
+    </span>
   );
 }
 
