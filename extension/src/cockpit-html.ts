@@ -31,6 +31,8 @@ export interface Ticket {
 export interface Wave {
   name: string;
   tickets: Ticket[];
+  /** PRD + mockups resolved from the repo for this wave (STO-2478). */
+  files?: import("./wave-files").WaveFiles;
 }
 export interface Stage {
   key: string;

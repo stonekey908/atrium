@@ -1,42 +1,103 @@
 import { vscode } from "./vscode";
-import type { DesignRef, InitPayload } from "./types";
+import type { InitPayload, Wave, WaveFileRef } from "./types";
 
 /**
- * Design canvas (STO-2168), lightweight for the VS Code reframe: lists the
- * project's mockup / design artifacts and opens them in VS Code's own editor.
- * Live HTML preview + annotation pins from the original spec are a VS Code-native
- * flow (open the HTML, use a preview extension) rather than a bespoke canvas.
+ * Design canvas (STO-2168 + STO-2478): the project's mockup / design artifacts,
+ * grouped by the wave that owns them (resolved host-side from .atrium/waves.json
+ * or the wave-<n>-* naming convention). Files no wave claims land in a
+ * "Project-wide" bucket — visible, never lost. Opens files in VS Code's own
+ * editor; live preview is STO-2479.
  */
 export function DesignView({ init }: { init: InitPayload }) {
   const refs = init.designRefs ?? [];
+  const waves = (init.waves ?? []).filter(
+    (w) => w.files && (w.files.prd || w.files.mockups.length > 0),
+  );
+  const claimed = new Set(
+    waves.flatMap((w) =>
+      [w.files?.prd?.path, ...(w.files?.mockups.map((m) => m.path) ?? [])].filter(
+        (p): p is string => !!p,
+      ),
+    ),
+  );
+  const general = refs.filter((r) => !claimed.has(r.path));
+
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-[760px] px-4 py-4 flex flex-col gap-4">
+      <div className="mx-auto w-full max-w-[760px] px-4 py-4 flex flex-col gap-5">
         <header>
           <h2 className="text-[20px] tracking-tight" style={{ fontFamily: "var(--font-serif, Georgia, serif)" }}>
             Design · references
           </h2>
           <p className="text-fg-muted text-[12px] mt-1">
-            Mockups and design artifacts in the project. Open one to view or edit it in VS Code.
+            Mockups and design artifacts, grouped by the wave they belong to. Open one to view or edit it in VS Code.
           </p>
         </header>
-        {refs.length === 0 ? (
-          <p className="text-fg-muted italic text-[12px]">No design references found in files/, docs/, mockups/ or design/.</p>
-        ) : (
-          <ul className="grid grid-cols-2 gap-2">
-            {refs.map((r) => (
-              <DesignCard key={r.path} item={r} />
-            ))}
-          </ul>
+        {waves.map((w) => (
+          <WaveDesign key={w.name} wave={w} />
+        ))}
+        {general.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h3 className="text-[12px] font-semibold uppercase tracking-wide text-fg-muted">Project-wide</h3>
+            <ul className="grid grid-cols-2 gap-2">
+              {general.map((r) => (
+                <DesignCard key={r.path} item={r} />
+              ))}
+            </ul>
+          </section>
+        )}
+        {waves.length === 0 && general.length === 0 && (
+          <p className="text-fg-muted italic text-[12px]">
+            No design references found. Map them in .atrium/waves.json or name them wave-&lt;n&gt;-*.html in files/,
+            docs/, mockups/ or design/.
+          </p>
         )}
       </div>
     </div>
   );
 }
 
-function DesignCard({ item }: { item: DesignRef }) {
+/** One wave's design artifacts: PRD chip + mockup grid. */
+function WaveDesign({ wave }: { wave: Wave }) {
+  const files = wave.files!;
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-[13px] font-semibold">{wave.name}</h3>
+        {files.prd && (
+          <button
+            type="button"
+            onClick={() => vscode.postMessage({ type: "openFile", path: files.prd!.path })}
+            className="flex items-center gap-1 px-1.5 py-0.5 border border-border rounded text-[11px] text-fg-muted hover:text-fg hover:border-fg-muted"
+            title={`Open ${files.prd.name} in VS Code`}
+          >
+            <span className="codicon codicon-book text-link text-[11px]" />
+            <span className="font-mono">{files.prd.name}</span>
+          </button>
+        )}
+      </div>
+      {files.mockups.length > 0 ? (
+        <ul className="grid grid-cols-2 gap-2">
+          {files.mockups.map((m) => (
+            <DesignCard key={m.path} item={m} />
+          ))}
+        </ul>
+      ) : (
+        <p className="text-fg-muted italic text-[11px]">No mockups linked to this wave.</p>
+      )}
+    </section>
+  );
+}
+
+function DesignCard({ item }: { item: Pick<WaveFileRef, "name" | "path" | "kind"> }) {
   const icon =
-    item.kind === "image" ? "codicon-file-media" : item.kind === "figma" ? "codicon-symbol-color" : "codicon-file-code";
+    item.kind === "image"
+      ? "codicon-file-media"
+      : item.kind === "figma"
+        ? "codicon-symbol-color"
+        : item.kind === "md"
+          ? "codicon-book"
+          : "codicon-file-code";
   return (
     <li>
       <button

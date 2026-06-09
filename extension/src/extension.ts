@@ -6,6 +6,7 @@ import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./boar
 import { LinearWriteClient, resolveStateId, type WriteState } from "./linear-writes";
 import { getGitStatus } from "./git";
 import { getTestFileCount, getDesignRefs } from "./discover";
+import { resolveWaveFiles } from "./wave-files";
 
 /**
  * Atrium Cockpit — VS Code extension host (POC).
@@ -415,6 +416,11 @@ async function buildInitPayload(): Promise<InitPayload> {
   const root = workspaceFolders[0]?.uri.fsPath;
   const git = root ? await getGitStatus(root) : null;
   const { board, error, source, projects, projectSource } = await loadBoard(folders);
+  // Resolve each wave's PRD + mockups from the repo (STO-2478) — manifest first,
+  // naming convention second, honest empty otherwise.
+  const waves = root
+    ? board.waves.map((w) => ({ ...w, files: resolveWaveFiles(root, w.label ?? w.name) }))
+    : board.waves;
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     projects,
@@ -425,7 +431,7 @@ async function buildInitPayload(): Promise<InitPayload> {
     designRefs: root ? getDesignRefs(root) : undefined,
     folders,
     stages: STAGES,
-    waves: board.waves,
+    waves,
     spikes: board.spikes,
     source,
     generatedAt: board.generatedAt || undefined,

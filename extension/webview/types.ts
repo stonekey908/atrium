@@ -38,9 +38,24 @@ export interface Ticket {
   sortOrder?: number;
 }
 
+export interface WaveFileRef {
+  name: string;
+  path: string;
+  kind: "md" | "html" | "image" | "figma";
+}
+
+/** PRD + mockups resolved from the repo for a wave (STO-2478) — manifest
+ *  (.atrium/waves.json) first, naming convention second, honest empty otherwise. */
+export interface WaveFiles {
+  prd?: WaveFileRef;
+  mockups: WaveFileRef[];
+}
+
 export interface Wave {
   name: string;
   tickets: Ticket[];
+  /** PRD + mockups resolved from the repo for this wave (STO-2478). */
+  files?: WaveFiles;
   /** The wave's Linear label (e.g. "ATR Wave 0.7 · Sprint board") — the target
    *  when a ticket is dragged into or out of this wave. */
   label?: string;
