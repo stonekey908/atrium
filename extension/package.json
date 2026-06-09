@@ -2,7 +2,7 @@
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
   "description": "Linear / PRD / sprint cockpit for Claude Code \u2014 live mock-up POC running as a VS Code extension.",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "publisher": "atrium",
   "private": true,
   "license": "UNLICENSED",

@@ -114,19 +114,20 @@ function WavePlan({ wave, collapsed, onToggle }: { wave: Wave; collapsed: boolea
   );
 }
 
-/** The wave's PRD/spec doc, resolved from the repo (STO-2478) — opens in VS Code;
- *  editing stays a repo-file concern, Atrium only surfaces it. */
+/** The wave's PRD/spec doc, resolved from the repo (STO-2478) — icon-only link
+ *  that opens it in VS Code; editing stays a repo-file concern, Atrium only
+ *  surfaces it. */
 function PrdChip({ prd }: { prd: WaveFileRef }) {
   return (
     <button
       type="button"
       onClick={() => vscode.postMessage({ type: "openFile", path: prd.path })}
-      className="self-start flex items-center gap-1.5 px-2 py-1 border border-border rounded text-[11px] text-fg-muted hover:text-fg hover:border-fg-muted"
-      title={`Open ${prd.name} in VS Code`}
+      className="self-start flex items-center gap-1 text-[11px] text-fg-muted hover:text-link"
+      aria-label={`Open ${prd.name} in VS Code`}
+      title={`PRD · open ${prd.name} in VS Code`}
     >
-      <span className="codicon codicon-book text-link text-[12px]" />
-      <span className="font-mono">{prd.name}</span>
-      <span className="codicon codicon-link-external text-[10px]" />
+      <span className="codicon codicon-book text-[13px]" />
+      <span className="uppercase tracking-wide text-[9px]">PRD</span>
     </button>
   );
 }

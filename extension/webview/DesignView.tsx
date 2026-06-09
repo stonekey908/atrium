@@ -69,11 +69,11 @@ function WaveDesign({ wave }: { wave: Wave }) {
           <button
             type="button"
             onClick={() => vscode.postMessage({ type: "openFile", path: files.prd!.path })}
-            className="flex items-center gap-1 px-1.5 py-0.5 border border-border rounded text-[11px] text-fg-muted hover:text-fg hover:border-fg-muted"
-            title={`Open ${files.prd.name} in VS Code`}
+            className="flex items-center self-center text-fg-muted hover:text-link"
+            aria-label={`Open ${files.prd.name} in VS Code`}
+            title={`PRD · open ${files.prd.name} in VS Code`}
           >
-            <span className="codicon codicon-book text-link text-[11px]" />
-            <span className="font-mono">{files.prd.name}</span>
+            <span className="codicon codicon-book text-[13px]" />
           </button>
         )}
       </div>
