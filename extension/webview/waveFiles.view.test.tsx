@@ -82,6 +82,11 @@ describe("DesignView wave grouping (STO-2478)", () => {
     expect(screen.getByText("old-sketch.html")).toBeInTheDocument();
   });
 
+  it("explains when no folder is open instead of suggesting a manifest", () => {
+    render(<DesignView init={{ ...init([wave({ files: { mockups: [] } })]), folders: [] }} />);
+    expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
+  });
+
   it("opens a wave PRD from the design view too", () => {
     const w = wave({
       files: { prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" }, mockups: [] },

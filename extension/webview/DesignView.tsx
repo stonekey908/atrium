@@ -48,8 +48,9 @@ export function DesignView({ init }: { init: InitPayload }) {
         )}
         {waves.length === 0 && general.length === 0 && (
           <p className="text-fg-muted italic text-[12px]">
-            No design references found. Map them in .atrium/waves.json or name them wave-&lt;n&gt;-*.html in files/,
-            docs/, mockups/ or design/.
+            {init.folders.length === 0
+              ? "No folder is open in this window — open the project folder (File → Open Folder) so Atrium can discover its PRD and mockup files."
+              : "No design references found. Map them in .atrium/waves.json or name them wave-<n>-*.html in files/, docs/, mockups/ or design/."}
           </p>
         )}
       </div>
