@@ -23,6 +23,9 @@ export interface WaveFileRef {
 export interface WaveFiles {
   prd?: WaveFileRef;
   mockups: WaveFileRef[];
+  /** Further docs for the wave (TRDs etc.) — manifest `docs` list or
+   *  convention `docs/waves/wave-<n>-*.md` (STO-2496). */
+  docs: WaveFileRef[];
 }
 
 /** Dirs scanned for convention-named mockups (same set as discover.ts plus the
@@ -53,6 +56,7 @@ function toRef(path: string): WaveFileRef | null {
 interface ManifestEntry {
   prd?: string;
   mockups?: string[];
+  docs?: string[];
 }
 
 function readManifest(root: string): Record<string, ManifestEntry> {
@@ -85,9 +89,34 @@ function conventionMockups(root: string, n: string): WaveFileRef[] {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Convention docs (TRDs etc.): `docs/waves/wave-<n>-*.md` — the bare
+ *  `wave-<n>.md` is the PRD, not a doc. */
+function conventionDocs(root: string, n: string): WaveFileRef[] {
+  const re = new RegExp(`^wave-${n.replace(/\./g, "\\.")}-.*\\.md$`, "i");
+  let entries;
+  try {
+    entries = readdirSync(join(root, "docs", "waves"), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((e) => e.isFile() && re.test(e.name))
+    .map((e) => toRef(join(root, "docs", "waves", e.name)))
+    .filter((r): r is WaveFileRef => r !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function fromManifestList(root: string, paths: string[]): WaveFileRef[] {
+  return paths
+    .map((p) => join(root, p))
+    .filter((p) => existsSync(p))
+    .map(toRef)
+    .filter((r): r is WaveFileRef => r !== null);
+}
+
 export function resolveWaveFiles(root: string, waveLabelOrName: string): WaveFiles {
   const n = waveNumber(waveLabelOrName);
-  if (!n) return { mockups: [] };
+  if (!n) return { mockups: [], docs: [] };
 
   const entry = readManifest(root)[n];
 
@@ -100,16 +129,8 @@ export function resolveWaveFiles(root: string, waveLabelOrName: string): WaveFil
     if (existsSync(conventional)) prd = toRef(conventional) ?? undefined;
   }
 
-  let mockups: WaveFileRef[];
-  if (entry?.mockups) {
-    mockups = entry.mockups
-      .map((p) => join(root, p))
-      .filter((p) => existsSync(p))
-      .map(toRef)
-      .filter((r): r is WaveFileRef => r !== null);
-  } else {
-    mockups = conventionMockups(root, n);
-  }
+  const mockups = entry?.mockups ? fromManifestList(root, entry.mockups) : conventionMockups(root, n);
+  const docs = entry?.docs ? fromManifestList(root, entry.docs) : conventionDocs(root, n);
 
-  return prd ? { prd, mockups } : { mockups };
+  return prd ? { prd, mockups, docs } : { mockups, docs };
 }

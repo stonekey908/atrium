@@ -2,7 +2,7 @@ import { PIPELINE } from "./sprint";
 import type { Ticket, TicketState, Wave, WriteState } from "./types";
 
 /** Top-level cockpit views (the canvas switcher). */
-export type CockpitView = "board" | "plan" | "design" | "uat";
+export type CockpitView = "board" | "prd" | "design";
 
 // ── Tier-1 pipeline (STO-2174) ───────────────────────────────────────────────
 
@@ -15,16 +15,30 @@ export interface PipelineStage {
 }
 
 /**
- * Groups waves onto the Plan→Release pipeline and derives each stage's state
+ * Where a wave ACTUALLY sits on the pipeline (STO-2496 stage-lighting rules).
+ * The host derives `plan|build|release` from ticket states; Design is the
+ * conditional refinement here: a not-yet-started wave with design signals —
+ * mockup files discovered for it, or UI-flagged tickets — sits at Design, not
+ * PRD. Waves with no design work skip the stage entirely.
+ */
+export function effectiveStage(wave: Wave): string | undefined {
+  if (wave.stage === "plan" && ((wave.files?.mockups.length ?? 0) > 0 || waveTouchesUi(wave))) {
+    return "design";
+  }
+  return wave.stage;
+}
+
+/**
+ * Groups waves onto the PRD→Release pipeline and derives each stage's state
  * from where the waves actually sit (not a hardcoded list): a stage is `active`
  * if any wave is at it, `done` if every wave has moved past it, else `todo`.
  */
 export function computePipeline(waves: Wave[]): PipelineStage[] {
   const indexOf = (stage?: string) => PIPELINE.findIndex((s) => s.key === stage);
   return PIPELINE.map((s, i) => {
-    const here = waves.filter((w) => w.stage === s.key);
-    const positioned = waves.filter((w) => indexOf(w.stage) !== -1);
-    const allPast = positioned.length > 0 && positioned.every((w) => indexOf(w.stage) > i);
+    const here = waves.filter((w) => effectiveStage(w) === s.key);
+    const positioned = waves.filter((w) => indexOf(effectiveStage(w)) !== -1);
+    const allPast = positioned.length > 0 && positioned.every((w) => indexOf(effectiveStage(w)) > i);
     const state: StageState = here.length > 0 ? "active" : allPast ? "done" : "todo";
     return { key: s.key, label: s.label, state, waves: here };
   });
@@ -44,47 +58,6 @@ export function loopBacks(waves: Wave[]): Wave[] {
  */
 export function demoteState(fromState: TicketState): WriteState | undefined {
   return fromState === "review" || fromState === "doing" ? "backlog" : undefined;
-}
-
-// ── UAT cases from acceptance criteria (STO-2187) ────────────────────────────
-
-export type UatStatus = "pass" | "fail" | "pending";
-export interface UatCase {
-  name: string;
-  status: UatStatus;
-}
-
-/** Each acceptance criterion (the ticket's `spec` bullets) becomes a pending UAT
- *  case. De-duped by name. */
-export function uatCasesFromTicket(ticket: Ticket): UatCase[] {
-  const seen = new Set<string>();
-  const cases: UatCase[] = [];
-  for (const name of ticket.spec) {
-    const key = name.trim().toLowerCase();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      cases.push({ name, status: "pending" });
-    }
-  }
-  return cases;
-}
-
-export interface UatRollup {
-  total: number;
-  pass: number;
-  fail: number;
-  pending: number;
-}
-
-/** Wave-level UAT rollup: every ticket's acceptance criteria summed. */
-export function waveUatRollup(wave: Wave): UatRollup {
-  const cases = wave.tickets.flatMap(uatCasesFromTicket);
-  return {
-    total: cases.length,
-    pass: cases.filter((c) => c.status === "pass").length,
-    fail: cases.filter((c) => c.status === "fail").length,
-    pending: cases.filter((c) => c.status === "pending").length,
-  };
 }
 
 // ── Fast-track / UI-detection gate (STO-2169) ────────────────────────────────

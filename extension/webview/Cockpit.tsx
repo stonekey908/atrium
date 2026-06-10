@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
-import { waveStages, resolveActiveTicket, currentSprint } from "./sprint";
+import { resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
 import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
-import { PlanView } from "./PlanView";
+import { PrdView } from "./PrdView";
 import { DesignView } from "./DesignView";
 import { setDrag, getDrag } from "./dnd";
 import { useBoardMutations } from "./useBoardMutations";
@@ -174,7 +174,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
           </div>
         </>
       )}
-      {view === "plan" && <PlanView init={liveInit} />}
+      {view === "prd" && <PrdView init={liveInit} />}
       {view === "design" && <DesignView init={init} />}
     </div>
   );
@@ -182,7 +182,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
 
 const VIEW_TABS: { key: CockpitView; label: string; icon: string }[] = [
   { key: "board", label: "Board", icon: "codicon-layout" },
-  { key: "plan", label: "Plan", icon: "codicon-checklist" },
+  { key: "prd", label: "PRD", icon: "codicon-book" },
   { key: "design", label: "Design", icon: "codicon-symbol-color" },
 ];
 
@@ -506,7 +506,6 @@ function WaveSection({
           <SegmentedBar done={done} doing={doing} review={review} todo={todo} className="w-16" />
         </span>
       </div>
-      {wave.stage && <WaveStageStrip stage={wave.stage} />}
       {open && (
         <div>
           {wave.tickets.map((t) => (
@@ -572,30 +571,6 @@ function CompletedGroup({
         </div>
       )}
     </section>
-  );
-}
-
-/** Per-sprint mini-pipeline: where this wave sits on Plan → … → Release. */
-function WaveStageStrip({ stage }: { stage: string }) {
-  return (
-    <div className="flex items-center gap-1 pl-5 pr-3 pb-1.5 -mt-0.5 overflow-x-auto">
-      {waveStages(stage).map((s, i) => (
-        <span key={s.key} className="flex items-center shrink-0">
-          <span
-            className={`text-[9px] uppercase tracking-wide ${
-              s.status === "active"
-                ? "text-link font-semibold"
-                : s.status === "done"
-                  ? "text-fg-muted"
-                  : "text-fg-muted/50"
-            }`}
-          >
-            {s.label}
-          </span>
-          {i < 5 && <span className="codicon codicon-chevron-right text-fg-muted/30 text-[9px]" />}
-        </span>
-      ))}
-    </div>
   );
 }
 

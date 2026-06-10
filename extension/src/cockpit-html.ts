@@ -86,13 +86,13 @@ export interface InitPayload {
   projectSource?: "setting" | "detected" | "none";
 }
 
-/** Tier-1 pipeline. Real status comes from wave rollups later. */
+/** Tier-1 pipeline shape (STO-2496): PRD → Design → Build → Release. The
+ *  webview derives real stage states itself (computePipeline); this static list
+ *  only rides the init payload as the pipeline's shape. */
 export const STAGES: Stage[] = [
-  { key: "plan", label: "Plan", status: "done" },
-  { key: "design", label: "Design", status: "done" },
-  { key: "ux", label: "UX", status: "done" },
+  { key: "plan", label: "PRD", status: "todo" },
+  { key: "design", label: "Design", status: "todo" },
   { key: "build", label: "Build", status: "active" },
-  { key: "uat", label: "UAT", status: "todo" },
   { key: "release", label: "Release", status: "todo" },
 ];
 

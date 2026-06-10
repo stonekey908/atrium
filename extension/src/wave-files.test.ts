@@ -76,15 +76,40 @@ describe("resolveWaveFiles", () => {
   });
 
   it("returns empty for a wave with no manifest entry and no convention files", () => {
-    expect(resolveWaveFiles(root, "Wave 6 · Ship")).toEqual({ mockups: [] });
+    expect(resolveWaveFiles(root, "Wave 6 · Ship")).toEqual({ mockups: [], docs: [] });
+  });
+
+  it("collects extra docs (TRDs etc.) by convention wave-<n>-*.md", () => {
+    writeFileSync(join(root, "docs", "waves", "wave-5-trd.md"), "# trd");
+    const r = resolveWaveFiles(root, "Wave 5 · SDLC flow");
+    expect(r.docs.map((d) => d.name)).toEqual(["wave-5-trd.md"]);
+    // The main wave-5.md stays the PRD, not a doc.
+    expect(r.prd?.name).toBe("wave-5.md");
+  });
+
+  it("collects manifest-listed docs, skipping missing paths", () => {
+    const m = mkdtempSync(join(tmpdir(), "atrium-docs-manifest-"));
+    try {
+      mkdirSync(join(m, ".atrium"));
+      mkdirSync(join(m, "specs"));
+      writeFileSync(join(m, "specs", "trd.md"), "# trd");
+      writeFileSync(
+        join(m, ".atrium", "waves.json"),
+        JSON.stringify({ "1": { docs: ["specs/trd.md", "specs/missing.md"] } }),
+      );
+      const r = resolveWaveFiles(m, "Wave 1");
+      expect(r.docs.map((d) => d.name)).toEqual(["trd.md"]);
+    } finally {
+      rmSync(m, { recursive: true, force: true });
+    }
   });
 
   it("returns empty for names without a wave number", () => {
-    expect(resolveWaveFiles(root, "Unsorted")).toEqual({ mockups: [] });
+    expect(resolveWaveFiles(root, "Unsorted")).toEqual({ mockups: [], docs: [] });
   });
 
   it("never throws on a nonexistent root", () => {
-    expect(resolveWaveFiles("/no/such/dir/xyz123", "Wave 5")).toEqual({ mockups: [] });
+    expect(resolveWaveFiles("/no/such/dir/xyz123", "Wave 5")).toEqual({ mockups: [], docs: [] });
   });
 
   it("ignores a malformed manifest and still resolves by convention", () => {

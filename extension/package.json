@@ -1,8 +1,8 @@
 {
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
-  "description": "Linear / PRD / sprint cockpit for Claude Code — live mock-up POC running as a VS Code extension.",
-  "version": "0.0.24",
+  "description": "Linear / PRD / sprint cockpit for Claude Code \u2014 live mock-up POC running as a VS Code extension.",
+  "version": "0.0.26",
   "publisher": "atrium",
   "private": true,
   "license": "UNLICENSED",
@@ -56,7 +56,7 @@
         "atrium.openOnStartup": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Open the Atrium cockpit automatically as an editor tab when VS Code finishes starting. Turn off if you'd rather open it on demand via the status-bar button, the `Atrium: Open Cockpit` command, or `⌘⌥A`."
+          "markdownDescription": "Open the Atrium cockpit automatically as an editor tab when VS Code finishes starting. Turn off if you'd rather open it on demand via the status-bar button, the `Atrium: Open Cockpit` command, or `\u2318\u2325A`."
         },
         "atrium.linear.apiKey": {
           "type": "string",
@@ -72,13 +72,13 @@
         "atrium.linear.wavePrefix": {
           "type": "string",
           "default": "ATR Wave",
-          "markdownDescription": "Label prefix that marks a **wave / sprint**. Any Linear label starting with this (case-insensitive) becomes a wave on the board — so new sprints show up automatically, no rebuild. Change it to your own convention (e.g. `Sprint`, `Wave`). The display name drops a leading `ATR `."
+          "markdownDescription": "Label prefix that marks a **wave / sprint**. Any Linear label starting with this (case-insensitive) becomes a wave on the board \u2014 so new sprints show up automatically, no rebuild. Change it to your own convention (e.g. `Sprint`, `Wave`). The display name drops a leading `ATR `."
         },
         "atrium.linear.pollSeconds": {
           "type": "number",
           "default": 0,
           "minimum": 0,
-          "markdownDescription": "Auto-refresh the cockpit from Linear every N seconds. **0 = off (default).** Only meaningful with a live API key set — try 60–300 for a gentle live sync."
+          "markdownDescription": "Auto-refresh the cockpit from Linear every N seconds. **0 = off (default).** Only meaningful with a live API key set \u2014 try 60\u2013300 for a gentle live sync."
         }
       }
     }

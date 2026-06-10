@@ -35,8 +35,8 @@ describe("buildHtml", () => {
 });
 
 describe("STAGES", () => {
-  it("is the six-stage Tier-1 pipeline with valid statuses", () => {
-    expect(STAGES.map((s) => s.label)).toEqual(["Plan", "Design", "UX", "Build", "UAT", "Release"]);
+  it("is the four-stage Tier-1 pipeline with valid statuses (STO-2496)", () => {
+    expect(STAGES.map((s) => s.label)).toEqual(["PRD", "Design", "Build", "Release"]);
     const valid = new Set(["done", "active", "todo"]);
     for (const s of STAGES) expect(valid.has(s.status)).toBe(true);
   });

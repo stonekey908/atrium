@@ -69,6 +69,8 @@ files. Atrium resolves them from your repo two ways — use either or both:
 ### Option A — naming convention (zero config)
 
 1. Put the wave's PRD at `docs/waves/wave-<n>.md` (e.g. `docs/waves/wave-5.md`).
+   Further docs (TRDs etc.) go next to it as `docs/waves/wave-<n>-<anything>.md`
+   (e.g. `docs/waves/wave-5-trd.md`) — all render in the PRD view.
 2. Name mockups `wave-<n>-<anything>.html` (or `.png`/`.jpg`/`.fig`) and put
    them in `files/`, `docs/`, `mockups/` or `design/`
    (e.g. `files/wave-5-board.html`).
@@ -85,7 +87,8 @@ Create `.atrium/waves.json` in the repo root, keyed by wave number:
 {
   "0.7": {
     "prd": "docs/superpowers/specs/2026-06-08-sprint-cards-linear-sync-design.md",
-    "mockups": ["files/atrium-sprint-horizon.html"]
+    "mockups": ["files/atrium-sprint-horizon.html"],
+    "docs": ["docs/anywhere/my-trd.md"]
   }
 }
 ```

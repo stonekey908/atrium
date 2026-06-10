@@ -180,14 +180,15 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/looped back/i)).toBeInTheDocument();
   });
 
-  it("switches to the Plan and Design views via the tabs", () => {
+  it("switches to the PRD and Design views via the tabs (STO-2496)", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    fireEvent.click(screen.getByRole("button", { name: /^Plan$/i }));
-    expect(screen.getByRole("heading", { name: /acceptance criteria/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^PRD$/i }));
+    expect(screen.getByRole("heading", { name: /prd · documents/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Design$/i }));
     expect(screen.getByRole("heading", { name: /design · references/i })).toBeInTheDocument();
-    // The UAT tab was removed (too much info for now); no UAT button.
+    // Plan and UAT tabs are gone — Board / PRD / Design only.
+    expect(screen.queryByRole("button", { name: /^Plan$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /^UAT$/i })).toBeNull();
   });
 

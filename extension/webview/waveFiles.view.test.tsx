@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import type { InitPayload, Wave } from "./types";
 
 const { postMessage } = vi.hoisted(() => ({ postMessage: vi.fn() }));
@@ -7,7 +7,7 @@ vi.mock("./vscode", () => ({
   vscode: { postMessage, getState: () => undefined, setState: () => undefined },
 }));
 
-import { PlanView } from "./PlanView";
+import { PrdView } from "./PrdView";
 import { DesignView } from "./DesignView";
 
 const wave = (over: Partial<Wave>): Wave => ({
@@ -35,31 +35,54 @@ const init = (waves: Wave[], extra: Partial<InitPayload> = {}): InitPayload => (
   ...extra,
 });
 
-describe("PlanView PRD chip (STO-2478)", () => {
+function sendContent(payload: { path: string; content?: string; error?: string }) {
+  act(() => {
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "fileContent", ...payload } }));
+  });
+}
+
+describe("PRD view (STO-2496)", () => {
   beforeEach(() => postMessage.mockClear());
 
-  it("shows the wave's PRD as a chip and opens it on click", () => {
+  it("renders the first documented wave's PRD as markdown, fetched via the host", () => {
     const w = wave({
-      files: { prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" }, mockups: [] },
+      files: { prd: { name: "wave-5.md", path: "/repo/docs/waves/wave-5.md", kind: "md" }, mockups: [], docs: [] },
     });
-    render(<PlanView init={init([w])} />);
-    const chip = screen.getByRole("button", { name: /sprint-design\.md/ });
-    fireEvent.click(chip);
-    expect(postMessage).toHaveBeenCalledWith({ type: "openFile", path: "/repo/specs/sprint-design.md" });
+    render(<PrdView init={init([w])} />);
+    expect(postMessage).toHaveBeenCalledWith({ type: "previewFile", path: "/repo/docs/waves/wave-5.md" });
+    sendContent({ path: "/repo/docs/waves/wave-5.md", content: "## Scope\n\nDo **this** well" });
+    expect(screen.getByText("Scope")).toBeInTheDocument();
+    expect(screen.getByText("this").tagName).toBe("STRONG");
   });
 
-  it("renders no chip when the wave has no PRD", () => {
-    render(<PlanView init={init([wave({ files: { mockups: [] } })])} />);
-    expect(screen.queryByRole("button", { name: /\.md/ })).not.toBeInTheDocument();
+  it("lists further docs (TRDs) alongside the PRD", () => {
+    const w = wave({
+      files: {
+        prd: { name: "wave-5.md", path: "/r/wave-5.md", kind: "md" },
+        mockups: [],
+        docs: [{ name: "wave-5-trd.md", path: "/r/wave-5-trd.md", kind: "md" }],
+      },
+    });
+    render(<PrdView init={init([w])} />);
+    expect(screen.getByText("wave-5.md")).toBeInTheDocument();
+    expect(screen.getByText("wave-5-trd.md")).toBeInTheDocument();
+    expect(screen.getByText(/2 docs/)).toBeInTheDocument();
   });
 
-  it("renders criteria markdown styled, not raw (STO-2494)", () => {
-    const w = wave({});
-    w.tickets[0].spec = ["Support a **list** of prefixes with `back-compat`"];
-    const { container } = render(<PlanView init={init([w])} />);
-    expect(container.querySelector("strong")?.textContent).toBe("list");
-    expect(container.querySelector("code")?.textContent).toBe("back-compat");
-    expect(container).not.toHaveTextContent("**list**");
+  it("offers open-in-VS-Code per doc", () => {
+    const w = wave({
+      files: { prd: { name: "wave-5.md", path: "/r/wave-5.md", kind: "md" }, mockups: [], docs: [] },
+    });
+    render(<PrdView init={init([w])} />);
+    fireEvent.click(screen.getByRole("button", { name: /open wave-5\.md in vs code/i }));
+    expect(postMessage).toHaveBeenCalledWith({ type: "openFile", path: "/r/wave-5.md" });
+  });
+
+  it("shows an honest empty state (no docs vs no folder)", () => {
+    const { rerender } = render(<PrdView init={init([wave({ files: { mockups: [], docs: [] } })])} />);
+    expect(screen.getByText(/no prd docs found/i)).toBeInTheDocument();
+    rerender(<PrdView init={{ ...init([]), folders: [] }} />);
+    expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
   });
 });
 
@@ -71,17 +94,17 @@ describe("DesignView wave grouping (STO-2478)", () => {
       files: {
         prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" },
         mockups: [{ name: "horizon.html", path: "/repo/files/horizon.html", kind: "html" }],
+        docs: [],
       },
     });
     render(<DesignView init={init([w], { designRefs: [{ name: "horizon.html", path: "/repo/files/horizon.html", kind: "html" }] })} />);
     expect(screen.getByText("Wave 0.7 · Sprint board")).toBeInTheDocument();
     expect(screen.getByText("horizon.html")).toBeInTheDocument();
-    // Claimed by the wave → must not ALSO appear in a project-wide bucket.
     expect(screen.getAllByText("horizon.html")).toHaveLength(1);
   });
 
   it("puts unclaimed design refs in a project-wide bucket", () => {
-    const w = wave({ files: { mockups: [] } });
+    const w = wave({ files: { mockups: [], docs: [] } });
     render(
       <DesignView
         init={init([w], { designRefs: [{ name: "old-sketch.html", path: "/repo/files/old-sketch.html", kind: "html" }] })}
@@ -91,15 +114,11 @@ describe("DesignView wave grouping (STO-2478)", () => {
     expect(screen.getByText("old-sketch.html")).toBeInTheDocument();
   });
 
-  it("explains when no folder is open instead of suggesting a manifest", () => {
-    render(<DesignView init={{ ...init([wave({ files: { mockups: [] } })]), folders: [] }} />);
-    expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
-  });
-
   it("auto-expands the first wave HTML mockup as an inline preview (STO-2479)", () => {
     const w = wave({
       files: {
         mockups: [{ name: "horizon.html", path: "/repo/files/horizon.html", kind: "html" }],
+        docs: [],
       },
     });
     render(<DesignView init={init([w])} />);
@@ -114,6 +133,7 @@ describe("DesignView wave grouping (STO-2478)", () => {
           { name: "a.html", path: "/repo/files/a.html", kind: "html" },
           { name: "b.html", path: "/repo/files/b.html", kind: "html" },
         ],
+        docs: [],
       },
     });
     render(<DesignView init={init([w])} />);
@@ -124,16 +144,21 @@ describe("DesignView wave grouping (STO-2478)", () => {
 
   it("offers no preview toggle for non-HTML refs, only open-in-VS-Code", () => {
     const w = wave({
-      files: { mockups: [{ name: "flow.png", path: "/repo/files/flow.png", kind: "image" }] },
+      files: { mockups: [{ name: "flow.png", path: "/repo/files/flow.png", kind: "image" }], docs: [] },
     });
     render(<DesignView init={init([w])} />);
     expect(screen.queryByRole("button", { name: /preview flow\.png/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /open flow\.png in vs code/i })).toBeInTheDocument();
   });
 
+  it("explains when no folder is open instead of suggesting a manifest", () => {
+    render(<DesignView init={{ ...init([wave({ files: { mockups: [], docs: [] } })]), folders: [] }} />);
+    expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
+  });
+
   it("opens a wave PRD from the design view too", () => {
     const w = wave({
-      files: { prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" }, mockups: [] },
+      files: { prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" }, mockups: [], docs: [] },
     });
     render(<DesignView init={init([w])} />);
     fireEvent.click(screen.getByRole("button", { name: /sprint-design\.md/ }));
