@@ -20,6 +20,8 @@ export interface ActivityItem {
   when: string;
 }
 export interface Ticket {
+  /** Full Linear description markdown — rendered in the ticket modal (STO-2494). */
+  description?: string;
   id: string;
   title: string;
   priority: Priority;

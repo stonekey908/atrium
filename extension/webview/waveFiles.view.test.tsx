@@ -52,6 +52,15 @@ describe("PlanView PRD chip (STO-2478)", () => {
     render(<PlanView init={init([wave({ files: { mockups: [] } })])} />);
     expect(screen.queryByRole("button", { name: /\.md/ })).not.toBeInTheDocument();
   });
+
+  it("renders criteria markdown styled, not raw (STO-2494)", () => {
+    const w = wave({});
+    w.tickets[0].spec = ["Support a **list** of prefixes with `back-compat`"];
+    const { container } = render(<PlanView init={init([w])} />);
+    expect(container.querySelector("strong")?.textContent).toBe("list");
+    expect(container.querySelector("code")?.textContent).toBe("back-compat");
+    expect(container).not.toHaveTextContent("**list**");
+  });
 });
 
 describe("DesignView wave grouping (STO-2478)", () => {

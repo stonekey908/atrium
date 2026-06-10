@@ -25,6 +25,9 @@ export interface ActivityItem {
 export interface Ticket {
   id: string;
   title: string;
+  /** Full Linear description markdown — rendered in the ticket modal (STO-2494).
+   *  Live pull only; absent in the committed snapshot. */
+  description?: string;
   priority: Priority;
   state: TicketState;
   spec: string[];
