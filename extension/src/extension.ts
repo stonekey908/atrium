@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { basename, dirname, join, resolve, sep } from "path";
 import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
 import { LinearWriteClient, resolveStateId, type WriteState } from "./linear-writes";
@@ -90,6 +90,7 @@ function openCockpit(extensionUri: vscode.Uri): void {
   dashboardPanel = panel;
   panel.onDidDispose(() => {
     activeWebviews.delete(webview);
+    disposePreviewWatchers();
     if (dashboardPanel === panel) dashboardPanel = undefined;
   });
 }
@@ -186,8 +187,56 @@ function wireMessages(webview: vscode.Webview): void {
       void handleAddFinding(webview, msg);
     } else if (msg?.type === "selectProject" && msg.name) {
       void handleSelectProject(msg.name);
+    } else if (msg?.type === "previewFile" && msg.path) {
+      handlePreviewFile(webview, msg.path);
     }
   });
+}
+
+/** Mockup preview (STO-2479): the webview asks for a file's content and we
+ *  answer with `fileContent`, then keep a watcher on it so edits to the repo
+ *  file (by the user or the agent) push a fresh render. The webview never
+ *  touches the filesystem itself, and we only ever serve workspace files. */
+function handlePreviewFile(webview: vscode.Webview, path: string): void {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const resolved = resolve(path);
+  if (!root || !(resolved === root || resolved.startsWith(root + sep))) {
+    void webview.postMessage({ type: "fileContent", path, error: "File is outside the workspace." });
+    return;
+  }
+  try {
+    const content = readFileSync(resolved, "utf8");
+    void webview.postMessage({ type: "fileContent", path, content });
+    watchPreviewFile(resolved, path);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    void webview.postMessage({ type: "fileContent", path, error: message });
+  }
+}
+
+/** One watcher per previewed file, broadcast to all live webviews on change.
+ *  Disposed when the cockpit panel closes. */
+const previewWatchers = new Map<string, vscode.FileSystemWatcher>();
+
+function watchPreviewFile(resolved: string, path: string): void {
+  if (previewWatchers.has(resolved)) return;
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(dirname(resolved), basename(resolved)),
+  );
+  watcher.onDidChange(() => {
+    try {
+      const content = readFileSync(resolved, "utf8");
+      for (const w of activeWebviews) void w.postMessage({ type: "fileContent", path, content });
+    } catch {
+      // Deleted mid-watch — the stale preview stays; a refresh re-resolves.
+    }
+  });
+  previewWatchers.set(resolved, watcher);
+}
+
+function disposePreviewWatchers(): void {
+  for (const w of previewWatchers.values()) w.dispose();
+  previewWatchers.clear();
 }
 
 /** Pins the picked Linear project for THIS workspace (.vscode/settings.json), so

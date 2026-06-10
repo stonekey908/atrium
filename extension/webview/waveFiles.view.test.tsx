@@ -87,6 +87,41 @@ describe("DesignView wave grouping (STO-2478)", () => {
     expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
   });
 
+  it("auto-expands the first wave HTML mockup as an inline preview (STO-2479)", () => {
+    const w = wave({
+      files: {
+        mockups: [{ name: "horizon.html", path: "/repo/files/horizon.html", kind: "html" }],
+      },
+    });
+    render(<DesignView init={init([w])} />);
+    expect(postMessage).toHaveBeenCalledWith({ type: "previewFile", path: "/repo/files/horizon.html" });
+    expect(screen.getByText(/loading preview/i)).toBeInTheDocument();
+  });
+
+  it("toggles a collapsed mockup open to request its preview", () => {
+    const w = wave({
+      files: {
+        mockups: [
+          { name: "a.html", path: "/repo/files/a.html", kind: "html" },
+          { name: "b.html", path: "/repo/files/b.html", kind: "html" },
+        ],
+      },
+    });
+    render(<DesignView init={init([w])} />);
+    expect(postMessage).not.toHaveBeenCalledWith({ type: "previewFile", path: "/repo/files/b.html" });
+    fireEvent.click(screen.getByRole("button", { name: "b.html" }));
+    expect(postMessage).toHaveBeenCalledWith({ type: "previewFile", path: "/repo/files/b.html" });
+  });
+
+  it("offers no preview toggle for non-HTML refs, only open-in-VS-Code", () => {
+    const w = wave({
+      files: { mockups: [{ name: "flow.png", path: "/repo/files/flow.png", kind: "image" }] },
+    });
+    render(<DesignView init={init([w])} />);
+    expect(screen.queryByRole("button", { name: /preview flow\.png/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open flow\.png in vs code/i })).toBeInTheDocument();
+  });
+
   it("opens a wave PRD from the design view too", () => {
     const w = wave({
       files: { prd: { name: "sprint-design.md", path: "/repo/specs/sprint-design.md", kind: "md" }, mockups: [] },
