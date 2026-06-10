@@ -9,16 +9,9 @@ import { PlanView } from "./PlanView";
 import { DesignView } from "./DesignView";
 import { setDrag, getDrag } from "./dnd";
 import { useBoardMutations } from "./useBoardMutations";
-import { PRIORITY, StateIcon, Empty, AuditRibbon } from "./ui";
-import type {
-  ActivityKind,
-  InitPayload,
-  Spike,
-  TestSummary,
-  Ticket,
-  Wave,
-  WriteState,
-} from "./types";
+import { TicketModal } from "./TicketModal";
+import { PRIORITY, StateIcon, AuditRibbon } from "./ui";
+import type { InitPayload, Spike, Ticket, Wave, WriteState } from "./types";
 
 /** Collapse-set sentinel for the "Completed" group. */
 const COMPLETED_KEY = "__completed__";
@@ -615,14 +608,14 @@ function TicketRow({
   draggable?: boolean;
   fromWaveLabel?: string;
 }) {
+  // Click opens the detail modal (STO-2494) — the old Spec/Tests/Activity
+  // inline tabs are gone; full info lives in the modal, editing in Linear.
   const [open, setOpen] = useState(false);
-  const toggle = () => setOpen((o) => !o);
   return (
     <div>
       <div
         role="button"
         tabIndex={0}
-        aria-expanded={open}
         draggable={draggable}
         onDragStart={
           draggable
@@ -636,21 +629,19 @@ function TicketRow({
                 })
             : undefined
         }
-        onClick={toggle}
+        onClick={() => setOpen(true)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            toggle();
+            setOpen(true);
           }
         }}
         className={`grid grid-cols-[16px_minmax(0,auto)_1fr_auto_auto_auto] items-center gap-2 pl-5 pr-3 h-[26px] text-left text-[13px] cursor-pointer hover:bg-hover ${
-          open
-            ? "bg-active text-active-fg"
-            : ticket.state === "review"
-              ? "bg-blue/[0.07]"
-              : ticket.state === "doing"
-                ? "bg-yellow/[0.07]"
-                : ""
+          ticket.state === "review"
+            ? "bg-blue/[0.07]"
+            : ticket.state === "doing"
+              ? "bg-yellow/[0.07]"
+              : ""
         }`}
       >
         <StateIcon state={ticket.state} />
@@ -678,97 +669,7 @@ function TicketRow({
           <span />
         )}
       </div>
-      {open && <TicketDetail ticket={ticket} />}
-    </div>
-  );
-}
-
-type Tab = "spec" | "tests" | "activity";
-
-function TicketDetail({ ticket }: { ticket: Ticket }) {
-  const [tab, setTab] = useState<Tab>("spec");
-  const tabs: Tab[] = ["spec", "tests", "activity"];
-  return (
-    <div className="pl-5 pr-3 pb-3 pt-1 border-b border-border">
-      <div className="flex items-center gap-4 border-b border-border mb-2 text-[12px]">
-        {tabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`py-1 capitalize ${
-              tab === t ? "text-fg border-b border-link -mb-px" : "text-fg-muted hover:text-fg"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-      {tab === "spec" && <Spec spec={ticket.spec} />}
-      {tab === "tests" && <Tests tests={ticket.tests} />}
-      {tab === "activity" && <Activity items={ticket.activity} />}
-    </div>
-  );
-}
-
-function Spec({ spec }: { spec: string[] }) {
-  if (spec.length === 0) return <Empty>No acceptance criteria yet.</Empty>;
-  return (
-    <ul className="flex flex-col gap-1 text-[12px]">
-      {spec.map((s, i) => (
-        <li key={i} className="flex gap-1.5">
-          <span className="codicon codicon-check text-fg-muted shrink-0" />
-          <span>{s}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Tests({ tests }: { tests: TestSummary }) {
-  const total = tests.passed + tests.failed + tests.missing;
-  if (total === 0) return <Empty>No tests discovered yet.</Empty>;
-  return (
-    <div className="flex gap-4 text-[12px]">
-      <span className="flex items-center gap-1 text-green">
-        <span className="codicon codicon-pass" />
-        {tests.passed} passed
-      </span>
-      <span className={`flex items-center gap-1 ${tests.failed ? "text-red" : "text-fg-muted"}`}>
-        <span className="codicon codicon-error" />
-        {tests.failed} failed
-      </span>
-      <span className="flex items-center gap-1 text-fg-muted">
-        <span className="codicon codicon-circle-large-outline" />
-        {tests.missing} missing
-      </span>
-    </div>
-  );
-}
-
-const ACTIVITY_ICON: Record<ActivityKind, string> = {
-  pickup: "codicon-arrow-small-right",
-  plan: "codicon-checklist",
-  phase: "codicon-milestone",
-  close: "codicon-check-all",
-  commit: "codicon-git-commit",
-};
-
-function Activity({ items }: { items: Ticket["activity"] }) {
-  if (items.length === 0) return <Empty>No activity yet.</Empty>;
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="pb-1.5 border-b border-border">
-        <AuditRibbon activity={items} labeled />
-      </div>
-      <ul className="flex flex-col gap-1.5 text-[12px]">
-        {items.map((a, i) => (
-          <li key={i} className="flex items-center gap-2">
-            <span className={`codicon ${ACTIVITY_ICON[a.kind]} text-fg-muted shrink-0`} />
-            <span className="flex-1">{a.text}</span>
-            <span className="text-fg-muted text-[10px] font-mono shrink-0">{a.when}</span>
-          </li>
-        ))}
-      </ul>
+      {open && <TicketModal ticket={ticket} onClose={() => setOpen(false)} />}
     </div>
   );
 }

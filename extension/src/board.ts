@@ -36,6 +36,9 @@ export interface Ticket {
   spec: string[];
   tests: TestSummary;
   activity: ActivityItem[];
+  /** Full Linear description markdown — rendered in the ticket modal (STO-2494).
+   *  Live pull only; absent in the committed snapshot. */
+  description?: string;
   /** Linear's internal issue UUID — present only on a live pull; the write-back
    *  (STO-2469/2470) targets this. Absent in the committed snapshot. */
   linearId?: string;
@@ -215,7 +218,8 @@ export function mapState(stateType: string, stateName = ""): TicketState {
   return "todo";
 }
 
-/** First 3 bullet lines (-, *, or "1.") with their markers stripped. */
+/** Every bullet line (-, *, or "1.") with its marker stripped. Uncapped since
+ *  STO-2494 — the Plan view shows the full criteria list. */
 export function specFromDescription(description: string | null): string[] {
   if (!description) return [];
   return description
@@ -223,8 +227,7 @@ export function specFromDescription(description: string | null): string[] {
     .map((l) => l.trim())
     .filter((l) => /^([-*]|\d+\.)\s+/.test(l))
     .map((l) => l.replace(/^([-*]|\d+\.)\s+/, "").replace(/^\[[ x]\]\s*/i, "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+    .filter(Boolean);
 }
 
 /** Maps a comment body onto an audit-trail kind by keyword (first match wins).
@@ -265,6 +268,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     spec: specFromDescription(i.description),
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
     activity: activityFromComments(i.comments),
+    description: i.description ?? undefined,
     linearId: i.id,
     sortOrder: i.sortOrder,
   };

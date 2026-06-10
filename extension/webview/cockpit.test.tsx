@@ -50,6 +50,7 @@ const PAYLOAD: InitPayload = {
           url: "https://linear.app/stonekey/issue/STO-2164",
           priority: "urgent",
           state: "todo",
+          description: "Renders **streaming** assistant text.\n\n- Tool calls as collapsible cards",
           spec: ["Renders streaming assistant text", "Tool calls as collapsible cards"],
           tests: { passed: 3, failed: 1, missing: 2 },
           activity: [{ kind: "pickup", text: "Picked up", when: "today" }],
@@ -90,19 +91,36 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText("2")).toBeInTheDocument(); // open folder count
   });
 
-  it("expands a ticket to its acceptance criteria (Spec) on click", () => {
+  it("opens the ticket modal with the rendered description on click (STO-2494)", () => {
     render(<App />);
     sendInit(PAYLOAD);
     fireEvent.click(screen.getByText(TICKET_TITLE));
-    expect(screen.getByText("Renders streaming assistant text")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: /STO-2164 details/i });
+    // Markdown renders styled, not raw: **streaming** → <strong>.
+    expect(dialog.querySelector("strong")?.textContent).toBe("streaming");
+    expect(dialog).not.toHaveTextContent("**streaming**");
   });
 
-  it("switches the expanded ticket to the Tests tab", () => {
+  it("closes the ticket modal with Escape and via the close button", () => {
     render(<App />);
     sendInit(PAYLOAD);
     fireEvent.click(screen.getByText(TICKET_TITLE));
-    fireEvent.click(screen.getByText("tests"));
-    expect(screen.getByText("3 passed")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(TICKET_TITLE));
+    fireEvent.click(screen.getByRole("button", { name: /^close$/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the criteria list when a ticket has no description (snapshot mode)", () => {
+    render(<App />);
+    // Strip the description → the modal shows the extracted criteria instead.
+    const stripped = structuredClone(PAYLOAD);
+    delete stripped.waves[1].tickets[0].description;
+    sendInit(stripped);
+    fireEvent.click(screen.getByText(TICKET_TITLE));
+    const dialog = screen.getByRole("dialog", { name: /STO-2164 details/i });
+    expect(dialog).toHaveTextContent("Tool calls as collapsible cards");
   });
 
   it("shows the Active Work strip for the branch-matched ticket", () => {

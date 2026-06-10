@@ -126,9 +126,9 @@ describe("mapState", () => {
 });
 
 describe("specFromDescription", () => {
-  it("pulls up to 3 bullet lines, stripped of markers", () => {
+  it("pulls every bullet line, stripped of markers (uncapped since STO-2494)", () => {
     const desc = "intro\n- crit one\n- crit two\n- crit three\n- crit four";
-    expect(specFromDescription(desc)).toEqual(["crit one", "crit two", "crit three"]);
+    expect(specFromDescription(desc)).toEqual(["crit one", "crit two", "crit three", "crit four"]);
   });
 
   it("returns [] when there are no bullets", () => {
@@ -217,7 +217,7 @@ describe("boardFromIssues", () => {
   it("maps ticket fields onto the board model", () => {
     const ticket = board.waves[0].tickets[0];
     expect(ticket).toMatchObject({ id: "STO-2095", priority: "high", state: "done" });
-    expect(ticket.spec).toEqual(["a", "b", "c"]);
+    expect(ticket.spec).toEqual(["a", "b", "c", "d"]);
     expect(ticket.tests.discovered).toBe(false);
   });
 

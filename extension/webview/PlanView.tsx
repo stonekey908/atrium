@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { vscode } from "./vscode";
 import { waveUatRollup, waveTouchesUi } from "./views";
+import { mdInlineToHtml } from "./markdown";
 import type { InitPayload, Wave, WaveFileRef } from "./types";
 
 /**
@@ -102,7 +103,8 @@ function WavePlan({ wave, collapsed, onToggle }: { wave: Wave; collapsed: boolea
                 {t.spec.map((s, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-[12.5px] text-fg leading-relaxed">
                     <span className="text-fg-muted/60 select-none pt-px">—</span>
-                    <span>{s}</span>
+                    {/* Criteria are Linear markdown — render inline styles, not raw **bold** (STO-2494). */}
+                    <span className="md-inline" dangerouslySetInnerHTML={{ __html: mdInlineToHtml(s) }} />
                   </li>
                 ))}
               </ul>
