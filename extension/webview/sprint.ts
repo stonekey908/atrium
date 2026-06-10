@@ -47,13 +47,15 @@ export function currentSprint(waves: Wave[], override?: string | null): Wave | n
   return pool.reduce((best, w) => (stageIdx(w) > stageIdx(best) ? w : best), pool[0]);
 }
 
-/** The Tier-1 pipeline, in order. A wave's `stage` names where it sits on it. */
+/** The Tier-1 pipeline, in order (STO-2496): PRD → Design → Build → Release.
+ *  UX merged into Design (no signal ever differentiated them) and UAT dropped
+ *  as a stage — the Pass-N loop-back machinery is the honest UAT representation
+ *  (spike STO-2485). The internal `plan` key is kept so derived/snapshot stage
+ *  strings keep matching; only the label reads PRD. */
 export const PIPELINE: { key: string; label: string }[] = [
-  { key: "plan", label: "Plan" },
+  { key: "plan", label: "PRD" },
   { key: "design", label: "Design" },
-  { key: "ux", label: "UX" },
   { key: "build", label: "Build" },
-  { key: "uat", label: "UAT" },
   { key: "release", label: "Release" },
 ];
 

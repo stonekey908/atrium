@@ -52,6 +52,8 @@ export interface WaveFileRef {
 export interface WaveFiles {
   prd?: WaveFileRef;
   mockups: WaveFileRef[];
+  /** Further docs for the wave (TRDs etc.) — rendered in the PRD view (STO-2496). */
+  docs: WaveFileRef[];
 }
 
 export interface Wave {

@@ -5,7 +5,7 @@ import { computeRollup } from "./rollup";
 import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
-import { PlanView } from "./PlanView";
+import { PrdView } from "./PrdView";
 import { DesignView } from "./DesignView";
 import { setDrag, getDrag } from "./dnd";
 import { useBoardMutations } from "./useBoardMutations";
@@ -174,7 +174,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
           </div>
         </>
       )}
-      {view === "plan" && <PlanView init={liveInit} />}
+      {view === "prd" && <PrdView init={liveInit} />}
       {view === "design" && <DesignView init={init} />}
     </div>
   );
@@ -182,7 +182,7 @@ export function Cockpit({ init }: { init: InitPayload }) {
 
 const VIEW_TABS: { key: CockpitView; label: string; icon: string }[] = [
   { key: "board", label: "Board", icon: "codicon-layout" },
-  { key: "plan", label: "Plan", icon: "codicon-checklist" },
+  { key: "prd", label: "PRD", icon: "codicon-book" },
   { key: "design", label: "Design", icon: "codicon-symbol-color" },
 ];
 

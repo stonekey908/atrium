@@ -1,13 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  computePipeline,
-  loopBacks,
-  demoteState,
-  uatCasesFromTicket,
-  waveUatRollup,
-  isUiTicket,
-  waveTouchesUi,
-} from "./views";
+import { computePipeline, effectiveStage, loopBacks, demoteState, isUiTicket, waveTouchesUi } from "./views";
 import type { Ticket, Wave } from "./types";
 
 const tk = (id: string, spec: string[] = [], title = id): Ticket => ({
@@ -21,6 +13,29 @@ const tk = (id: string, spec: string[] = [], title = id): Ticket => ({
 });
 const wave = (name: string, stage: string, opts: Partial<Wave> = {}): Wave => ({ name, stage, tickets: [], ...opts });
 
+describe("effectiveStage (STO-2496 stage-lighting rules)", () => {
+  it("keeps a plain unstarted wave at PRD (plan)", () => {
+    expect(effectiveStage(wave("A", "plan", { tickets: [tk("T", ["compute totals"], "rollup math")] }))).toBe("plan");
+  });
+
+  it("lights Design for an unstarted wave with discovered mockups", () => {
+    const w = wave("A", "plan", {
+      files: { mockups: [{ name: "m.html", path: "/r/m.html", kind: "html" }], docs: [] },
+    });
+    expect(effectiveStage(w)).toBe("design");
+  });
+
+  it("lights Design for an unstarted wave with UI-flagged tickets", () => {
+    expect(effectiveStage(wave("A", "plan", { tickets: [tk("T", [], "Add a button")] }))).toBe("design");
+  });
+
+  it("never overrides started or shipped waves", () => {
+    const files = { mockups: [{ name: "m.html", path: "/r/m.html", kind: "html" as const }], docs: [] };
+    expect(effectiveStage(wave("A", "build", { files }))).toBe("build");
+    expect(effectiveStage(wave("A", "release", { files }))).toBe("release");
+  });
+});
+
 describe("computePipeline", () => {
   it("marks the stage with waves active, earlier stages done, later todo", () => {
     const stages = computePipeline([wave("A", "build"), wave("B", "build")]);
@@ -28,13 +43,21 @@ describe("computePipeline", () => {
     expect(by.plan).toBe("done");
     expect(by.design).toBe("done");
     expect(by.build).toBe("active");
-    expect(by.uat).toBe("todo");
+    expect(by.release).toBe("todo");
     expect(stages.find((s) => s.key === "build")!.waves).toHaveLength(2);
   });
 
-  it("spreads waves across their stages", () => {
-    const stages = computePipeline([wave("A", "plan"), wave("B", "build"), wave("C", "release")]);
+  it("is the four-stage PRD → Design → Build → Release pipeline", () => {
+    expect(computePipeline([]).map((s) => s.label)).toEqual(["PRD", "Design", "Build", "Release"]);
+  });
+
+  it("spreads waves across their stages, honouring the Design lighting rule", () => {
+    const designy = wave("D", "plan", {
+      files: { mockups: [{ name: "m.html", path: "/r/m.html", kind: "html" }], docs: [] },
+    });
+    const stages = computePipeline([wave("A", "plan"), designy, wave("B", "build"), wave("C", "release")]);
     expect(stages.find((s) => s.key === "plan")!.state).toBe("active");
+    expect(stages.find((s) => s.key === "design")!.waves.map((w) => w.name)).toEqual(["D"]);
     expect(stages.find((s) => s.key === "build")!.state).toBe("active");
     expect(stages.find((s) => s.key === "release")!.state).toBe("active");
   });
@@ -42,7 +65,7 @@ describe("computePipeline", () => {
 
 describe("loopBacks", () => {
   it("returns only waves at Pass ≥ 2", () => {
-    const got = loopBacks([wave("A", "build", { passN: 1 }), wave("B", "uat", { passN: 3 })]);
+    const got = loopBacks([wave("A", "build", { passN: 1 }), wave("B", "build", { passN: 3 })]);
     expect(got.map((w) => w.name)).toEqual(["B"]);
   });
 });
@@ -53,19 +76,6 @@ describe("demoteState", () => {
     expect(demoteState("doing")).toBe("backlog");
     expect(demoteState("done")).toBeUndefined();
     expect(demoteState("todo")).toBeUndefined();
-  });
-});
-
-describe("uatCasesFromTicket / waveUatRollup", () => {
-  it("turns each acceptance criterion into a pending case, de-duped", () => {
-    const cases = uatCasesFromTicket(tk("STO-1", ["Renders the kanban", "Renders the kanban", "Drags to sync"]));
-    expect(cases.map((c) => c.name)).toEqual(["Renders the kanban", "Drags to sync"]);
-    expect(cases.every((c) => c.status === "pending")).toBe(true);
-  });
-
-  it("rolls up a wave's cases", () => {
-    const w = wave("W", "build", { tickets: [tk("A", ["x", "y"]), tk("B", ["z"])] });
-    expect(waveUatRollup(w)).toEqual({ total: 3, pass: 0, fail: 0, pending: 3 });
   });
 });
 
