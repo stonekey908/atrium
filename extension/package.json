@@ -2,7 +2,7 @@
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
   "description": "Linear / PRD / sprint cockpit for Claude Code \u2014 live mock-up POC running as a VS Code extension.",
-  "version": "0.0.32",
+  "version": "0.0.33",
   "publisher": "atrium",
   "private": true,
   "license": "UNLICENSED",
@@ -72,7 +72,7 @@
         "atrium.linear.wavePrefix": {
           "type": "string",
           "default": "ATR Wave",
-          "markdownDescription": "Label prefix that marks a **wave / sprint**. Any Linear label starting with this (case-insensitive) becomes a wave on the board \u2014 so new sprints show up automatically, no rebuild. Change it to your own convention (e.g. `Sprint`, `Wave`). The display name drops a leading `ATR `."
+          "markdownDescription": "Label prefix(es) that mark a **wave / sprint** \u2014 comma-separated for several (e.g. `CG Phase, CG Sprint`). Any Linear label starting with one (case-insensitive) becomes a wave \u2014 new sprints show up automatically, no rebuild. **If nothing in the project matches, Atrium auto-detects** sprint-ish labels (`wave`/`sprint`/`phase`/`slice`/`milestone` + a number or letter, e.g. `sprint-12`, `CG Phase 3`), so foreign boards group with zero config. The display name drops a leading `ATR `."
         },
         "atrium.linear.pollSeconds": {
           "type": "number",
