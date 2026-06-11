@@ -49,6 +49,14 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     // A folder added/removed can change which Linear project this workspace maps to.
     vscode.workspace.onDidChangeWorkspaceFolders(() => refreshAll()),
+    // Re-pull when the VS Code WINDOW regains focus (STO-2481 finding #1b):
+    // the tab-visibility hook never fires if the cockpit stays on screen while
+    // you work in the browser (e.g. Linear) — window focus covers that loop.
+    vscode.window.onDidChangeWindowState((e) => {
+      if (e.focused && activeWebviews.size > 0 && Date.now() - lastInitAt > VISIBILITY_REFRESH_MIN_MS) {
+        refreshAll();
+      }
+    }),
     { dispose: stopPolling },
   );
 
