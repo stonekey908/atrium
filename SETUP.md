@@ -142,7 +142,7 @@ If you see that window — you're done. Edit `src/App.tsx` and changes appear in
 bun tauri build
 ```
 
-Produces a signed `.app` bundle in `src-tauri/target/release/bundle/macos/` (macOS), `.msi` on Windows, or `.AppImage` on Linux. **Code signing and notarisation are out of scope for v0.x** — see CLAUDE.md.
+Produces a signed `.app` bundle in `src-tauri/target/release/bundle/macos/` (macOS), `.msi` on Windows, or `.AppImage` on Linux. **Code signing and notarisation are out of scope for v0.x.**
 
 ---
 

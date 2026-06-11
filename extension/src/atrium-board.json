@@ -1,1090 +1,149 @@
 {
-  "project": "Atrium",
-  "generatedAt": "2026-06-08",
+  "project": "Nimbus",
+  "generatedAt": "2026-06-11",
   "spikes": [],
   "waves": [
     {
-      "name": "Wave 0",
-      "label": "ATR Wave 0",
+      "name": "Sprint 1 · Foundations",
+      "label": "Sprint 1 · Foundations",
       "stage": "release",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
         {
-          "id": "STO-2099",
-          "title": "T-008 — Title-bar git status (branch, ahead/behind, dirty/clean)",
-          "url": "https://linear.app/stonekey/issue/STO-2099/t-008-title-bar-git-status-branch-aheadbehind-dirtyclean",
+          "id": "NMB-101",
+          "title": "Project scaffold — build, test and CI wiring",
+          "url": "",
           "priority": "high",
           "state": "done",
-          "spec": [
-            "`git rev-parse --abbrev-ref HEAD` → branch name",
-            "`git status --porcelain` → dirty/clean indicator",
-            "`git rev-list --left-right --count @{u}...HEAD` → ahead/behind counts (when upstream exists)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["Repo builds from a fresh clone", "CI runs the suite on every push"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [
-            {
-              "kind": "close",
-              "text": "Merged to main. feat/sto-2099-titlebar-git-status → main via --no-ff (merge commit 1b59…",
-              "when": "2026-05-06"
-            },
-            {
-              "kind": "close",
-              "text": "Closed. Live git status now drives the title-bar BranchChip — branch name, dirty dot, a…",
-              "when": "2026-05-06"
-            },
-            {
-              "kind": "plan",
-              "text": "Plan locked. Approach: shell out to git CLI from Rust (matches ticket spec literally), …",
-              "when": "2026-05-06"
-            },
-            {
-              "kind": "close",
-              "text": "Starting work. Will update with approach before implementation.",
-              "when": "2026-05-06"
-            }
+            { "kind": "pickup", "text": "Starting work. Will update with approach.", "when": "2026-06-02" },
+            { "kind": "plan", "text": "Plan locked — scaffold first, CI second.", "when": "2026-06-02" },
+            { "kind": "close", "text": "Merged to main. Suite green on CI.", "when": "2026-06-03" }
           ],
-          "linearId": "1078cbc1-8637-4428-bb81-f0b9538d5c00",
-          "sortOrder": -1559644
+          "description": "Stand up the project skeleton so every later ticket lands on a working base.\n\n## Scope\n\n- Build tooling + scripts (`build`, `test`, `lint`)\n- CI pipeline running the suite on every push\n- A `README` stub with setup steps\n\n## Acceptance\n\n- A fresh clone builds and tests green with two commands."
         },
         {
-          "id": "STO-2096",
-          "title": "T-005 — Title bar with traffic lights, breadcrumb, model pill (static)",
-          "url": "https://linear.app/stonekey/issue/STO-2096/t-005-title-bar-with-traffic-lights-breadcrumb-model-pill-static",
+          "id": "NMB-102",
+          "title": "Design tokens + base layout shell",
+          "url": "",
           "priority": "med",
           "state": "done",
-          "spec": [
-            "Traffic lights (`-webkit-app-region: drag` parent)",
-            "Workspace icon · workspace name · `/` · branch chip · `·` · session title",
-            "Right side: model pill (green dot · \"Claude Opus 4.7\"), context-budget pill (\"14,820 / 200k\"), no-drag region"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["Tokens load from one source", "Shell renders on all breakpoints"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [
-            {
-              "kind": "close",
-              "text": "UAT passed — closing.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "plan",
-              "text": "Implementation complete — ready for UAT.",
-              "when": "2026-05-05"
-            }
+            { "kind": "pickup", "text": "Picked up after NMB-101.", "when": "2026-06-03" },
+            { "kind": "close", "text": "Shipped — tokens + shell merged.", "when": "2026-06-04" }
           ],
-          "linearId": "f2252812-b0d2-40bf-9ec4-dfabf0be4e07",
-          "sortOrder": -1545813
-        },
-        {
-          "id": "STO-2095",
-          "title": "T-004 — Three-column layout (sidebar 240 / main 1fr / right rail 320)",
-          "url": "https://linear.app/stonekey/issue/STO-2095/t-004-three-column-layout-sidebar-240-main-1fr-right-rail-320",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "Left rail: 240px — Workspace nav, active sessions, user card at bottom",
-            "Main: 1fr — conversation pane placeholder, composer placeholder",
-            "Right rail: 320px — tab bar (Files / MCP / Context), panel content placeholder"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "close",
-              "text": "UAT passed — closing.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "phase",
-              "text": "Implementation complete — ready for UAT.",
-              "when": "2026-05-05"
-            }
-          ],
-          "linearId": "d2245bb5-26a5-4784-a63a-3dc40ae605e0",
-          "sortOrder": -1544895
-        },
-        {
-          "id": "STO-2094",
-          "title": "T-003 — Bundle Source Serif 4, Inter Tight, JetBrains Mono locally",
-          "url": "https://linear.app/stonekey/issue/STO-2094/t-003-bundle-source-serif-4-inter-tight-jetbrains-mono-locally",
-          "priority": "med",
-          "state": "done",
-          "spec": [
-            "Source Serif 4 — italic 8..60 wght 400/500/600, roman 8..60 wght 400/500/600 (display, serif italic is a load-bearing aesthetic choice)",
-            "Inter Tight — 300/400/500/600/700 (body)",
-            "JetBrains Mono — 400/500/600 (code)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "close",
-              "text": "UAT passed — closing.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "phase",
-              "text": "Implementation complete — ready for UAT.",
-              "when": "2026-05-05"
-            }
-          ],
-          "linearId": "f8253273-1ec9-4fee-80a2-efb62a77946e",
-          "sortOrder": -1543884
-        },
-        {
-          "id": "STO-2093",
-          "title": "T-002 — Port design tokens from atrium.html into tailwind.config.ts",
-          "url": "https://linear.app/stonekey/issue/STO-2093/t-002-port-design-tokens-from-atriumhtml-into-tailwindconfigts",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "Colors: `bg`, `bg-elev`, `bg-sunk`, `bg-hover`, `ink`, `ink-2/3/4`, `line`, `line-2`, `green`, `green-soft`, `amber`, `amber-soft`, `red`, `red-soft`",
-            "Fonts: `serif` (Source Serif 4), `sans` (Inter Tight), `mono` (JetBrains Mono)",
-            "Radii: `r-sm` (6), `r-md` (10), `r-lg` (14)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "close",
-              "text": "UAT passed — closing.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "plan",
-              "text": "Implementation complete — ready for UAT.",
-              "when": "2026-05-05"
-            }
-          ],
-          "linearId": "6d268b16-1282-4fb3-b83b-c872c18b59f8",
-          "sortOrder": -1542981
-        },
-        {
-          "id": "STO-2092",
-          "title": "T-001 — Tauri scaffold (Vite + React + Tailwind + TypeScript)",
-          "url": "https://linear.app/stonekey/issue/STO-2092/t-001-tauri-scaffold-vite-react-tailwind-typescript",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`bun tauri dev` launches a native window",
-            "Vite HMR works for React changes",
-            "Tailwind classes apply"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "close",
-              "text": "UAT passed — closing.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "plan",
-              "text": "Implementation complete — ready for UAT.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "close",
-              "text": "Plan locked.",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "plan",
-              "text": "Starting work. Bootstrap ticket — repo doesn't exist yet, so there's a small pre-flight…",
-              "when": "2026-05-05"
-            },
-            {
-              "kind": "plan",
-              "text": "Kickoff context — this is the entry-point ticket for Wave 0. Pick this up first.",
-              "when": "2026-05-03"
-            }
-          ],
-          "linearId": "86077864-2534-463f-980c-f1ac2d33c460",
-          "sortOrder": -1537925
+          "description": "One source of truth for color/spacing/type, plus the app shell every screen mounts into.\n\n- Tokens as CSS variables\n- Light/dark from the host theme\n- Shell: header, content, status strip"
         }
       ]
     },
     {
-      "name": "Wave 0.5",
-      "label": "ATR Wave 0.5",
-      "stage": "release",
-      "passN": 1,
+      "name": "Sprint 2 · The core loop",
+      "label": "Sprint 2 · The core loop",
+      "stage": "build",
+      "passN": 2,
       "gatedBy": null,
       "tickets": [
         {
-          "id": "STO-2187",
-          "title": "NEW-G — UAT case rollup from acceptance criteria + UAT canvas findings",
-          "url": "https://linear.app/stonekey/issue/STO-2187/new-g-uat-case-rollup-from-acceptance-criteria-uat-canvas-findings",
-          "priority": "med",
-          "state": "done",
-          "spec": [
-            "**Acceptance criteria** — parsed from the ticket description's `## Acceptance` section. Each bullet becomes a UAT case. Status: `pending` until manually marked or until a finding closes it.",
-            "**UAT canvas findings** — when a UAT session classifies a finding against this ticket (Wave 4.5 territory, see [STO-2176](https://linear.app/stonekey/issue/STO-2176/uat-canvas-question-card-classified-findings-list)), it lands here as `fail` or `pending` depending on resolution.",
-            "**Manually authored UAT cases** — added via the `Generate tests` action on the inline expand (NEW-E) when Claude is asked to author them; persisted in `.atrium/uat-cases.yaml` (or similar) co-located with the project."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "plan",
-              "text": "Implementation complete (pending UAT). UAT cases derived 1:1 from acceptance criteria (…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "04567b89-2ed2-45ea-a04d-12d4bd779a57",
-          "sortOrder": -1778826
-        },
-        {
-          "id": "STO-2186",
-          "title": "NEW-F — Test discovery: auto-find unit tests, count pass/fail/missing per ticket + per wave",
-          "url": "https://linear.app/stonekey/issue/STO-2186/new-f-test-discovery-auto-find-unit-tests-count-passfailmissing-per",
-          "priority": "med",
-          "state": "done",
-          "spec": [
-            "Glob: `**/*.test.{ts,tsx,js,jsx}` and `**/*.spec.{ts,tsx}` (configurable per project in CLAUDE.md / atrium config).",
-            "Association heuristics, in order:",
-            "Test file references the ticket ID in a `// @ticket STO-1234` comment or top-level describe block."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete — reframed (pending UAT). Project-level test-file discovery (ho…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "39eb3860-bd09-4808-b06e-1316b179f19a",
-          "sortOrder": -1777882
-        },
-        {
-          "id": "STO-2185",
-          "title": "NEW-E — Ticket inline-expand: Spec / Tests / Activity tabs",
-          "url": "https://linear.app/stonekey/issue/STO-2185/new-e-ticket-inline-expand-spec-tests-activity-tabs",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "Three tabs along the top: **Spec** · **Tests** · **Activity**.",
-            "Below tabs: panel content (single panel visible at a time).",
-            "Footer actions: `Open in canvas` (primary — jumps to Build/Plan canvas with this ticket loaded), `View in Linear` (opens Linear deep link in a separate window or via MCP), `Generate tests` (kicks off Claude to author the missing unit/UAT cases — handed off to /sprint)."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Already built — verified. Ticket inline-expand with Spec / Tests / Activity tabs is the…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "0c2a44db-99e5-4a86-aa2e-38cda65382e6",
-          "sortOrder": -1776797
-        }
-      ]
-    },
-    {
-      "name": "Wave 0.6 · Cockpit data",
-      "label": "ATR Wave 0.6 · Cockpit data",
-      "stage": "release",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
-        {
-          "id": "STO-2465",
-          "title": "W0.6-5 — Click-through to Linear + real ticket detail depth",
-          "url": "https://linear.app/stonekey/issue/STO-2465/w06-5-click-through-to-linear-real-ticket-detail-depth",
-          "priority": "med",
-          "state": "done",
-          "spec": [
-            "`TicketRow` gains an `↗` open-in-Linear button → webview posts `openLinear` → host `vscode.env.openExternal(ticket.url)`.",
-            "(Optional) `revealBranch` host message — best-effort.",
-            "`TicketDetail` Spec / Activity tabs filled with real Linear content (acceptance criteria + comment timeline). Tests tab shows Linear-recorded counts, or \"not discovered yet\" when `tests.discovered === false`."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implemented + committed (690ea67): each ticket row gets an open-in-Linear button → host…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "fa47e111-55a7-4b42-81c5-4ecc3f7236bc",
-          "sortOrder": -1783780
-        },
-        {
-          "id": "STO-2464",
-          "title": "W0.6-4 — Spike-gate map + per-wave Pass-N badge",
-          "url": "https://linear.app/stonekey/issue/STO-2464/w06-4-spike-gate-map-per-wave-pass-n-badge",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`SpikeGateMap` — renders the wave sequence with ⚠ gate chips on blocked waves (\"gated by T-110\"). Driven by `board.spikes[]` + each wave's `gatedBy`. Lives in the rollup region.",
-            "Per-wave **Pass-N / UAT-loop-back badge** in `WaveSection` — appears only when `wave.passN > 1` (the loop-back machinery, [STO-2177](https://linear.app/stonekey/issue/STO-2177/loop-back-machinery-chip-on-wave-card-return-strip-pass-n-badge)).",
-            "Spike-gate map shows a gate chip on each wave whose `gatedBy` is set, naming the spike."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implemented + committed (690ea67): spike-gate chips on gated waves (the real board ligh…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "318a60f9-cc97-4949-96bd-fc7dd2be35c8",
-          "sortOrder": -1782754
-        },
-        {
-          "id": "STO-2463",
-          "title": "W0.6-3 — Active Work strip (branch → ticket resolution)",
-          "url": "https://linear.app/stonekey/issue/STO-2463/w06-3-active-work-strip-branch-ticket-resolution",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`ActiveWork` — collapsible strip showing the active ticket, its branch, state, and a next-action hint.",
-            "`resolveActiveTicket(board, branch)` in `board.ts`: match the current git branch name against ticket ids (e.g. branch `…sto-2181…` → [STO-2181](https://linear.app/stonekey/issue/STO-2181/new-a-left-rail-mode-toggle-waves-files-1-resize-handle)); fall back to the first `doing` ticket; else null. The extension host already knows the branch.",
-            "Active Work strip shows the ticket matched from the current branch (or the doing fallback)."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implemented + committed (690ea67): Active Work strip — \"Working on\" the ticket matched …",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "d82c127b-51b5-4001-9132-d68ff9c61e43",
-          "sortOrder": -1781763
-        },
-        {
-          "id": "STO-2462",
-          "title": "W0.6-2 — Project rollup bar + segmented progress bars",
-          "url": "https://linear.app/stonekey/issue/STO-2462/w06-2-project-rollup-bar-segmented-progress-bars",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`RollupBar` component at the top of the cockpit: counts by state (done / doing / todo), spike count, overall progress.",
-            "**Segmented state bar** (done/doing/todo as colored segments) — far more scannable than a bare %. Project-level in `RollupBar` and per-wave in `WaveSection` (replaces the current bare % bar).",
-            "`computeRollup(board)` and `computeWaveProgress(wave)` in `board.ts`."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implemented + committed (690ea67): project rollup bar — done/total + in-progress + spik…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "017db5b1-a545-4730-a605-2a69fa0f867e",
-          "sortOrder": -1780861
-        },
-        {
-          "id": "STO-2461",
-          "title": "W0.6-1 — Board snapshot source + BoardSource loader (replace STUB_WAVES)",
-          "url": "https://linear.app/stonekey/issue/STO-2461/w06-1-board-snapshot-source-boardsource-loader-replace-stub-waves",
+          "id": "NMB-201",
+          "title": "Import pipeline — fetch, validate, store",
+          "url": "",
           "priority": "urgent",
           "state": "done",
-          "spec": [
-            "`extension/src/atrium-board.json` — committed snapshot of the real Atrium board, generated by a Claude session via the Linear MCP. Schema: `project`, `generatedAt`, `spikes[]`, `waves[]` (name, label, stage, passN, gatedBy, tickets\\[\\]), each ticket = `id, title, url, priority, state, spec[], tests{passed,failed,missing,discovered}, activity[]`.",
-            "`extension/src/board.ts` — pure module (no `vscode` import, mirrors the `cockpit-html.ts` split): `interface BoardSource { load(): Board }`; `SnapshotSource` imports the JSON; `LinearSdkSource` is a stub for the live path.",
-            "`extension.ts` `buildInitPayload()` reads from `board.ts` instead of `STUB_WAVES`."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["Malformed rows are quarantined, not dropped", "Re-running an import is idempotent"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [
-            {
-              "kind": "phase",
-              "text": "Implemented + committed on claude/vs-plugin-architecture-FyCiv. Real board snapshot beh…",
-              "when": "2026-06-08"
-            }
+            { "kind": "pickup", "text": "Starting the pipeline work.", "when": "2026-06-05" },
+            { "kind": "plan", "text": "Plan locked — staged ingest with a quarantine table.", "when": "2026-06-05" },
+            { "kind": "phase", "text": "UAT pass 1 bounced — duplicate handling regressed.", "when": "2026-06-07" },
+            { "kind": "close", "text": "Pass 2 clean. Merged.", "when": "2026-06-08" }
           ],
-          "linearId": "92664e58-5e14-4d3d-a5ff-fe84e918b279",
-          "sortOrder": -1779904
-        }
-      ]
-    },
-    {
-      "name": "Wave 0.7 · Sprint board",
-      "label": "ATR Wave 0.7 · Sprint board",
-      "stage": "release",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
+          "description": "The ingest path everything depends on.\n\n## Behaviour\n\n- Fetch source data on a schedule **and** on demand\n- Validate rows against the schema; quarantine failures with a reason\n- Idempotent re-runs (hash-keyed upserts)\n\n## Notes\n\nBounced once in UAT (duplicate handling) — fixed and re-verified on pass 2."
+        },
         {
-          "id": "STO-2470",
-          "title": "W0.7-3 — Drag-to-reorder priority (Linear sortOrder)",
-          "url": "https://linear.app/stonekey/issue/STO-2470/w07-3-drag-to-reorder-priority-linear-sortorder",
+          "id": "NMB-202",
+          "title": "Dashboard — live results table with filters",
+          "url": "",
+          "priority": "high",
+          "state": "doing",
+          "spec": ["Filters combine (status + date + text)", "Table updates without a reload"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
+          "activity": [
+            { "kind": "pickup", "text": "Starting the dashboard slice.", "when": "2026-06-09" },
+            { "kind": "plan", "text": "Plan locked — table first, filters second, live updates last.", "when": "2026-06-09" }
+          ],
+          "description": "The screen users live in: results as a fast, filterable table.\n\n- Combined filters: status, date range, free text\n- Live updates over the existing socket — **no reload**\n- Empty/error/loading states designed, not defaulted"
+        },
+        {
+          "id": "NMB-203",
+          "title": "Notifications — digest email + in-app toasts",
+          "url": "",
           "priority": "med",
-          "state": "done",
-          "spec": [
-            "Reorder within a column persists to Linear sortOrder; optimistic + synced/failed/revert.",
-            "tsc + vitest green; F5/live-verified."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "state": "review",
+          "spec": ["Digest sends once per day, deduped", "Toasts respect the OS do-not-disturb"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [
-            {
-              "kind": "phase",
-              "text": "Slice 3 complete. Drag a card onto another in the same column → optimistic reorder + ho…",
-              "when": "2026-06-08"
-            }
+            { "kind": "pickup", "text": "Picked up.", "when": "2026-06-08" },
+            { "kind": "phase", "text": "Implementation done — in review.", "when": "2026-06-10" }
           ],
-          "linearId": "b7de0e1a-2cff-4498-8950-91e1c651f368",
-          "sortOrder": -1786597
+          "description": "Two channels, one preference model.\n\n- Daily digest email (deduped against in-app reads)\n- In-app toasts for urgent events only\n- Per-user channel preferences"
         },
         {
-          "id": "STO-2469",
-          "title": "W0.7-2 — Drag-to-status + optimistic Linear write-back",
-          "url": "https://linear.app/stonekey/issue/STO-2469/w07-2-drag-to-status-optimistic-linear-write-back",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`useBoardMutations` hook: optimistic state over `init.waves` + per-ticket sync status + reconcile on `init`.",
-            "Host `moveTicket {id, toState}` handler → resolve the issue's team workflow-state **id** (todo/doing/review/done → unstarted/started(name\\~review)/started/completed; resolved from Linear, cached) → `updateIssue`.",
-            "Conflict: read-before-write; if Linear already differs from `fromState`, reject (revert + \"changed in Linear\" flag), don't clobber."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Slice 2 complete — first live write to Linear. Drag a card across columns → optimistic …",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "fffe5577-c7c4-4e36-be8c-c5d8c6094308",
-          "sortOrder": -1785656
-        },
-        {
-          "id": "STO-2468",
-          "title": "W0.7-1 — Read-only sprint kanban (spotlight current sprint)",
-          "url": "https://linear.app/stonekey/issue/STO-2468/w07-1-read-only-sprint-kanban-spotlight-current-sprint",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "`SprintBoard` + `KanbanCard` (id, title, priority, ↗ open-in-Linear, sync-badge scaffold).",
-            "Pure `boardToColumns(wave)` (group tickets by state) + test.",
-            "Regenerate `extension/src/atrium-board.json` to match the pruned board (drop cancelled Waves 1/2/3/5/7)."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Slice 1 complete. Read-only SprintBoard kanban spotlights the current sprint (Build-sta…",
-              "when": "2026-06-08"
-            },
-            {
-              "kind": "plan",
-              "text": "Starting work as the W0.7 sprint-board build (with STO-2469 drag-to-status + STO-2470 d…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "95e6e93c-c0fe-439a-a2cc-52f22856e026",
-          "sortOrder": -1784712
+          "id": "NMB-204",
+          "title": "Bulk actions — select, tag, archive",
+          "url": "",
+          "priority": "low",
+          "state": "todo",
+          "spec": ["Selection survives pagination", "Archive is undoable for 30s"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
+          "activity": [],
+          "description": "Multi-select on the dashboard table with the three bulk verbs people actually use: tag, archive, export."
         }
       ]
     },
     {
-      "name": "Wave 3.5",
-      "label": "ATR Wave 3.5",
-      "stage": "release",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
-        {
-          "id": "STO-2169",
-          "title": "Fast-track gate — UI-detection blocks bypass with warning chip",
-          "url": "https://linear.app/stonekey/issue/STO-2169/fast-track-gate-ui-detection-blocks-bypass-with-warning-chip",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "Acceptance criteria contain any of: `screen`, `canvas`, `UI`, `component`, `dialog`, `modal`, `flow`, `view`, `pane`, `card`",
-            "Spec mentions `wireframe`, `mockup`, `design`, `figma`, `prototype`",
-            "Wave label includes `UX` or `Design`"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "plan",
-              "text": "Implementation complete (pending UAT). Fast-track gate as a UI-detection heuristic (isU…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "8a93ae69-6ba5-420c-8993-c7adef043452",
-          "sortOrder": -1789586
-        },
-        {
-          "id": "STO-2168",
-          "title": "Design canvas — mockup-on-canvas + annotation pins",
-          "url": "https://linear.app/stonekey/issue/STO-2168/design-canvas-mockup-on-canvas-annotation-pins",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "Toolbar: file path (mono), pin count chip (amber soft), edited-timestamp, zoom controls",
-            "Stage area: dot-grid background, mockup rendered inside a chrome-styled mini-frame",
-            "Numbered annotation pins (amber circles, 24×24) overlay the surface at any pixel"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete — lightweight, reframed (pending UAT). Design view lists mockup…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "acac7c97-88a1-4093-9aa5-5ecb35059197",
-          "sortOrder": -1788684
-        },
-        {
-          "id": "STO-2167",
-          "title": "Plan canvas — spec doc + acceptance criteria + ticket-tags",
-          "url": "https://linear.app/stonekey/issue/STO-2167/plan-canvas-spec-doc-acceptance-criteria-ticket-tags",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "Doc title (28px serif, `-0.025em` letter-spacing)",
-            "Doc meta row: date · ticket count · file path",
-            "Sections: **Why now** (paragraph), **Acceptance criteria** (checklist with per-criterion `STO-XXXX` ticket-tag column), **Out-of-scope** (paragraph — first-class block; not a footnote)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "plan",
-              "text": "Implementation complete (pending UAT). Plan view: per-wave acceptance criteria with tic…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "17fd507a-96f0-43cb-a42c-75ccca423405",
-          "sortOrder": -1787609
-        }
-      ]
-    },
-    {
-      "name": "Wave 4",
-      "label": "ATR Wave 4",
-      "stage": "release",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
-        {
-          "id": "STO-2173",
-          "title": "Wave plan summary on Build — ticket pipeline + UAT phase row",
-          "url": "https://linear.app/stonekey/issue/STO-2173/wave-plan-summary-on-build-ticket-pipeline-uat-phase-row",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "**Heading**: wave name + meta (`N tickets · ~Xm elapsed · ~Ym remaining`)",
-            "**Breakdown legend** (right-aligned): coloured dots for `N done · N live · N next · UAT after`",
-            "**Done** — green check, struck-through title, green pill"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "plan",
-              "text": "Implementation complete (pending UAT). Wave-plan breakdown tally (done / in-flight / in…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "195e7943-9bc5-48d7-bcbf-52ae6a9fedc0",
-          "sortOrder": -1792409
-        },
-        {
-          "id": "STO-2172",
-          "title": "Audit-trail timeline — Pickup / Plan locked / Phase end / Close",
-          "url": "https://linear.app/stonekey/issue/STO-2172/audit-trail-timeline-pickup-plan-locked-phase-end-close",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "**Filled (green)** — Linear comment exists for that step",
-            "**Empty (outline)** — required but missing",
-            "**Pickup** — \"Starting work. Will update with approach.\""
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "close",
-              "text": "Implementation complete (pending UAT). 4-dot audit ribbon (Pickup → Plan → Phase → Clos…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "28cf63fb-4216-4792-8df8-613b358cb37c",
-          "sortOrder": -1791450
-        },
-        {
-          "id": "STO-2170",
-          "title": "Session Status rail — persistent across all Tier-2 canvases",
-          "url": "https://linear.app/stonekey/issue/STO-2170/session-status-rail-persistent-across-all-tier-2-canvases",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "**Branch** — name + dirty/clean dot (`feat/<ticket-id>-<desc>` validation)",
-            "**Ahead** — unpushed commit count (amber if > 0)",
-            "**tsc** — last typecheck result (`passes` / `N errors`)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete (pending UAT). Built as a status strip below the header: real w…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "2ca48bd0-9bc5-4067-b844-cc48b6a26286",
-          "sortOrder": -1790508
-        }
-      ]
-    },
-    {
-      "name": "Wave 4.5",
-      "label": "ATR Wave 4.5",
-      "stage": "release",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
-        {
-          "id": "STO-2177",
-          "title": "Loop-back machinery — chip on wave card + return-strip + Pass-N badge",
-          "url": "https://linear.app/stonekey/issue/STO-2177/loop-back-machinery-chip-on-wave-card-return-strip-pass-n-badge",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "**Amber** `Pass N` chip on the wave card in Tier-1 pipeline",
-            "**One-line return-strip** below the pipeline citing the originating finding (\"Wave 3 returned to Design 12 minutes ago — UAT-091 reopened the preview height. 2 pins active. Pass 2 of 3\")",
-            "`Pass N · from <stage>` chip in the wave-title-row's stage-tag area on the Tier-2 canvas"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete (pending UAT). Return-strip below the pipeline surfaces the mos…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "c0abf9c0-2500-4b97-9863-cd692671c8a2",
-          "sortOrder": -1796543
-        },
-        {
-          "id": "STO-2176",
-          "title": "UAT canvas — Question card + classified findings list",
-          "url": "https://linear.app/stonekey/issue/STO-2176/uat-canvas-question-card-classified-findings-list",
-          "priority": "low",
-          "state": "done",
-          "spec": [
-            "**Hero**: Question card (NEW-11 — supports Tab-to-add-note + screenshot)",
-            "**Findings table** below the card:",
-            "Columns: ID · screenshot thumb (36×26) · description · verdict pill · shot count · next-action"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete (pending UAT). UAT view with rollup tiles + a classified findin…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "7b94b088-2935-4bd1-9240-064bdba31168",
-          "sortOrder": -1795577
-        },
-        {
-          "id": "STO-2175",
-          "title": "Screenshot annotation — capture, draw, redact, file as finding",
-          "url": "https://linear.app/stonekey/issue/STO-2175/screenshot-annotation-capture-draw-redact-file-as-finding",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "Global hotkey `⌘⇧4` triggers a snip overlay (system-style cross-hair selection). Screenshot capture goes via the extension host (Node) or a webview capture; the OS capture path differs under a VS Code extension — flag to revisit. The annotation UI stays in the webview.",
-            "Camera button in titlebar / composer attach-row triggers same flow",
-            "Selected region opens in an annotation canvas (webview view / editor-tab surface)"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete — lightweight, reframed (pending UAT). The \"file as finding\" pa…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "949a0fcd-f96c-437c-8877-7a4eeee6818d",
-          "sortOrder": -1794488
-        },
-        {
-          "id": "STO-2174",
-          "title": "Tier-1 Project Overview pipeline (Plan / Design / UX / Build / UAT / Release)",
-          "url": "https://linear.app/stonekey/issue/STO-2174/tier-1-project-overview-pipeline-plan-design-ux-build-uat-release",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "Title row: swatch (stage colour) · name · count",
-            "1px border-bottom rule beneath title",
-            "Wave card stack below"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "phase",
-              "text": "Implementation complete (pending UAT). Tier-1 pipeline now derives each stage's state +…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "f27198a7-c460-4f18-b757-f563f9f6ba44",
-          "sortOrder": -1793498
-        }
-      ]
-    },
-    {
-      "name": "Wave 5 · SDLC flow",
-      "label": "ATR Wave 5 · SDLC flow",
+      "name": "Sprint 3 · Polish & launch",
+      "label": "Sprint 3 · Polish & launch",
       "stage": "plan",
       "passN": 1,
       "gatedBy": null,
       "tickets": [
         {
-          "id": "STO-2485",
-          "title": "Spike: how does the cockpit know something is &quot;in testing&quot;? (and is it worth it)",
-          "url": "https://linear.app/stonekey/issue/STO-2485/spike-how-does-the-cockpit-know-something-is-andquotin-testingandquot",
+          "id": "NMB-301",
+          "title": "Onboarding — first-run checklist",
+          "url": "",
           "priority": "med",
           "state": "todo",
-          "spec": [
-            "A Linear **workflow state** — is \"In Review\" enough, or is there a dedicated \"QA\"/\"Testing\"/\"UAT\" state to map?",
-            "A **UAT label** on tickets/waves?",
-            "**Test-run results** (would need running the suite — likely too heavy for a passive cockpit)?"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["A new user reaches a populated dashboard in under 3 minutes"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [],
-          "linearId": "88db7dc2-1468-486a-b4e4-421693dda738",
-          "sortOrder": -1479094
+          "description": "First-run experience: connect a source, run the first import, see real data — guided, skippable, under three minutes."
         },
         {
-          "id": "STO-2484",
-          "title": "UAT / testing cycle — how the flow represents build → test → release",
-          "url": "https://linear.app/stonekey/issue/STO-2484/uat-testing-cycle-how-the-flow-represents-build-test-release",
+          "id": "NMB-302",
+          "title": "Performance pass — p95 under 200ms on the dashboard",
+          "url": "",
           "priority": "med",
           "state": "todo",
-          "spec": [
-            "Where testing/UAT sits in the pipeline (Plan → Build → **UAT/test** → Release) and how a wave reads while it's being tested.",
-            "Loop-back: a wave that fails UAT returns to Build/Design (Pass-N chip + return-strip already built).",
-            "Decide whether to revive the parked `UatView` (classified findings composer → Linear comment) as the testing surface, or keep it lighter."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["p95 interaction latency < 200ms with 50k rows"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [],
-          "linearId": "4c6d22df-c8c8-4ce9-9d2a-34fae7baab81",
-          "sortOrder": -1478085
+          "description": "Measure first (tracing on the three hottest interactions), then fix the top offenders. Budget: p95 < 200ms at 50k rows."
         },
         {
-          "id": "STO-2481",
-          "title": "End-to-end dogfood — run Atrium start→finish on a real in-flight wave",
-          "url": "https://linear.app/stonekey/issue/STO-2481/end-to-end-dogfood-run-atrium-startfinish-on-a-real-in-flight-wave",
-          "priority": "med",
-          "state": "todo",
-          "spec": [
-            "Take one wave end-to-end through the cockpit (define the flow steps explicitly first).",
-            "Have a ticket genuinely in flight while doing it, to see how the live board + sprint behave.",
-            "Log every friction point."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "ec0576d6-eb37-4a5d-b8df-65c24a0038cf",
-          "sortOrder": -1474838
-        },
-        {
-          "id": "STO-2480",
-          "title": "Plan canvas — render the PRD + make it editable / reorderable",
-          "url": "https://linear.app/stonekey/issue/STO-2480/plan-canvas-render-the-prd-make-it-editable-reorderable",
-          "priority": "med",
-          "state": "todo",
-          "spec": [
-            "Render the wave's PRD doc (resolved via file-discovery) in the Plan canvas.",
-            "Reorder acceptance criteria / tickets → write back Linear `sortOrder` (the primitive already exists from the kanban).",
-            "Requirements stay as Linear tickets + the repo PRD doc; Atrium surfaces + reorders, doesn't replace Linear."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "e95f9d5a-6ae9-4ddb-a02e-c3de48b68dbe",
-          "sortOrder": -1473895
-        },
-        {
-          "id": "STO-2479",
-          "title": "Design canvas — render mockups live (preview) + edit affordance",
-          "url": "https://linear.app/stonekey/issue/STO-2479/design-canvas-render-mockups-live-preview-edit-affordance",
-          "priority": "high",
-          "state": "todo",
-          "spec": [
-            "Live-preview HTML mockups in a sandboxed iframe inside the webview (look good).",
-            "\"Open to edit in VS Code\" / \"ask Claude to edit\" affordance — editing happens on the **repo files** (agent or user); Atrium re-renders on change.",
-            "Render PRD/spec markdown nicely where relevant."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "7e61c34e-dd12-4496-b73f-ef78e55ab8b1",
-          "sortOrder": -1472985
-        },
-        {
-          "id": "STO-2478",
-          "title": "File discovery — how Atrium finds the PRD + mockups for a wave/sprint",
-          "url": "https://linear.app/stonekey/issue/STO-2478/file-discovery-how-atrium-finds-the-prd-mockups-for-a-wavesprint",
-          "priority": "high",
-          "state": "todo",
-          "spec": [
-            "Naming convention (e.g. `docs/superpowers/specs/<wave>.md`, `files/<wave>-*.html`)?",
-            "Markdown frontmatter tagging a file to a wave?",
-            "A small per-project manifest (`.atrium/waves.json`)?"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "54dc076a-a680-4f8d-9f56-ccfc178db2d1",
-          "sortOrder": -1471913
-        },
-        {
-          "id": "STO-2477",
-          "title": "Conditional Design / UX stages — only enacted when there's design work",
-          "url": "https://linear.app/stonekey/issue/STO-2477/conditional-design-ux-stages-only-enacted-when-theres-design-work",
-          "priority": "med",
-          "state": "todo",
-          "spec": [
-            "**When are Design/UX enacted per wave?** Options: a `Design`/`UX` signal (label), the presence of mockup/design files for the wave (ties to file-discovery), or a manual per-wave toggle.",
-            "Default flow with no design = **Plan → Build → (UAT) → Release**; Design/UX light up only when the wave has design scope.",
-            "Pipeline only marks Design/UX active when the wave genuinely has design scope; no empty forced stages."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "1f364034-2ac7-48ec-8dcd-3785221c5ed0",
-          "sortOrder": -1471000
-        },
-        {
-          "id": "STO-2476",
-          "title": "Auto-derive wave pipeline stage from ticket states",
-          "url": "https://linear.app/stonekey/issue/STO-2476/auto-derive-wave-pipeline-stage-from-ticket-states",
-          "priority": "high",
-          "state": "done",
-          "spec": [
-            "No ticket started → **Plan**",
-            "The second any ticket is in progress / in review → **Build**",
-            "All tickets done → **Release**"
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [
-            {
-              "kind": "plan",
-              "text": "Done. deriveStage(tickets, fallback) in board.ts applied in boardFromIssues: all done →…",
-              "when": "2026-06-08"
-            }
-          ],
-          "linearId": "a7626c23-f0d3-4f2a-893d-d054d99ae4f1",
-          "sortOrder": -1799589
-        }
-      ]
-    },
-    {
-      "name": "Wave 6 · Ship & portability",
-      "label": "ATR Wave 6 · Ship & portability",
-      "stage": "plan",
-      "passN": 1,
-      "gatedBy": null,
-      "tickets": [
-        {
-          "id": "STO-2483",
-          "title": "Provider portability — formalize a BoardWriter interface + Jira adapter spike",
-          "url": "https://linear.app/stonekey/issue/STO-2483/provider-portability-formalize-a-boardwriter-interface-jira-adapter",
+          "id": "NMB-303",
+          "title": "Launch checklist — docs, error pages, status page",
+          "url": "",
           "priority": "low",
           "state": "todo",
-          "spec": [
-            "Formalize a clean `BoardWriter` interface (setState / setSortOrder / moveToWave / addComment) alongside the existing `BoardSource` read interface.",
-            "Spike a **Jira adapter**: map Jira status-categories / labels-or-components / rank / **Sprints** (native — maps better than Linear cycles) → the cockpit model.",
-            "Document the adapter contract so a fork can implement a new provider against it."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
+          "spec": ["Every external error state has a designed page", "Docs cover setup + the five core flows"],
+          "tests": { "passed": 0, "failed": 0, "missing": 0, "discovered": false },
           "activity": [],
-          "linearId": "3fd85ae1-65c1-4203-990a-ea9ad1dc06cb",
-          "sortOrder": -1476986
-        },
-        {
-          "id": "STO-2482",
-          "title": "Distribute the .vsix — publish so others can install",
-          "url": "https://linear.app/stonekey/issue/STO-2482/distribute-the-vsix-publish-so-others-can-install",
-          "priority": "med",
-          "state": "todo",
-          "spec": [
-            "**Open VSX** (works in VS Code + forks + Theia) — preferred per the staged plan.",
-            "MS Marketplace.",
-            "Or attach the `.vsix` to a GitHub release (\"install VS Code + this .vsix\")."
-          ],
-          "tests": {
-            "passed": 0,
-            "failed": 0,
-            "missing": 0,
-            "discovered": false
-          },
-          "activity": [],
-          "linearId": "3026cfb6-06f5-418f-b3dc-ccb322d7a8f9",
-          "sortOrder": -1475934
+          "description": "The unglamorous list that makes it feel finished: real error pages, a status page, and docs for the five core flows."
         }
       ]
     }
