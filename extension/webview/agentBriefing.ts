@@ -16,8 +16,6 @@ project, so progress stays visible on the project board.
   form "<word> <number> · <theme>" where <word> is one of: Wave, Sprint,
   Phase, Slice, Milestone — e.g. "Wave 1 · Foundations" or "Sprint 3 · Auth".
   Keep the same word and numbering style across the whole project.
-- Write ticket descriptions in markdown. Express acceptance criteria as
-  bullet lines starting with "- " — they are parsed as the ticket's spec.
 - Move tickets through workflow states as you work (Todo → In Progress →
   In Review → Done). Comment on the ticket at pickup, when the plan is
   agreed, at the end of each phase, and at close.

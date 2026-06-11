@@ -32,11 +32,13 @@ describe("AGENT_BRIEFING content", () => {
     expect(AGENT_BRIEFING).not.toMatch(/linear|jira|claude|cursor|copilot|atrium cockpit/i);
   });
 
-  it("covers labels, criteria, branches, and the file conventions", () => {
+  it("covers labels, branches, and the file conventions", () => {
     expect(AGENT_BRIEFING).toMatch(/ONE sprint label/);
-    expect(AGENT_BRIEFING).toMatch(/bullet lines starting with "- "/);
     expect(AGENT_BRIEFING).toMatch(/feat\/<TICKET-ID>/);
     expect(AGENT_BRIEFING).toMatch(/docs\/waves\/wave-<n>\.md/);
     expect(AGENT_BRIEFING).toMatch(/\.atrium\/waves\.json/);
+    // Description-format prescriptions were dropped (2026-06-11): the modal
+    // renders full markdown, so agents may write tickets however they like.
+    expect(AGENT_BRIEFING).not.toMatch(/bullet lines|acceptance criteria/i);
   });
 });
