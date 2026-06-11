@@ -1,3 +1,4 @@
+import { vscode } from "./vscode";
 import type { GitInfo, InitPayload } from "./types";
 
 /**
@@ -13,11 +14,45 @@ export function StatusStrip({ init }: { init: InitPayload }) {
     <div className="flex items-center gap-3 px-3 h-6 border-b border-border shrink-0 text-[11px] text-fg-muted">
       {init.git && <GitCell git={init.git} />}
       <LinearCell source={init.source} generatedAt={init.generatedAt} />
+      {init.source === "live" && <PollPicker seconds={init.pollSeconds ?? 0} />}
       <span className="ml-auto flex items-center gap-1" title="Open workspace folders">
         <span className="codicon codicon-folder-opened" />
         {init.folders.length}
       </span>
     </div>
+  );
+}
+
+/** Auto-refresh cadence (STO-2481 finding #2): adjusts atrium.linear.pollSeconds
+ *  from the cockpit itself — written to workspace settings via the host. The
+ *  focus/visibility refresh always runs on top; this adds a rolling poll. */
+const POLL_CHOICES: { value: number; label: string }[] = [
+  { value: 0, label: "manual" },
+  { value: 30, label: "30s" },
+  { value: 60, label: "1m" },
+  { value: 120, label: "2m" },
+  { value: 300, label: "5m" },
+];
+
+function PollPicker({ seconds }: { seconds: number }) {
+  const known = POLL_CHOICES.some((c) => c.value === seconds);
+  return (
+    <span className="flex items-center gap-0.5 shrink-0" title="Auto-refresh from Linear (plus refresh-on-focus, always on)">
+      <span className="codicon codicon-sync text-[10px]" />
+      <select
+        aria-label="Auto-refresh interval"
+        value={seconds}
+        onChange={(e) => vscode.postMessage({ type: "setPollSeconds", seconds: Number(e.target.value) })}
+        className="bg-transparent border-none text-fg-muted hover:text-fg text-[11px] cursor-pointer focus:outline-none"
+      >
+        {!known && <option value={seconds}>{seconds}s</option>}
+        {POLL_CHOICES.map((c) => (
+          <option key={c.value} value={c.value}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }
 

@@ -44,11 +44,21 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("atrium.linear.pollSeconds")) setupPolling();
-      // Key / project / wave-prefix edits change what the board shows — re-pull.
-      else if (e.affectsConfiguration("atrium.linear")) refreshAll();
+      // Any atrium.linear change re-pulls — INCLUDING pollSeconds (not an else:
+      // the init payload carries pollSeconds, and without a re-post the status
+      // strip picker snaps back to its old value — STO-2481 finding #2b).
+      if (e.affectsConfiguration("atrium.linear")) refreshAll();
     }),
     // A folder added/removed can change which Linear project this workspace maps to.
     vscode.workspace.onDidChangeWorkspaceFolders(() => refreshAll()),
+    // Re-pull when the VS Code WINDOW regains focus (STO-2481 finding #1b):
+    // the tab-visibility hook never fires if the cockpit stays on screen while
+    // you work in the browser (e.g. Linear) — window focus covers that loop.
+    vscode.window.onDidChangeWindowState((e) => {
+      if (e.focused && activeWebviews.size > 0 && Date.now() - lastInitAt > VISIBILITY_REFRESH_MIN_MS) {
+        refreshAll();
+      }
+    }),
     { dispose: stopPolling },
   );
 
@@ -88,12 +98,25 @@ function openCockpit(extensionUri: vscode.Uri): void {
   trackWebview(webview);
   wireMessages(webview);
   dashboardPanel = panel;
+  // Re-pull the board when the tab comes back into view (STO-2481 finding #1):
+  // covers the "worked elsewhere, tabbed back, board is stale" loop without
+  // polling. Guarded so rapid tab-flips don't hammer Linear.
+  const viewStateSub = panel.onDidChangeViewState(() => {
+    if (panel.visible && Date.now() - lastInitAt > VISIBILITY_REFRESH_MIN_MS) {
+      void postInit(webview);
+    }
+  });
   panel.onDidDispose(() => {
+    viewStateSub.dispose();
     activeWebviews.delete(webview);
     disposePreviewWatchers();
     if (dashboardPanel === panel) dashboardPanel = undefined;
   });
 }
+
+/** Don't visibility-refresh more than once per this window. */
+const VISIBILITY_REFRESH_MIN_MS = 10_000;
+let lastInitAt = 0;
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -122,6 +145,7 @@ function trackWebview(webview: vscode.Webview): void {
 }
 
 async function postInit(webview: vscode.Webview): Promise<void> {
+  lastInitAt = Date.now();
   const payload = await buildInitPayload();
   try {
     await webview.postMessage({ type: "init", payload });
@@ -163,6 +187,8 @@ interface InboundMessage {
   verdict?: string;
   /** Header project-picker selection (STO-2486). */
   name?: string;
+  /** Status-strip auto-refresh picker (STO-2481). */
+  seconds?: number;
 }
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
@@ -189,8 +215,20 @@ function wireMessages(webview: vscode.Webview): void {
       void handleSelectProject(msg.name);
     } else if (msg?.type === "previewFile" && msg.path) {
       handlePreviewFile(webview, msg.path);
+    } else if (msg?.type === "setPollSeconds" && typeof msg.seconds === "number") {
+      void handleSetPollSeconds(msg.seconds);
     }
   });
+}
+
+/** Status-strip auto-refresh picker (STO-2481 finding #2): writes the cadence
+ *  to THIS workspace's settings; the config listener re-arms the poll timer. */
+async function handleSetPollSeconds(seconds: number): Promise<void> {
+  const target =
+    (vscode.workspace.workspaceFolders?.length ?? 0) > 0
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global;
+  await vscode.workspace.getConfiguration("atrium").update("linear.pollSeconds", Math.max(0, seconds), target);
 }
 
 /** Mockup preview (STO-2479): the webview asks for a file's content and we
@@ -474,6 +512,7 @@ async function buildInitPayload(): Promise<InitPayload> {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     projects,
     projectSource,
+    pollSeconds: vscode.workspace.getConfiguration("atrium").get<number>("linear.pollSeconds") ?? 0,
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
     designRefs: root ? getDesignRefs(root) : undefined,

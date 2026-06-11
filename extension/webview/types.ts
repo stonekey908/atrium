@@ -111,4 +111,7 @@ export interface InitPayload {
   /** How the shown project was chosen: pinned setting, folder-name auto-detect,
    *  or nothing matched (empty board + banner + picker). */
   projectSource?: "setting" | "detected" | "none";
+  /** Current auto-refresh cadence (atrium.linear.pollSeconds) — the status
+   *  strip exposes a picker for it (STO-2481 finding #2). */
+  pollSeconds?: number;
 }
