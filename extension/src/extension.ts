@@ -44,8 +44,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("atrium.linear.pollSeconds")) setupPolling();
-      // Key / project / wave-prefix edits change what the board shows — re-pull.
-      else if (e.affectsConfiguration("atrium.linear")) refreshAll();
+      // Any atrium.linear change re-pulls — INCLUDING pollSeconds (not an else:
+      // the init payload carries pollSeconds, and without a re-post the status
+      // strip picker snaps back to its old value — STO-2481 finding #2b).
+      if (e.affectsConfiguration("atrium.linear")) refreshAll();
     }),
     // A folder added/removed can change which Linear project this workspace maps to.
     vscode.workspace.onDidChangeWorkspaceFolders(() => refreshAll()),
