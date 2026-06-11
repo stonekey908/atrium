@@ -2,7 +2,7 @@ import { useState } from "react";
 import { vscode } from "./vscode";
 import { resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
-import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
+import { loopBacks, demoteState, type CockpitView } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
 import { PrdView } from "./PrdView";
@@ -103,7 +103,6 @@ export function Cockpit({ init }: { init: InitPayload }) {
       {init.error && <LoadBanner message={init.error} />}
       {view === "board" && (
         <>
-          <Pipeline stages={computePipeline(displayWaves)} />
           <ReturnStrip waves={displayWaves} />
           <ActiveWork waves={displayWaves} branch={init.branch} />
           <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
@@ -237,18 +236,36 @@ function LoadBanner({ message }: { message: string }) {
 /** Tier-2 "what am I doing right now": the ticket matched from the current branch
  *  (or the first in-progress one). Hidden when nothing is active. */
 function ActiveWork({ waves, branch }: { waves: Wave[]; branch: string }) {
+  // Clicking the strip opens the ticket modal (STO-2498 UAT), same as a row.
+  const [open, setOpen] = useState(false);
   const active = resolveActiveTicket(waves, branch);
   if (!active) return null;
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 text-[12px] bg-active/5">
-      <span className="codicon codicon-debug-start text-link shrink-0" />
-      <span className="uppercase text-[9px] tracking-wide text-fg-muted shrink-0">Working on</span>
-      <span className="font-mono text-[11px] text-fg-muted shrink-0">{active.id}</span>
-      <span className="truncate">{active.title}</span>
-      <span className="ml-auto shrink-0">
-        <StateIcon state={active.state} />
-      </span>
-    </div>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        title={`Open ${active.id} details`}
+        aria-label={`Open ${active.id} details`}
+        className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 text-[12px] bg-active/5 cursor-pointer hover:bg-hover"
+      >
+        <span className="codicon codicon-debug-start text-link shrink-0" />
+        <span className="uppercase text-[9px] tracking-wide text-fg-muted shrink-0">Working on</span>
+        <span className="font-mono text-[11px] text-fg-muted shrink-0">{active.id}</span>
+        <span className="truncate">{active.title}</span>
+        <span className="ml-auto shrink-0">
+          <StateIcon state={active.state} />
+        </span>
+      </div>
+      {open && <TicketModal ticket={active} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -368,40 +385,6 @@ function ProjectPicker({ init }: { init: InitPayload }) {
       )}
     </span>
   );
-}
-
-/** Tier-1 project pipeline (STO-2174): each stage's state + wave count derived
- *  from where the waves actually sit. */
-function Pipeline({ stages }: { stages: PipelineStage[] }) {
-  return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0 overflow-x-auto">
-      {stages.map((s, i) => (
-        <span key={s.key} className="flex items-center shrink-0">
-          <span
-            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] ${
-              s.state === "active"
-                ? "bg-active text-active-fg"
-                : s.state === "done"
-                  ? "text-fg"
-                  : "text-fg-muted"
-            }`}
-            title={s.waves.length > 0 ? s.waves.map((w) => w.name).join(", ") : `No waves at ${s.label}`}
-          >
-            <span className={`codicon ${stageIcon(s.state)}`} />
-            {s.label}
-            {s.waves.length > 0 && <span className="font-mono opacity-70">{s.waves.length}</span>}
-          </span>
-          {i < stages.length - 1 && <span className="codicon codicon-chevron-right text-fg-muted opacity-50" />}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function stageIcon(state: PipelineStage["state"]): string {
-  if (state === "done") return "codicon-pass-filled text-green";
-  if (state === "active") return "codicon-circle-large-filled";
-  return "codicon-circle-large-outline";
 }
 
 function WaveSection({

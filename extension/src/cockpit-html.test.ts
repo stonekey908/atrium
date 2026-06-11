@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildHtml, getNonce, STAGES, STUB_WAVES } from "./cockpit-html";
+import { buildHtml, getNonce, STUB_WAVES } from "./cockpit-html";
 
 describe("getNonce", () => {
   it("returns a 32-char token", () => {
@@ -31,14 +31,6 @@ describe("buildHtml", () => {
   });
   it("mounts a #root for React", () => {
     expect(html).toContain('<div id="root"></div>');
-  });
-});
-
-describe("STAGES", () => {
-  it("is the four-stage Tier-1 pipeline with valid statuses (STO-2496)", () => {
-    expect(STAGES.map((s) => s.label)).toEqual(["PRD", "Design", "Build", "Release"]);
-    const valid = new Set(["done", "active", "todo"]);
-    for (const s of STAGES) expect(valid.has(s.status)).toBe(true);
   });
 });
 
