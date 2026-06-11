@@ -195,6 +195,39 @@ export interface LinearIssueLite {
  *  setting so the cockpit works with any labelling convention without a rebuild. */
 export const DEFAULT_WAVE_PREFIX = "ATR Wave";
 
+/** The `wavePrefix` setting, parsed: comma-separated list of prefixes
+ *  (back-compat: a single string is a one-entry list; empty → default). */
+export function parsePrefixes(setting?: string): string[] {
+  const list = (setting ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length > 0 ? list : [DEFAULT_WAVE_PREFIX];
+}
+
+/** Generic sprint-ish label heuristic (STO-2495): a wave/sprint/phase/slice/
+ *  milestone word followed by a number ("sprint-12", "CG Phase 3", "SS Wave 7")
+ *  or a single letter ("CG Sprint A: Launch Blockers"). Deliberately
+ *  conservative — bare "P4"-style codes stay Unsorted rather than risk false
+ *  positives. */
+const SPRINTISH = /\b(wave|sprint|phase|slice|milestone)([ \-_]?\d+(\.\d+)?|[ -][a-z](?=[\s:.,)]|$))/i;
+
+/**
+ * Wave-label matcher for a project's label set (STO-2495). Configured prefixes
+ * are authoritative when ANY label in the project matches one; otherwise —
+ * a foreign project with its own naming convention — the sprint-ish heuristic
+ * takes over, so the board groups with zero config.
+ */
+export function makeWaveLabelMatcher(
+  prefixSetting: string | undefined,
+  allLabels: string[],
+): (label: string) => boolean {
+  const prefixes = parsePrefixes(prefixSetting).map((p) => p.toLowerCase());
+  const byPrefix = (label: string) => {
+    const l = label.trim().toLowerCase();
+    return prefixes.some((p) => l.startsWith(p));
+  };
+  if (allLabels.some(byPrefix)) return byPrefix;
+  return (label: string) => SPRINTISH.test(label);
+}
+
 /** Display name for a wave label: drops a leading "ATR " so "ATR Wave 5 · SDLC
  *  flow" reads "Wave 5 · SDLC flow". Whatever you label it in Linear is the name. */
 export function waveName(label: string): string {
@@ -299,9 +332,11 @@ export function boardFromIssues(
   issues: LinearIssueLite[],
   opts: { projectName: string; generatedAt: string; wavePrefix?: string },
 ): Board {
-  const prefix = (opts.wavePrefix ?? DEFAULT_WAVE_PREFIX).trim().toLowerCase();
-  const isWaveLabel = (label: string) => label.trim().toLowerCase().startsWith(prefix);
   const live = issues.filter((i) => i.stateType !== "canceled");
+  // Prefix(es) win when present; foreign conventions fall back to the
+  // sprint-ish heuristic (STO-2495) over the labels actually in this project.
+  const allLabels = Array.from(new Set(live.flatMap((i) => i.labels)));
+  const isWaveLabel = makeWaveLabelMatcher(opts.wavePrefix, allLabels);
 
   // The distinct wave labels actually used on live issues, in wave-number order.
   const waveLabels = Array.from(new Set(live.flatMap((i) => i.labels.filter(isWaveLabel)))).sort(

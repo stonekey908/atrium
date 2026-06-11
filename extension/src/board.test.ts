@@ -225,3 +225,99 @@ describe("boardFromIssues", () => {
     expect(board.spikes).toEqual([]);
   });
 });
+
+// ── Flexible wave detection (STO-2495) ───────────────────────────────────────
+
+import { parsePrefixes, makeWaveLabelMatcher } from "./board";
+
+/** Real labels from the Stonekey workspace — the corpus the heuristic must hold against. */
+const CORPUS = {
+  sprintish: [
+    "CG Phase 3",
+    "CG Sprint A: Launch Blockers",
+    "CG Sprint B: Submission",
+    "Anvil Sprint 2",
+    "sprint-12",
+    "SS Wave 7",
+    "CP Wave 5",
+    "TL Wave 6",
+    "CV Slice 6",
+    "Wave 14",
+    "phase-1",
+  ],
+  not: [
+    "gemmy-feature",
+    "gemmy-bug",
+    "LKT polish",
+    "LKT tmux",
+    "Igloo Post-MVP",
+    "Igloo P4: Forwarding", // deliberately conservative: bare P<n> stays Unsorted
+    "SS v1 Build",
+    "Hackathon",
+    "guardian",
+    "ATR Spike",
+  ],
+};
+
+describe("parsePrefixes", () => {
+  it("splits a comma-separated setting, trimming each entry", () => {
+    expect(parsePrefixes("CG Phase, CG Sprint")).toEqual(["CG Phase", "CG Sprint"]);
+  });
+
+  it("keeps the single-string form and defaults when empty", () => {
+    expect(parsePrefixes("ATR Wave")).toEqual(["ATR Wave"]);
+    expect(parsePrefixes(undefined)).toEqual(["ATR Wave"]);
+    expect(parsePrefixes(" , ")).toEqual(["ATR Wave"]);
+  });
+});
+
+describe("makeWaveLabelMatcher", () => {
+  it("uses configured prefixes when any label matches them (heuristic OFF)", () => {
+    const labels = ["ATR Wave 6 · Ship & portability", "ATR Spike", "sprint-12"];
+    const matches = makeWaveLabelMatcher("ATR Wave", labels);
+    expect(matches("ATR Wave 6 · Ship & portability")).toBe(true);
+    // sprint-12 would pass the heuristic, but prefix mode is authoritative.
+    expect(matches("sprint-12")).toBe(false);
+  });
+
+  it("supports a prefix list", () => {
+    const labels = ["CG Phase 3", "CG Sprint A: Launch Blockers"];
+    const matches = makeWaveLabelMatcher("CG Phase, CG Sprint", labels);
+    expect(matches("CG Phase 3")).toBe(true);
+    expect(matches("CG Sprint A: Launch Blockers")).toBe(true);
+  });
+
+  it("falls back to the sprint-ish heuristic when no prefix matches anything", () => {
+    const matches = makeWaveLabelMatcher("ATR Wave", [...CORPUS.sprintish, ...CORPUS.not]);
+    for (const label of CORPUS.sprintish) expect(matches(label), label).toBe(true);
+    for (const label of CORPUS.not) expect(matches(label), label).toBe(false);
+  });
+});
+
+describe("boardFromIssues with foreign conventions", () => {
+  const issue = (id: string, label: string): LinearIssueLite => ({
+    id: `uuid-${id}`,
+    identifier: id,
+    title: id,
+    url: "",
+    priority: 3,
+    sortOrder: 0,
+    stateType: "unstarted",
+    stateName: "Todo",
+    labels: [label],
+    description: null,
+    comments: [],
+  });
+
+  it("groups CarGuide-style labels into waves with zero config (default prefix)", () => {
+    const board = boardFromIssues(
+      [issue("CG-1", "CG Phase 1"), issue("CG-2", "CG Sprint A: Launch Blockers"), issue("CG-3", "Hackathon")],
+      { projectName: "CarGuide", generatedAt: "2026-06-11" },
+    );
+    expect(board.waves.map((w) => w.label)).toContain("CG Phase 1");
+    expect(board.waves.map((w) => w.label)).toContain("CG Sprint A: Launch Blockers");
+    // Non-sprint-ish labels stay visibly Unsorted, never lost.
+    const unsorted = board.waves.find((w) => w.name.startsWith("Unsorted"));
+    expect(unsorted?.tickets.map((t) => t.id)).toEqual(["CG-3"]);
+  });
+});
