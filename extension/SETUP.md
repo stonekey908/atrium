@@ -97,3 +97,16 @@ Paths are relative to the repo root. A manifest entry **wins over the
 convention** for that wave (per field). Entries pointing at deleted files are
 skipped, falling back to the convention. Files no wave claims show under
 **Project-wide** in the Design view — visible, never lost.
+
+## Onboard your AI assistant (optional, recommended)
+
+Click the **?** icon in the cockpit header → **Copy agent briefing**, and paste
+it into your AI assistant at the start of a project. It instructs the agent —
+platform-agnostically — to structure work so the board picks everything up:
+one sprint-ish wave label per ticket, markdown descriptions with bullet
+acceptance criteria, `feat/<TICKET-ID>-…` branches, and the planning-file
+conventions (`docs/waves/wave-<n>.md` PRD, `wave-<n>-*.md` TRDs,
+`wave-<n>-*.html` mockups, `.atrium/waves.json` for odd names).
+
+The canonical text lives in `webview/agentBriefing.ts` — the Help modal renders
+and copies exactly that string.
