@@ -185,6 +185,8 @@ interface InboundMessage {
   verdict?: string;
   /** Header project-picker selection (STO-2486). */
   name?: string;
+  /** Status-strip auto-refresh picker (STO-2481). */
+  seconds?: number;
 }
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
@@ -211,8 +213,20 @@ function wireMessages(webview: vscode.Webview): void {
       void handleSelectProject(msg.name);
     } else if (msg?.type === "previewFile" && msg.path) {
       handlePreviewFile(webview, msg.path);
+    } else if (msg?.type === "setPollSeconds" && typeof msg.seconds === "number") {
+      void handleSetPollSeconds(msg.seconds);
     }
   });
+}
+
+/** Status-strip auto-refresh picker (STO-2481 finding #2): writes the cadence
+ *  to THIS workspace's settings; the config listener re-arms the poll timer. */
+async function handleSetPollSeconds(seconds: number): Promise<void> {
+  const target =
+    (vscode.workspace.workspaceFolders?.length ?? 0) > 0
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global;
+  await vscode.workspace.getConfiguration("atrium").update("linear.pollSeconds", Math.max(0, seconds), target);
 }
 
 /** Mockup preview (STO-2479): the webview asks for a file's content and we
@@ -496,6 +510,7 @@ async function buildInitPayload(): Promise<InitPayload> {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     projects,
     projectSource,
+    pollSeconds: vscode.workspace.getConfiguration("atrium").get<number>("linear.pollSeconds") ?? 0,
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
     designRefs: root ? getDesignRefs(root) : undefined,
