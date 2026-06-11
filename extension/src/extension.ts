@@ -62,10 +62,47 @@ export function activate(context: vscode.ExtensionContext): void {
     { dispose: stopPolling },
   );
 
+  // Activity-Bar launcher (STO-2482): clicking the Atrium icon in the side
+  // rail opens the cockpit TAB (the real surface) — the sidebar view itself is
+  // just a small launcher card. Resolve/visibility both count as intent.
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("atrium.launcher", {
+      resolveWebviewView(view) {
+        view.webview.options = { enableScripts: true };
+        view.webview.html = launcherHtml();
+        view.webview.onDidReceiveMessage((m: { type?: string }) => {
+          if (m?.type === "open") openCockpit(extensionUri);
+        });
+        openCockpit(extensionUri);
+        view.onDidChangeVisibility(() => {
+          if (view.visible) openCockpit(extensionUri);
+        });
+      },
+    }),
+  );
+
   // Auto-open on startup so the cockpit is just there when you open the project.
   const openOnStartup =
     vscode.workspace.getConfiguration("atrium").get<boolean>("openOnStartup") ?? true;
   if (openOnStartup) openCockpit(extensionUri);
+}
+
+/** The tiny sidebar card behind the Activity-Bar icon — the cockpit itself
+ *  lives in an editor tab, so this only re-opens it and says so. */
+function launcherHtml(): string {
+  const nonce = getNonce();
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'" />
+</head><body style="font-family: var(--vscode-font-family); font-size: 12px; color: var(--vscode-foreground); padding: 8px 12px;">
+<p style="margin: 0 0 8px;">The cockpit opens as an editor tab.</p>
+<button style="cursor: pointer; padding: 4px 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 3px; background: var(--vscode-button-background); color: var(--vscode-button-foreground);">Open Cockpit</button>
+<p style="margin: 8px 0 0; opacity: 0.7;">Also: the status-bar 🚀, or ⌘⌥A.</p>
+<script nonce="${nonce}">
+  const vscode = acquireVsCodeApi();
+  document.querySelector("button").addEventListener("click", () => vscode.postMessage({ type: "open" }));
+</script>
+</body></html>`;
 }
 
 /** The single cockpit editor tab. Reused across every entry point so we never

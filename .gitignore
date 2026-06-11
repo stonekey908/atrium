@@ -42,3 +42,6 @@ Thumbs.db
 # Repo-specific — historical handoff archive, not part of source
 files.zip
 files/atrium-repo.zip
+
+# Project handoff notes — local working file, not part of the public repo
+CLAUDE.md

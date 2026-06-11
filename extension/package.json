@@ -1,11 +1,10 @@
 {
   "name": "atrium-cockpit",
   "displayName": "Atrium Cockpit",
-  "description": "Linear / PRD / sprint cockpit for Claude Code \u2014 live mock-up POC running as a VS Code extension.",
-  "version": "0.0.35",
+  "description": "A visual SDLC cockpit for your issue tracker, inside VS Code \u2014 sprint kanban with live write-back, rendered PRDs, live mockup previews.",
+  "version": "0.1.0",
   "publisher": "atrium",
-  "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/stonekey908/atrium.git",
@@ -34,6 +33,24 @@
         "icon": "$(refresh)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "atrium",
+          "title": "Atrium",
+          "icon": "media/atrium.svg"
+        }
+      ]
+    },
+    "views": {
+      "atrium": [
+        {
+          "type": "webview",
+          "id": "atrium.launcher",
+          "name": "Cockpit"
+        }
+      ]
+    },
     "menus": {
       "editor/title": [
         {

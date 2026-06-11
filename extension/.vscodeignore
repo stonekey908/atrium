@@ -13,4 +13,3 @@ postcss.config.cjs
 **/*.test.*
 **/*.map
 .gitignore
-README.md
