@@ -88,12 +88,25 @@ function openCockpit(extensionUri: vscode.Uri): void {
   trackWebview(webview);
   wireMessages(webview);
   dashboardPanel = panel;
+  // Re-pull the board when the tab comes back into view (STO-2481 finding #1):
+  // covers the "worked elsewhere, tabbed back, board is stale" loop without
+  // polling. Guarded so rapid tab-flips don't hammer Linear.
+  const viewStateSub = panel.onDidChangeViewState(() => {
+    if (panel.visible && Date.now() - lastInitAt > VISIBILITY_REFRESH_MIN_MS) {
+      void postInit(webview);
+    }
+  });
   panel.onDidDispose(() => {
+    viewStateSub.dispose();
     activeWebviews.delete(webview);
     disposePreviewWatchers();
     if (dashboardPanel === panel) dashboardPanel = undefined;
   });
 }
+
+/** Don't visibility-refresh more than once per this window. */
+const VISIBILITY_REFRESH_MIN_MS = 10_000;
+let lastInitAt = 0;
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -122,6 +135,7 @@ function trackWebview(webview: vscode.Webview): void {
 }
 
 async function postInit(webview: vscode.Webview): Promise<void> {
+  lastInitAt = Date.now();
   const payload = await buildInitPayload();
   try {
     await webview.postMessage({ type: "init", payload });
