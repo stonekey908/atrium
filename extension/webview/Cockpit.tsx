@@ -2,7 +2,7 @@ import { useState } from "react";
 import { vscode } from "./vscode";
 import { resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
-import { computePipeline, loopBacks, demoteState, type CockpitView, type PipelineStage } from "./views";
+import { loopBacks, demoteState, type CockpitView } from "./views";
 import { SprintBoard } from "./SprintBoard";
 import { StatusStrip } from "./StatusStrip";
 import { PrdView } from "./PrdView";
@@ -103,7 +103,6 @@ export function Cockpit({ init }: { init: InitPayload }) {
       {init.error && <LoadBanner message={init.error} />}
       {view === "board" && (
         <>
-          <Pipeline stages={computePipeline(displayWaves)} />
           <ReturnStrip waves={displayWaves} />
           <ActiveWork waves={displayWaves} branch={init.branch} />
           <RollupBar waves={displayWaves} spikes={init.spikes ?? []} />
@@ -368,40 +367,6 @@ function ProjectPicker({ init }: { init: InitPayload }) {
       )}
     </span>
   );
-}
-
-/** Tier-1 project pipeline (STO-2174): each stage's state + wave count derived
- *  from where the waves actually sit. */
-function Pipeline({ stages }: { stages: PipelineStage[] }) {
-  return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0 overflow-x-auto">
-      {stages.map((s, i) => (
-        <span key={s.key} className="flex items-center shrink-0">
-          <span
-            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] ${
-              s.state === "active"
-                ? "bg-active text-active-fg"
-                : s.state === "done"
-                  ? "text-fg"
-                  : "text-fg-muted"
-            }`}
-            title={s.waves.length > 0 ? s.waves.map((w) => w.name).join(", ") : `No waves at ${s.label}`}
-          >
-            <span className={`codicon ${stageIcon(s.state)}`} />
-            {s.label}
-            {s.waves.length > 0 && <span className="font-mono opacity-70">{s.waves.length}</span>}
-          </span>
-          {i < stages.length - 1 && <span className="codicon codicon-chevron-right text-fg-muted opacity-50" />}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function stageIcon(state: PipelineStage["state"]): string {
-  if (state === "done") return "codicon-pass-filled text-green";
-  if (state === "active") return "codicon-circle-large-filled";
-  return "codicon-circle-large-outline";
 }
 
 function WaveSection({

@@ -6,7 +6,6 @@
 
 export type Priority = "urgent" | "high" | "med" | "low";
 export type TicketState = "todo" | "doing" | "review" | "done";
-export type StageStatus = "done" | "active" | "todo";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
 export interface TestSummary {
@@ -36,11 +35,6 @@ export interface Wave {
   /** PRD + mockups resolved from the repo for this wave (STO-2478). */
   files?: import("./wave-files").WaveFiles;
 }
-export interface Stage {
-  key: string;
-  label: string;
-  status: StageStatus;
-}
 export interface Spike {
   id: string;
   code: string;
@@ -64,14 +58,11 @@ export interface InitPayload {
   project: string;
   branch: string;
   folders: string[];
-  stages: Stage[];
   waves: Wave[];
   spikes?: Spike[];
   /** Real workspace git status for the status strip (STO-2170); absent if the
    *  workspace isn't a git repo. */
   git?: GitInfo;
-  /** Count of unit-test files discovered in the workspace (STO-2186). */
-  testFiles?: number;
   /** Design reference artifacts found in the project (STO-2168). */
   designRefs?: DesignRef[];
   /** Where the board came from + how fresh it is (shown as a header chip). */
@@ -85,16 +76,6 @@ export interface InitPayload {
    *  or nothing matched (empty board + banner + picker). */
   projectSource?: "setting" | "detected" | "none";
 }
-
-/** Tier-1 pipeline shape (STO-2496): PRD → Design → Build → Release. The
- *  webview derives real stage states itself (computePipeline); this static list
- *  only rides the init payload as the pipeline's shape. */
-export const STAGES: Stage[] = [
-  { key: "plan", label: "PRD", status: "todo" },
-  { key: "design", label: "Design", status: "todo" },
-  { key: "build", label: "Build", status: "active" },
-  { key: "release", label: "Release", status: "todo" },
-];
 
 /** Stand-in for Linear data until the MCP integration lands (Wave 0.5). */
 export const STUB_WAVES: Wave[] = [

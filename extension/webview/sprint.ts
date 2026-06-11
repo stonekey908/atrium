@@ -1,4 +1,4 @@
-import type { StageStatus, Ticket, TicketState, Wave } from "./types";
+import type { Ticket, TicketState, Wave } from "./types";
 
 /** The kanban columns, in board order, with their display labels. */
 export const KANBAN_COLUMNS: { key: TicketState; label: string }[] = [

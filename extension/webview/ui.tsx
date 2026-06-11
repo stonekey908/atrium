@@ -44,6 +44,3 @@ export function StateIcon({ state }: { state: TicketState }) {
   return <span className="codicon codicon-circle-large-outline text-fg-muted" title="todo" />;
 }
 
-export function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] text-fg-muted italic">{children}</p>;
-}

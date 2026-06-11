@@ -14,10 +14,6 @@ const PAYLOAD: InitPayload = {
   project: "atrium",
   branch: "claude/vs-plugin-architecture",
   folders: ["atrium", "shared"],
-  stages: [
-    { key: "build", label: "Build", status: "active" },
-    { key: "uat", label: "UAT", status: "todo" },
-  ],
   spikes: [{ id: "STO-2146", code: "T-110", gatesWave: "Wave 1", state: "todo" }],
   waves: [
     // The current sprint (Build stage) — spotlighted in the kanban, not the list.
@@ -81,14 +77,14 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/Connecting to Atrium host/i)).toBeInTheDocument();
   });
 
-  it("renders the pipeline, waves, tickets and folder count after init", () => {
+  it("renders the waves, tickets and folder count after init (no pipeline strip — STO-2498)", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    expect(screen.getAllByText("Build").length).toBeGreaterThan(0); // pipeline stage (also appears in the wave strip)
     // "Wave 1 · CLI bridge" appears in the WaveSection and the return-strip (it's looped back).
     expect(screen.getAllByText("Wave 1 · CLI bridge").length).toBeGreaterThan(0);
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // open folder count
+    expect(screen.queryByText("Release")).not.toBeInTheDocument(); // pipeline strip gone
   });
 
   it("opens the ticket modal with the rendered description on click (STO-2494)", () => {

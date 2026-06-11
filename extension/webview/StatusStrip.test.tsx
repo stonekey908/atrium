@@ -7,7 +7,6 @@ const base: InitPayload = {
   project: "atrium",
   branch: "feat/x",
   folders: ["atrium", "shared"],
-  stages: [],
   waves: [],
 };
 

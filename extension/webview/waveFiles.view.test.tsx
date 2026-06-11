@@ -30,7 +30,6 @@ const init = (waves: Wave[], extra: Partial<InitPayload> = {}): InitPayload => (
   project: "Atrium",
   branch: "main",
   folders: ["Atrium"],
-  stages: [],
   waves,
   ...extra,
 });

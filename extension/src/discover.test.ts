@@ -1,15 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getTestFileCount, getDesignRefs } from "./discover";
-
-describe("getTestFileCount", () => {
-  it("counts unit-test files under a directory (this repo has them)", () => {
-    expect(getTestFileCount(process.cwd())).toBeGreaterThan(0);
-  });
-
-  it("returns 0 for a nonexistent path", () => {
-    expect(getTestFileCount("/no/such/dir/xyz123")).toBe(0);
-  });
-});
+import { getDesignRefs } from "./discover";
 
 describe("getDesignRefs", () => {
   it("returns well-formed refs (or none) without throwing", () => {

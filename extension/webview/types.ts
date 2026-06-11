@@ -3,7 +3,6 @@ export type TicketState = "todo" | "doing" | "review" | "done";
 /** A write target for moves: the four columns plus an explicit `backlog`, used
  *  when demoting a ticket out of the sprint (distinct from the todo column). */
 export type WriteState = TicketState | "backlog";
-export type StageStatus = "done" | "active" | "todo";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
 /** Per-card write-back status for the sprint kanban (slice 2+). `idle` = no
@@ -79,12 +78,6 @@ export interface Spike {
   state: TicketState;
 }
 
-export interface Stage {
-  key: string;
-  label: string;
-  status: StageStatus;
-}
-
 export interface GitInfo {
   branch: string;
   dirty: boolean;
@@ -102,13 +95,10 @@ export interface InitPayload {
   project: string;
   branch: string;
   folders: string[];
-  stages: Stage[];
   waves: Wave[];
   spikes?: Spike[];
   /** Real workspace git status for the status strip (STO-2170); absent if not a repo. */
   git?: GitInfo;
-  /** Count of unit-test files in the workspace (STO-2186). */
-  testFiles?: number;
   /** Design reference artifacts found in the project (STO-2168). */
   designRefs?: DesignRef[];
   /** Where the board came from + how fresh it is (shown as a header chip). */

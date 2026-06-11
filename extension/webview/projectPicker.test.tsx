@@ -13,7 +13,6 @@ const BASE: InitPayload = {
   project: "Atrium",
   branch: "main",
   folders: ["Atrium"],
-  stages: [],
   waves: [],
   source: "live",
 };

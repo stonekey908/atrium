@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import { readFileSync } from "fs";
 import { basename, dirname, join, resolve, sep } from "path";
-import { buildHtml, getNonce, STAGES, type InitPayload } from "./cockpit-html";
+import { buildHtml, getNonce, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
 import { LinearWriteClient, resolveStateId, type WriteState } from "./linear-writes";
 import { getGitStatus } from "./git";
-import { getTestFileCount, getDesignRefs } from "./discover";
+import { getDesignRefs } from "./discover";
 import { resolveWaveFiles } from "./wave-files";
 
 /**
@@ -476,10 +476,8 @@ async function buildInitPayload(): Promise<InitPayload> {
     projectSource,
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
-    testFiles: root ? getTestFileCount(root) : undefined,
     designRefs: root ? getDesignRefs(root) : undefined,
     folders,
-    stages: STAGES,
     waves,
     spikes: board.spikes,
     source,
