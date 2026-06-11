@@ -236,18 +236,36 @@ function LoadBanner({ message }: { message: string }) {
 /** Tier-2 "what am I doing right now": the ticket matched from the current branch
  *  (or the first in-progress one). Hidden when nothing is active. */
 function ActiveWork({ waves, branch }: { waves: Wave[]; branch: string }) {
+  // Clicking the strip opens the ticket modal (STO-2498 UAT), same as a row.
+  const [open, setOpen] = useState(false);
   const active = resolveActiveTicket(waves, branch);
   if (!active) return null;
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 text-[12px] bg-active/5">
-      <span className="codicon codicon-debug-start text-link shrink-0" />
-      <span className="uppercase text-[9px] tracking-wide text-fg-muted shrink-0">Working on</span>
-      <span className="font-mono text-[11px] text-fg-muted shrink-0">{active.id}</span>
-      <span className="truncate">{active.title}</span>
-      <span className="ml-auto shrink-0">
-        <StateIcon state={active.state} />
-      </span>
-    </div>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        title={`Open ${active.id} details`}
+        aria-label={`Open ${active.id} details`}
+        className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0 text-[12px] bg-active/5 cursor-pointer hover:bg-hover"
+      >
+        <span className="codicon codicon-debug-start text-link shrink-0" />
+        <span className="uppercase text-[9px] tracking-wide text-fg-muted shrink-0">Working on</span>
+        <span className="font-mono text-[11px] text-fg-muted shrink-0">{active.id}</span>
+        <span className="truncate">{active.title}</span>
+        <span className="ml-auto shrink-0">
+          <StateIcon state={active.state} />
+        </span>
+      </div>
+      {open && <TicketModal ticket={active} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

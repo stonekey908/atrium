@@ -125,6 +125,13 @@ describe("Atrium cockpit webview", () => {
     expect(screen.getByText(/working on/i)).toBeInTheDocument();
   });
 
+  it("opens the ticket modal from the Active Work strip (STO-2498)", () => {
+    render(<App />);
+    sendInit({ ...PAYLOAD, branch: "feat/sto-2164-conversation-strip" });
+    fireEvent.click(screen.getByRole("button", { name: /open STO-2164 details/i }));
+    expect(screen.getByRole("dialog", { name: /STO-2164 details/i })).toBeInTheDocument();
+  });
+
   it("opens the ticket in Linear via the host when its open button is clicked", () => {
     render(<App />);
     sendInit(PAYLOAD);
