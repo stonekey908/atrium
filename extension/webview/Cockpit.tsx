@@ -10,6 +10,7 @@ import { DesignView } from "./DesignView";
 import { setDrag, getDrag } from "./dnd";
 import { useBoardMutations } from "./useBoardMutations";
 import { TicketModal } from "./TicketModal";
+import { HelpModal } from "./HelpModal";
 import { PRIORITY, StateIcon, AuditRibbon } from "./ui";
 import type { InitPayload, Spike, Ticket, Wave, WriteState } from "./types";
 
@@ -322,20 +323,33 @@ function SegmentedBar({
 }
 
 function Header({ init }: { init: InitPayload }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   return (
     <div className="flex items-center gap-2 px-3 h-9 border-b border-border shrink-0 text-[12px]">
       <span className="codicon codicon-symbol-structure text-link" />
       <span className="font-semibold">Atrium</span>
       <ProjectPicker init={init} />
-      <button
-        type="button"
-        aria-label="Refresh board"
-        title="Refresh board"
-        className="ml-auto flex items-center text-fg-muted hover:text-fg"
-        onClick={() => vscode.postMessage({ type: "refresh" })}
-      >
-        <span className="codicon codicon-refresh" />
-      </button>
+      <span className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          aria-label="Help — conventions and agent briefing"
+          title="Conventions + copy-able agent briefing"
+          className="flex items-center text-fg-muted hover:text-fg"
+          onClick={() => setHelpOpen(true)}
+        >
+          <span className="codicon codicon-question" />
+        </button>
+        <button
+          type="button"
+          aria-label="Refresh board"
+          title="Refresh board"
+          className="flex items-center text-fg-muted hover:text-fg"
+          onClick={() => vscode.postMessage({ type: "refresh" })}
+        >
+          <span className="codicon codicon-refresh" />
+        </button>
+      </span>
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

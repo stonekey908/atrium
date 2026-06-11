@@ -189,6 +189,8 @@ interface InboundMessage {
   name?: string;
   /** Status-strip auto-refresh picker (STO-2481). */
   seconds?: number;
+  /** Help-modal clipboard copy (STO-2507). */
+  text?: string;
 }
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
@@ -217,6 +219,11 @@ function wireMessages(webview: vscode.Webview): void {
       handlePreviewFile(webview, msg.path);
     } else if (msg?.type === "setPollSeconds" && typeof msg.seconds === "number") {
       void handleSetPollSeconds(msg.seconds);
+    } else if (msg?.type === "copyText" && msg.text) {
+      // Help modal's "Copy agent briefing" (STO-2507).
+      void vscode.env.clipboard.writeText(msg.text).then(() => {
+        void vscode.window.showInformationMessage("Agent briefing copied — paste it into your assistant.");
+      });
     }
   });
 }
