@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { basename, dirname, join, resolve, sep } from "path";
 import { buildHtml, getNonce, type InitPayload } from "./cockpit-html";
 import { validateBoard, EMPTY_BOARD, type Board, type TicketState } from "./board";
@@ -230,7 +230,19 @@ interface InboundMessage {
   seconds?: number;
   /** Help-modal clipboard copy (STO-2507). */
   text?: string;
+  /** Editable-docs sync (STO-2573/2574): PRD markdown, wave label id + blurb. */
+  content?: string;
+  labelId?: string;
+  description?: string;
 }
+
+/** The single build PRD, by convention — editable in the PRD view, synced to
+ *  the Linear project overview (STO-2573). */
+const PRD_REL_PATH = "docs/PRD.md";
+
+/** Last resolved Linear project name (set on each board build) — the PRD sync
+ *  target. Cached so the save handler doesn't re-run project auto-detection. */
+let lastProjectName = "";
 
 /** Webview <-> host channel. The webview asks once it has booted; we answer
  *  with project state. Drag interactions post mutation intents we write to
@@ -249,6 +261,12 @@ function wireMessages(webview: vscode.Webview): void {
       void handleMoveToWave(webview, msg);
     } else if (msg?.type === "setStatus") {
       void handleSetStatus(webview, msg);
+    } else if (msg?.type === "savePrd") {
+      void handleSavePrd(webview, msg);
+    } else if (msg?.type === "saveFile" && msg.path) {
+      handleSaveFile(webview, msg.path, msg.content ?? "");
+    } else if (msg?.type === "saveWaveDescription") {
+      void handleSaveWaveDescription(webview, msg);
     } else if (msg?.type === "openFile" && msg.path) {
       // Open a design reference in VS Code's own editor (STO-2168).
       void vscode.window.showTextDocument(vscode.Uri.file(msg.path), { preview: true });
@@ -424,6 +442,70 @@ async function handleSetStatus(webview: vscode.Webview, msg: InboundMessage): Pr
   }
 }
 
+/** Editable build PRD (STO-2573): write docs/PRD.md (the source of truth) and
+ *  best-effort sync the markdown to the Linear project overview. The repo write
+ *  always happens (even without a key); the Linear sync is opportunistic. */
+async function handleSavePrd(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (typeof msg.content !== "string" || !root) return;
+  try {
+    writeFileSync(join(root, PRD_REL_PATH), msg.content, "utf8");
+  } catch (e) {
+    void vscode.window.showWarningMessage(`Couldn't write ${PRD_REL_PATH}: ${e instanceof Error ? e.message : String(e)}`);
+    return;
+  }
+  const client = getWriteClient();
+  if (client && lastProjectName) {
+    try {
+      const projectId = await client.findProjectId(lastProjectName);
+      if (projectId && (await client.setProjectDescription(projectId, msg.content))) {
+        void vscode.window.showInformationMessage("PRD saved and synced to the Linear project overview.");
+        return;
+      }
+    } catch (e) {
+      void vscode.window.showWarningMessage(`PRD saved to ${PRD_REL_PATH}, but Linear sync failed: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
+  }
+  void webview.postMessage({ type: "prdSaved" }); // file written; no key → no Linear sync
+}
+
+/** Generic doc save (STO-2573): write an edited workspace doc to disk (no Linear
+ *  sync — used for per-wave PRD/TRD files). Same workspace-only guard as preview;
+ *  the file watcher then pushes the fresh content back to re-render. */
+function handleSaveFile(webview: vscode.Webview, path: string, content: string): void {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const resolved = resolve(path);
+  if (!root || !(resolved === root || resolved.startsWith(root + sep))) {
+    void webview.postMessage({ type: "fileContent", path, error: "File is outside the workspace." });
+    return;
+  }
+  try {
+    writeFileSync(resolved, content, "utf8");
+  } catch (e) {
+    void webview.postMessage({ type: "fileContent", path, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/** Editable wave blurb (STO-2574): sync the description to the wave's Linear
+ *  label, then refresh so the board shows it. Needs a live key (label = the source). */
+async function handleSaveWaveDescription(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { labelId } = msg;
+  if (!labelId) return;
+  const client = getWriteClient();
+  if (!client) {
+    void vscode.window.showWarningMessage("No Linear API key set — can't sync the wave description.");
+    return;
+  }
+  try {
+    const ok = await client.setLabelDescription(labelId, msg.description ?? "");
+    if (ok) refreshAll(); // re-pull so the board shows the new blurb
+    else void vscode.window.showWarningMessage("Linear rejected the wave-description update.");
+  } catch (e) {
+    void vscode.window.showWarningMessage(`Wave-description sync failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 /** Cross-wave drag: relabel the issue to the target wave (promote into the
  *  sprint, or demote back to a wave), optionally set its column state, then
  *  refresh so the ticket re-appears in its new wave. */
@@ -582,6 +664,7 @@ async function buildInitPayload(): Promise<InitPayload> {
   const waves = root
     ? board.waves.map((w) => ({ ...w, files: resolveWaveFiles(root, w.label ?? w.name) }))
     : board.waves;
+  lastProjectName = board.project || "";
   return {
     project: board.project || vscode.workspace.name || folders[0] || "workspace",
     projects,
@@ -590,6 +673,9 @@ async function buildInitPayload(): Promise<InitPayload> {
     branch: git?.branch || "(no branch)",
     git: git ?? undefined,
     designRefs: root ? getDesignRefs(root) : undefined,
+    // The single build PRD (STO-2573) — surfaced when docs/PRD.md exists. Path is
+    // ABSOLUTE so previewFile/openFile resolve it (host cwd ≠ workspace root).
+    prd: root && existsSync(join(root, PRD_REL_PATH)) ? { path: join(root, PRD_REL_PATH) } : undefined,
     folders,
     waves,
     spikes: board.spikes,

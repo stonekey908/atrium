@@ -65,6 +65,9 @@ export interface InitPayload {
   git?: GitInfo;
   /** Design reference artifacts found in the project (STO-2168). */
   designRefs?: DesignRef[];
+  /** The single build PRD (docs/PRD.md) — editable in the PRD view, synced to
+   *  the Linear project overview (STO-2573). Absent when the file doesn't exist. */
+  prd?: { path: string };
   /** Where the board came from + how fresh it is (shown as a header chip). */
   source?: "snapshot" | "live";
   generatedAt?: string;

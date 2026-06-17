@@ -154,6 +154,48 @@ export class LinearWriteClient {
     return res.data?.commentCreate?.success ?? false;
   }
 
+  /** Resolves a project's id from its name (for the PRD sync target). STO-2573. */
+  async findProjectId(name: string): Promise<string | null> {
+    const query = `
+      query FindProject($name: String!) {
+        projects(filter: { name: { eq: $name } }, first: 1) { nodes { id } }
+      }
+    `;
+    const res = await this.client.client.rawRequest<{ projects: { nodes: { id: string }[] } }, { name: string }>(
+      query,
+      { name },
+    );
+    return res.data?.projects?.nodes?.[0]?.id ?? null;
+  }
+
+  /** Syncs the build PRD into the Linear project's overview/description. STO-2573. */
+  async setProjectDescription(projectId: string, description: string): Promise<boolean> {
+    const mutation = `
+      mutation SyncPrd($id: String!, $description: String!) {
+        projectUpdate(id: $id, input: { description: $description }) { success }
+      }
+    `;
+    const res = await this.client.client.rawRequest<
+      { projectUpdate: { success: boolean } },
+      { id: string; description: string }
+    >(mutation, { id: projectId, description });
+    return res.data?.projectUpdate?.success ?? false;
+  }
+
+  /** Syncs a wave's blurb into its Linear label description. STO-2574. */
+  async setLabelDescription(labelId: string, description: string): Promise<boolean> {
+    const mutation = `
+      mutation SyncWaveDesc($id: String!, $description: String!) {
+        issueLabelUpdate(id: $id, input: { description: $description }) { success }
+      }
+    `;
+    const res = await this.client.client.rawRequest<
+      { issueLabelUpdate: { success: boolean } },
+      { id: string; description: string }
+    >(mutation, { id: labelId, description });
+    return res.data?.issueLabelUpdate?.success ?? false;
+  }
+
   /** Sets the issue's sort order (priority within the project). STO-2470. */
   async setSortOrder(uuid: string, sortOrder: number): Promise<boolean> {
     const mutation = `

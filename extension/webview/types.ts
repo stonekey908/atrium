@@ -75,6 +75,11 @@ export interface Wave {
   gatedBy?: string | null;
   /** UAT loop-back count; >1 means it bounced back. */
   passN?: number;
+  /** Short "what this wave entails" blurb (the Linear label description) — shown
+   *  succinctly on the board, editable + synced back to the label (STO-2574). */
+  description?: string;
+  /** The wave label's Linear id — the write target for the description sync. */
+  labelId?: string;
 }
 
 export interface Spike {
@@ -107,6 +112,9 @@ export interface InitPayload {
   git?: GitInfo;
   /** Design reference artifacts found in the project (STO-2168). */
   designRefs?: DesignRef[];
+  /** The single build PRD (docs/PRD.md) — editable in the PRD view, synced to
+   *  the Linear project overview (STO-2573). Absent when the file doesn't exist. */
+  prd?: { path: string };
   /** Where the board came from + how fresh it is (shown as a header chip). */
   source?: "snapshot" | "live";
   generatedAt?: string;

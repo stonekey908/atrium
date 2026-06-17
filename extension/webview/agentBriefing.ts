@@ -19,6 +19,9 @@ project, so progress stays visible on the project board.
 - Move tickets through workflow states as you work (Todo → In Progress →
   In Review → Done). Comment on the ticket at pickup, when the plan is
   agreed, at the end of each phase, and at close.
+- Give every sprint label a short one-line description of what that wave
+  entails. It shows as a succinct blurb under the wave on the board (and is
+  editable there). Keep it current as the wave's scope settles.
 
 ## Branches
 
@@ -28,8 +31,12 @@ project, so progress stays visible on the project board.
 
 ## Planning files (in the repo)
 
-- Wave PRD: docs/waves/wave-<n>.md (e.g. docs/waves/wave-1.md)
-- Further docs for a wave (TRDs etc.): docs/waves/wave-<n>-<topic>.md
+- Build PRD: docs/PRD.md — the SINGLE build-level PRD for the whole project
+  (one document that evolves with architecture, features and direction). It is
+  rendered and editable directly in the board's PRD view; saving writes the file
+  and syncs it to the project's overview/description. Keep this current.
+- Per-wave docs (TRDs etc.): docs/waves/wave-<n>.md and wave-<n>-<topic>.md
+  (e.g. docs/waves/wave-1.md). These are per-wave, rendered read-only.
 - Mockups: files named wave-<n>-<name>.html (or .png) placed in files/,
   docs/, mockups/ or design/. Self-contained HTML mockups (inline CSS, no
   external assets) render as live previews.

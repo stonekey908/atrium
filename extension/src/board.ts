@@ -64,6 +64,11 @@ export interface Wave {
   passN: number;
   /** Spike code blocking this wave (e.g. "T-110"), or null. */
   gatedBy: string | null;
+  /** Short "what this wave entails" blurb — the wave's Linear label description,
+   *  shown succinctly on the board and editable/synced back (STO-2574). Live only. */
+  description?: string;
+  /** The wave label's Linear id — the write target for the description sync. Live only. */
+  labelId?: string;
   tickets: Ticket[];
 }
 
@@ -194,6 +199,9 @@ export interface LinearIssueLite {
   stateType: string;
   stateName: string;
   labels: string[];
+  /** Per-label id + description (live pull) — lets a wave carry its label's
+   *  description + write-target id (STO-2574). Names still live in `labels`. */
+  labelInfo?: { name: string; id: string; description: string | null }[];
   description: string | null;
   comments: { body: string; createdAt: string }[];
 }
@@ -348,45 +356,68 @@ export function deriveStage(tickets: Ticket[], fallback: string): string {
 }
 
 /**
- * Builds the Board by **detecting waves dynamically from the labels present in
- * Linear** — any label starting with `wavePrefix` (default "ATR Wave") becomes a
- * wave, sorted by its number, named from the label, stage derived from ticket
- * states. No hardcoded wave list, so a new sprint label just shows up — no
- * rebuild. Canceled/Duplicate issues are kept (flagged via `status`) so the
- * status picker can restore them and the filter can reveal them — they're hidden
- * by default and excluded from counts, not dropped. Issues with no wave label
- * fall into an "Unsorted" bucket so nothing is silently lost. Pure.
+ * Builds the Board by **detecting waves dynamically from the labels on ACTIVE
+ * tickets** — any label starting with `wavePrefix` (default "ATR Wave") that an
+ * active ticket carries becomes a wave, sorted by number, named from the label,
+ * stage derived from states. Waves are never created up front: a label carried
+ * only by canceled/duplicate tickets makes no (blank) wave. Canceled/Duplicate
+ * issues are kept (flagged via `status`) and attached to the waves that exist, so
+ * the filter can reveal them and the status picker can restore them — hidden by
+ * default, excluded from counts. Active issues with no wave label fall into an
+ * "Unsorted" bucket. Works for any Linear project, even one never set up with
+ * Atrium's labels (everything lands in Unsorted, sync still works). Pure.
  */
 export function boardFromIssues(
   issues: LinearIssueLite[],
   opts: { projectName: string; generatedAt: string; wavePrefix?: string },
 ): Board {
   const live = issues;
-  // Prefix(es) win when present; foreign conventions fall back to the
-  // sprint-ish heuristic (STO-2495) over the labels actually in this project.
-  const allLabels = Array.from(new Set(live.flatMap((i) => i.labels)));
+  // Waves emerge from EXISTING (active) tickets — never created up front. Detection
+  // ignores canceled/duplicate issues, so an old label carried only by canceled
+  // tickets makes no blank wave; canceled tickets still attach to waves that exist.
+  const active = issues.filter((i) => i.stateType !== "canceled");
+  // Prefix(es) win when present; foreign conventions fall back to the sprint-ish
+  // heuristic (STO-2495) over the labels actually on active tickets in this project.
+  const allLabels = Array.from(new Set(active.flatMap((i) => i.labels)));
   const isWaveLabel = makeWaveLabelMatcher(opts.wavePrefix, allLabels);
 
-  // The distinct wave labels actually used on live issues, in wave-number order.
-  const waveLabels = Array.from(new Set(live.flatMap((i) => i.labels.filter(isWaveLabel)))).sort(
+  // The distinct wave labels on active issues, in wave-number order.
+  const waveLabels = Array.from(new Set(active.flatMap((i) => i.labels.filter(isWaveLabel)))).sort(
     (a, b) => waveOrder(a) - waveOrder(b) || a.localeCompare(b),
   );
 
+  // label name → {id, description} from the live pull, so a wave can carry its
+  // label's blurb + write-target id (STO-2574). Absent in snapshot mode.
+  const labelMeta = new Map<string, { id: string; description: string | null }>();
+  for (const i of live) for (const l of i.labelInfo ?? []) labelMeta.set(l.name, { id: l.id, description: l.description });
+
   const waves: Wave[] = waveLabels.map((label) => {
+    // Attach all tickets carrying the label, incl. canceled (revealed via filter).
     const tickets = live.filter((i) => i.labels.includes(label)).map(issueToTicket);
-    return { name: waveName(label), label, stage: deriveStage(tickets, "plan"), passN: 1, gatedBy: null, tickets };
+    const meta = labelMeta.get(label);
+    return {
+      name: waveName(label),
+      label,
+      stage: deriveStage(tickets, "plan"),
+      passN: 1,
+      gatedBy: null,
+      description: meta?.description ?? undefined,
+      labelId: meta?.id,
+      tickets,
+    };
   });
 
-  // Anything with no wave label still shows — never silently dropped.
-  const orphans = live.filter((i) => !i.labels.some(isWaveLabel));
-  if (orphans.length > 0) {
+  // Label-less work still shows in an Unsorted bucket — but only when there's
+  // ACTIVE orphan work, so a project of only-canceled stragglers stays blank-free.
+  const isOrphan = (i: LinearIssueLite) => !i.labels.some(isWaveLabel);
+  if (active.some(isOrphan)) {
     waves.push({
       name: "Unsorted · No sprint",
       label: "",
       stage: "",
       passN: 1,
       gatedBy: null,
-      tickets: orphans.map(issueToTicket),
+      tickets: live.filter(isOrphan).map(issueToTicket),
     });
   }
 

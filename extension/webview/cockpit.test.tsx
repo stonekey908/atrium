@@ -257,15 +257,16 @@ describe("Atrium cockpit webview", () => {
     expect(screen.queryByText("STO-2164")).toBeNull(); // non-matching wave is hidden
   });
 
-  it("filters the lists by a priority chip", () => {
+  it("filters the lists via the Priority dropdown", () => {
     render(<App />);
     sendInit(PAYLOAD);
     expect(screen.getByText("STO-2164")).toBeInTheDocument(); // urgent
-    fireEvent.click(screen.getByTitle("Show High priority"));
-    expect(screen.queryByText("STO-2164")).toBeNull(); // urgent drops out under High-only
+    fireEvent.click(screen.getByRole("button", { name: /Priority/ })); // open the dropdown
+    fireEvent.click(screen.getByRole("option", { name: /High/ })); // High only
+    expect(screen.queryByText("STO-2164")).toBeNull(); // urgent drops out
   });
 
-  it("hides canceled tickets by default and reveals them via the Canceled chip", () => {
+  it("hides canceled tickets by default and reveals them via the Status dropdown", () => {
     const withCanceled: InitPayload = {
       ...PAYLOAD,
       waves: [
@@ -292,8 +293,38 @@ describe("Atrium cockpit webview", () => {
     render(<App />);
     sendInit(withCanceled);
     expect(screen.queryByText("Abandoned approach")).toBeNull(); // hidden by default
-    fireEvent.click(screen.getByTitle(/Show canceled/i));
+    fireEvent.click(screen.getByRole("button", { name: /Status/ })); // open the Status dropdown
+    fireEvent.click(screen.getByRole("option", { name: /Canceled/ })); // reveal canceled
     expect(screen.getByText("Abandoned approach")).toBeInTheDocument(); // revealed
+  });
+
+  it("shows a wave's description on the board and edits it (STO-2574)", () => {
+    const withDesc: InitPayload = {
+      ...PAYLOAD,
+      source: "live",
+      waves: [
+        {
+          name: "Wave 1 · CLI bridge",
+          stage: "plan",
+          label: "ATR Wave 1",
+          labelId: "lbl-1",
+          description: "Bridge the claude CLI via stream-json",
+          tickets: [{ ...PAYLOAD.waves[1].tickets[0] }],
+        },
+      ],
+    };
+    render(<App />);
+    sendInit(withDesc);
+    expect(screen.getByText("Bridge the claude CLI via stream-json")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Edit description for Wave 1/i));
+    const editor = screen.getByLabelText(/Description for Wave 1/i);
+    fireEvent.change(editor, { target: { value: "new blurb" } });
+    fireEvent.click(screen.getByText("Save"));
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "saveWaveDescription",
+      labelId: "lbl-1",
+      description: "new blurb",
+    });
   });
 
   it("pins a horizon wave as the current sprint, then unpins back to auto", () => {

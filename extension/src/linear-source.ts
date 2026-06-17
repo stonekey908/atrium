@@ -24,7 +24,7 @@ const ISSUES_QUERY = `
         priority
         sortOrder
         state { type name }
-        labels { nodes { name } }
+        labels { nodes { id name description } }
         description
         comments { nodes { body createdAt } }
       }
@@ -43,7 +43,7 @@ interface IssuesResponse {
       priority: number;
       sortOrder: number;
       state: { type: string; name: string };
-      labels: { nodes: { name: string }[] };
+      labels: { nodes: { id: string; name: string; description: string | null }[] };
       description: string | null;
       comments: { nodes: { body: string; createdAt: string }[] };
     }[];
@@ -72,6 +72,7 @@ async function fetchAllIssues(client: LinearClient, projectName: string): Promis
         stateType: n.state.type,
         stateName: n.state.name,
         labels: n.labels.nodes.map((l) => l.name),
+        labelInfo: n.labels.nodes.map((l) => ({ name: l.name, id: l.id, description: l.description })),
         description: n.description,
         comments: n.comments.nodes.map((c) => ({ body: c.body, createdAt: c.createdAt })),
       });

@@ -54,6 +54,22 @@ describe("PRD view (STO-2496)", () => {
     expect(screen.getByText("this").tagName).toBe("STRONG");
   });
 
+  it("edits a per-wave doc in place and posts saveFile (no Linear sync)", () => {
+    const w = wave({
+      files: { prd: { name: "wave-5.md", path: "/repo/docs/waves/wave-5.md", kind: "md" }, mockups: [], docs: [] },
+    });
+    render(<PrdView init={init([w])} />);
+    sendContent({ path: "/repo/docs/waves/wave-5.md", content: "orig" });
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.change(screen.getByLabelText("Edit wave-5.md"), { target: { value: "edited" } });
+    fireEvent.click(screen.getByText("Save"));
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "saveFile",
+      path: "/repo/docs/waves/wave-5.md",
+      content: "edited",
+    });
+  });
+
   it("lists further docs (TRDs) alongside the PRD", () => {
     const w = wave({
       files: {
@@ -79,9 +95,32 @@ describe("PRD view (STO-2496)", () => {
 
   it("shows an honest empty state (no docs vs no folder)", () => {
     const { rerender } = render(<PrdView init={init([wave({ files: { mockups: [], docs: [] } })])} />);
-    expect(screen.getByText(/no prd docs found/i)).toBeInTheDocument();
+    expect(screen.getByText(/no prd found/i)).toBeInTheDocument();
     rerender(<PrdView init={{ ...init([]), folders: [] }} />);
     expect(screen.getByText(/no folder is open/i)).toBeInTheDocument();
+  });
+});
+
+describe("Build PRD — editable + synced (STO-2573)", () => {
+  beforeEach(() => postMessage.mockClear());
+
+  it("renders the build PRD and requests its content from the host", () => {
+    render(<PrdView init={init([], { prd: { path: "docs/PRD.md" } })} />);
+    expect(screen.getByText("Build PRD")).toBeInTheDocument();
+    expect(postMessage).toHaveBeenCalledWith({ type: "previewFile", path: "docs/PRD.md" });
+    sendContent({ path: "docs/PRD.md", content: "# Title\n\nbody" });
+    expect(screen.getByText("Title")).toBeInTheDocument(); // rendered markdown
+  });
+
+  it("edits and posts savePrd with the new content", () => {
+    render(<PrdView init={init([], { prd: { path: "docs/PRD.md" } })} />);
+    sendContent({ path: "docs/PRD.md", content: "original" });
+    fireEvent.click(screen.getByText("Edit"));
+    const editor = screen.getByLabelText("Edit Build PRD") as HTMLTextAreaElement;
+    expect(editor.value).toBe("original");
+    fireEvent.change(editor, { target: { value: "rewritten PRD" } });
+    fireEvent.click(screen.getByText(/Save & sync/i));
+    expect(postMessage).toHaveBeenCalledWith({ type: "savePrd", content: "rewritten PRD" });
   });
 });
 

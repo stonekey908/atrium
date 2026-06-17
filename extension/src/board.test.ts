@@ -213,6 +213,42 @@ describe("boardFromIssues", () => {
     expect(b.waves[0].stage).toBe("build");
   });
 
+  it("carries each wave's label description + id from the live label info (STO-2574)", () => {
+    const issues: LinearIssueLite[] = [
+      {
+        id: "u", sortOrder: 1, comments: [], identifier: "STO-1", title: "t", url: "u", priority: 2,
+        stateType: "started", stateName: "In Progress", labels: ["ATR Wave 9 · Docs"],
+        labelInfo: [{ name: "ATR Wave 9 · Docs", id: "lbl-9", description: "What wave 9 entails" }], description: null,
+      },
+    ];
+    const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "d" });
+    const w = b.waves.find((x) => x.label === "ATR Wave 9 · Docs")!;
+    expect(w.description).toBe("What wave 9 entails");
+    expect(w.labelId).toBe("lbl-9");
+  });
+
+  it("does not render a wave whose only tickets are canceled (no blank waves)", () => {
+    const issues: LinearIssueLite[] = [
+      { id: "u", sortOrder: 1, comments: [], identifier: "STO-A", title: "live", url: "u", priority: 2, stateType: "started", stateName: "In Progress", labels: ["ATR Wave 1"], description: null },
+      { id: "u", sortOrder: 1, comments: [], identifier: "STO-DEAD", title: "dead", url: "u", priority: 4, stateType: "canceled", stateName: "Canceled", labels: ["ATR Wave 9 · Abandoned"], description: null },
+    ];
+    const b = boardFromIssues(issues, { projectName: "Atrium", generatedAt: "2026-06-08" });
+    expect(b.waves.map((w) => w.name)).toContain("Wave 1");
+    expect(b.waves.map((w) => w.name)).not.toContain("Wave 9 · Abandoned");
+    expect(b.waves.flatMap((w) => w.tickets).map((t) => t.id)).not.toContain("STO-DEAD");
+  });
+
+  it("handles a project never set up with Atrium labels — everything lands in Unsorted", () => {
+    const issues: LinearIssueLite[] = [
+      { id: "u", sortOrder: 1, comments: [], identifier: "EXT-1", title: "a", url: "u", priority: 2, stateType: "started", stateName: "In Progress", labels: ["Frontend"], description: null },
+      { id: "u", sortOrder: 1, comments: [], identifier: "EXT-2", title: "b", url: "u", priority: 3, stateType: "unstarted", stateName: "Todo", labels: [], description: null },
+    ];
+    const b = boardFromIssues(issues, { projectName: "Other", generatedAt: "2026-06-08" });
+    const unsorted = b.waves.find((w) => w.name === "Unsorted · No sprint");
+    expect(unsorted).toBeTruthy();
+    expect(unsorted!.tickets.map((t) => t.id).sort()).toEqual(["EXT-1", "EXT-2"]);
+  });
+
   it("surfaces canceled issues, flagged via status (not dropped)", () => {
     const all = board.waves.flatMap((w) => w.tickets);
     const dead = all.find((t) => t.id === "STO-9999");

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { vscode } from "./vscode";
 import { resolveActiveTicket, currentSprint } from "./sprint";
 import { computeRollup } from "./rollup";
@@ -12,7 +12,7 @@ import { useBoardMutations } from "./useBoardMutations";
 import { TicketModal } from "./TicketModal";
 import { HelpModal } from "./HelpModal";
 import { PRIORITY, StateIcon, AuditRibbon } from "./ui";
-import { applyTicketView, filterTickets, isFiltering, DEFAULT_VIEW, type TicketView, type SortKey } from "./ticketView";
+import { applyTicketView, filterTickets, isFiltering, DEFAULT_VIEW, type TicketView, type SortKey, type FilterStatus } from "./ticketView";
 import { activeTickets, isCanceled } from "./types";
 import type { InitPayload, Priority, Spike, Ticket, TicketState, Wave, WriteState } from "./types";
 
@@ -53,15 +53,21 @@ function NoSprint() {
 }
 
 /** Status chips for the filter bar — colour-coded to match the kanban / StateIcon. */
-const STATE_FILTERS: { key: TicketState; label: string; dot: string }[] = [
+/** Status filter options (the four kanban columns + Canceled, hidden by default
+ *  until checked). Drives the Status dropdown — `view.states` is FilterStatus[]. */
+const STATUS_OPTIONS: { key: FilterStatus; label: string; dot: string }[] = [
   { key: "todo", label: "To do", dot: "bg-fg-muted" },
   { key: "doing", label: "Doing", dot: "bg-yellow" },
   { key: "review", label: "Review", dot: "bg-blue" },
   { key: "done", label: "Done", dot: "bg-green" },
+  { key: "canceled", label: "Canceled", dot: "bg-fg-muted/40" },
 ];
-const PRIORITY_FILTERS: Priority[] = ["urgent", "high", "med", "low"];
+const PRIORITY_OPTIONS: { key: Priority; label: string; cls: string }[] = (["urgent", "high", "med", "low"] as Priority[]).map(
+  (p) => ({ key: p, label: PRIORITY[p].label, cls: PRIORITY[p].cls }),
+);
+/** "Default" = the order Linear gives us (drag-to-reorder on the kanban writes it). */
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "manual", label: "Manual" },
+  { key: "manual", label: "Default" },
   { key: "priority", label: "Priority" },
   { key: "state", label: "Status" },
   { key: "id", label: "ID" },
@@ -69,9 +75,92 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 const toggle = <T,>(arr: T[], v: T): T[] => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-/** Global sort/filter toolbar above the wave lists. Multi-select status +
- *  priority chips (OR within an axis, AND across), a text search over id/title,
- *  and a sort dropdown. Hosts the collapse-all toggle when not filtering. */
+/** A compact multi-select dropdown for one filter axis — keeps the toolbar on a
+ *  single line. Shows "All" when nothing is picked (no narrowing on that axis),
+ *  a count when some are. Closes on outside-click / Esc. */
+function FilterDropdown<T extends string>({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  options: { key: T; label: string; dot?: string; cls?: string }[];
+  selected: T[];
+  onChange: (next: T[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex items-center gap-1 h-6 px-2 rounded border ${
+          selected.length > 0 ? "border-link text-fg" : "border-border text-fg-muted hover:text-fg hover:border-fg-muted"
+        }`}
+      >
+        <span>{label}</span>
+        <span className={selected.length > 0 ? "px-1 rounded-full bg-active text-active-fg text-[9px]" : "text-fg-muted/60"}>
+          {selected.length > 0 ? selected.length : "All"}
+        </span>
+        <span className="codicon codicon-chevron-down text-[10px]" />
+      </button>
+      {open && (
+        <div role="listbox" className="absolute left-0 mt-1 z-30 min-w-[150px] rounded border border-border bg-bg shadow-lg py-1">
+          {options.map((o) => {
+            const on = selected.includes(o.key);
+            return (
+              <button
+                key={o.key}
+                type="button"
+                role="option"
+                aria-selected={on}
+                onClick={() => onChange(toggle(selected, o.key))}
+                className="w-full flex items-center gap-2 px-2 h-6 text-left text-[11px] hover:bg-hover"
+              >
+                <span className={`codicon ${on ? "codicon-check text-link" : ""} text-[11px] w-3.5 shrink-0`} />
+                {o.dot && <span className={`w-1.5 h-1.5 rounded-full ${o.dot} shrink-0`} />}
+                <span className={`truncate ${o.cls ?? ""}`}>{o.label}</span>
+              </button>
+            );
+          })}
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="w-full text-left text-[10px] text-fg-muted hover:text-fg px-2 pt-1 mt-1 border-t border-border"
+            >
+              Clear {label.toLowerCase()}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Global sort/filter toolbar above the wave lists, on a single line: a text
+ *  search, categorised Status + Priority dropdowns (multi-select; "All" when
+ *  empty), a sort dropdown, and the collapse-all toggle. */
 function TicketFilterBar({
   view,
   onChange,
@@ -86,15 +175,15 @@ function TicketFilterBar({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-10 bg-bg border-b border-border flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2 py-1.5 text-[11px]">
-      <div className="flex items-center gap-1 h-6 px-1.5 rounded border border-border focus-within:border-fg-muted">
+    <div className="sticky top-0 z-10 bg-bg border-b border-border flex items-center gap-2 px-2 py-1.5 text-[11px]">
+      <div className="flex items-center gap-1 h-6 px-1.5 rounded border border-border focus-within:border-fg-muted shrink-0">
         <span className="codicon codicon-search text-[11px] text-fg-muted" />
         <input
           value={view.search}
           onChange={(e) => onChange({ ...view, search: e.target.value })}
           placeholder="Filter tickets…"
           aria-label="Filter tickets by id or title"
-          className="bg-transparent outline-none w-28 placeholder:text-fg-muted/60"
+          className="bg-transparent outline-none w-24 placeholder:text-fg-muted/60"
         />
         {view.search && (
           <button
@@ -109,65 +198,20 @@ function TicketFilterBar({
         )}
       </div>
 
-      <div className="flex items-center gap-1" role="group" aria-label="Filter by status">
-        {STATE_FILTERS.map((s) => {
-          const active = view.states.includes(s.key);
-          return (
-            <button
-              key={s.key}
-              type="button"
-              aria-pressed={active}
-              title={`Show ${s.label}`}
-              onClick={() => onChange({ ...view, states: toggle(view.states, s.key) })}
-              className={`flex items-center gap-1 h-5 px-1.5 rounded-full border text-[10px] uppercase tracking-wide ${
-                active ? "border-link bg-active/20 text-fg" : "border-border text-fg-muted hover:text-fg hover:border-fg-muted"
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-              {s.label}
-            </button>
-          );
-        })}
-        {/* Canceled/Duplicate are hidden by default — this chip reveals them (and,
-            selected alone, shows only them, for the "bring it back" flow). */}
-        <span className="w-px h-3.5 bg-border mx-0.5" aria-hidden="true" />
-        <button
-          type="button"
-          aria-pressed={view.states.includes("canceled")}
-          title="Show canceled & duplicate tickets (hidden by default)"
-          onClick={() => onChange({ ...view, states: toggle(view.states, "canceled") })}
-          className={`flex items-center gap-1 h-5 px-1.5 rounded-full border text-[10px] uppercase tracking-wide ${
-            view.states.includes("canceled")
-              ? "border-link bg-active/20 text-fg"
-              : "border-border text-fg-muted hover:text-fg hover:border-fg-muted"
-          }`}
-        >
-          <span className="codicon codicon-circle-slash text-[10px]" />
-          Canceled
-        </button>
-      </div>
+      <FilterDropdown
+        label="Status"
+        options={STATUS_OPTIONS}
+        selected={view.states}
+        onChange={(states) => onChange({ ...view, states })}
+      />
+      <FilterDropdown
+        label="Priority"
+        options={PRIORITY_OPTIONS}
+        selected={view.priorities}
+        onChange={(priorities) => onChange({ ...view, priorities })}
+      />
 
-      <div className="flex items-center gap-1" role="group" aria-label="Filter by priority">
-        {PRIORITY_FILTERS.map((p) => {
-          const active = view.priorities.includes(p);
-          return (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={active}
-              title={`Show ${PRIORITY[p].label} priority`}
-              onClick={() => onChange({ ...view, priorities: toggle(view.priorities, p) })}
-              className={`h-5 px-1.5 rounded-full border text-[10px] uppercase tracking-wide ${
-                active ? `border-link bg-active/20 ${PRIORITY[p].cls}` : "border-border text-fg-muted hover:text-fg hover:border-fg-muted"
-              }`}
-            >
-              {PRIORITY[p].label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2 shrink-0">
         {isFiltering(view) && (
           <button
             type="button"
@@ -179,8 +223,12 @@ function TicketFilterBar({
             Clear
           </button>
         )}
-        <label className="flex items-center gap-1 text-fg-muted" title="Sort tickets within each wave">
+        <label
+          className="flex items-center gap-1 text-fg-muted"
+          title="Sort tickets within each wave. Default = the order from Linear (set by drag-to-reorder on the kanban)."
+        >
           <span className="codicon codicon-sort-precedence text-[12px]" />
+          Sort
           <select
             aria-label="Sort tickets"
             value={view.sort}
@@ -634,7 +682,7 @@ function WaveSection({
         droppable ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsOver(false); } : undefined
       }
       onDrop={droppable ? onDrop : undefined}
-      className={`border-b border-border transition-colors ${
+      className={`group/wave border-b border-border transition-colors ${
         isOver ? "outline outline-1 -outline-offset-1 outline-link bg-active/10" : ""
       }`}
     >
@@ -688,6 +736,7 @@ function WaveSection({
           <SegmentedBar done={done} doing={doing} review={review} todo={todo} className="w-16" />
         </span>
       </div>
+      <WaveDescription wave={wave} canWrite={canWrite} />
       {open && (
         <div>
           {applyTicketView(wave.tickets, view).map((t) => (
@@ -696,6 +745,73 @@ function WaveSection({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The wave's succinct "what this wave entails" blurb (its Linear label
+ * description), shown as one truncated line under the wave name — full text on
+ * hover, so it never floods the board (STO-2574). Editable in live mode: Save
+ * syncs to the Linear label description, then the board refreshes.
+ */
+function WaveDescription({ wave, canWrite }: { wave: Wave; canWrite: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const canEdit = canWrite && !!wave.labelId;
+  if (!wave.description && !canEdit) return null;
+
+  if (editing) {
+    return (
+      <div className="px-2 pl-7 pb-1.5 flex items-start gap-1.5">
+        <textarea
+          aria-label={`Description for ${wave.name}`}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={2}
+          autoFocus
+          className="flex-1 resize-y bg-bg text-fg border border-border rounded px-1.5 py-1 text-[11px] focus:outline-none focus:border-link"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            vscode.postMessage({ type: "saveWaveDescription", labelId: wave.labelId, description: draft });
+            setEditing(false);
+          }}
+          className="text-[11px] px-1.5 py-0.5 rounded bg-active text-active-fg hover:opacity-90 shrink-0"
+        >
+          Save
+        </button>
+        <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-fg-muted hover:text-fg shrink-0">
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-2 pl-7 pb-1 flex items-center gap-1.5 text-[11px] text-fg-muted">
+      {wave.description ? (
+        <span className="truncate" title={wave.description}>
+          {wave.description}
+        </span>
+      ) : (
+        <span className="italic opacity-0 group-hover/wave:opacity-60">No description yet</span>
+      )}
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(wave.description ?? "");
+            setEditing(true);
+          }}
+          title="Edit wave description (syncs to the Linear label)"
+          aria-label={`Edit description for ${wave.name}`}
+          className="flex items-center text-fg-muted hover:text-link opacity-0 group-hover/wave:opacity-100 shrink-0"
+        >
+          <span className="codicon codicon-edit text-[10px]" />
+        </button>
+      )}
+    </div>
   );
 }
 
