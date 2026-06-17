@@ -3,6 +3,7 @@ import { vscode } from "./vscode";
 import { boardToColumns, type KanbanColumn } from "./sprint";
 import { setDrag, getDrag } from "./dnd";
 import { PRIORITY } from "./ui";
+import { TicketModal } from "./TicketModal";
 import type { SyncState, Ticket, TicketState, Wave, WriteState } from "./types";
 
 export interface SprintBoardCallbacks {
@@ -222,6 +223,7 @@ function Column({
             ticket={t}
             sync={syncOf?.(t.id) ?? "idle"}
             draggable={canWrite}
+            canWrite={canWrite}
             fromState={col.key}
             fromWaveLabel={waveLabel}
             onDrop={(e) => onCardDrop(i, e)}
@@ -236,6 +238,7 @@ export function KanbanCard({
   ticket,
   sync = "idle",
   draggable = false,
+  canWrite = false,
   fromState,
   fromWaveLabel,
   onDrop,
@@ -243,10 +246,14 @@ export function KanbanCard({
   ticket: Ticket;
   sync?: SyncState;
   draggable?: boolean;
+  canWrite?: boolean;
   fromState?: TicketState;
   fromWaveLabel?: string;
   onDrop?: (e: React.DragEvent) => void;
 }) {
+  // Click opens the detail modal (same as a wave-list row, STO-2494). A real
+  // HTML5 drag doesn't fire a click afterward, so this coexists with dragging.
+  const [open, setOpen] = useState(false);
   const onDragStart = (e: React.DragEvent) => {
     setDrag(e, {
       id: ticket.id,
@@ -257,37 +264,51 @@ export function KanbanCard({
     });
   };
   return (
-    <div
-      draggable={draggable}
-      onDragStart={draggable ? onDragStart : undefined}
-      onDragOver={draggable ? (e) => e.preventDefault() : undefined}
-      onDrop={draggable ? onDrop : undefined}
-      className={`group rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted ${
-        draggable ? "cursor-grab active:cursor-grabbing" : ""
-      }`}
-    >
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-[10px] text-fg-muted shrink-0">{ticket.id}</span>
-        <SyncBadge sync={sync} />
-        <span className={`ml-auto text-[9px] uppercase tracking-wide shrink-0 ${PRIORITY[ticket.priority].cls}`}>
-          {PRIORITY[ticket.priority].label}
-        </span>
-        {ticket.url && (
-          <button
-            type="button"
-            aria-label={`Open ${ticket.id} in Linear`}
-            title="Open in Linear"
-            className="flex items-center text-fg-muted hover:text-link opacity-0 group-hover:opacity-100 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              vscode.postMessage({ type: "openLinear", url: ticket.url });
-            }}
-          >
-            <span className="codicon codicon-link-external text-[11px]" />
-          </button>
-        )}
+    // Modal lives outside the clickable card so close/overlay clicks don't
+    // bubble back into onClick and immediately reopen it (mirrors TicketRow).
+    <div>
+      <div
+        role="button"
+        tabIndex={0}
+        draggable={draggable}
+        onDragStart={draggable ? onDragStart : undefined}
+        onDragOver={draggable ? (e) => e.preventDefault() : undefined}
+        onDrop={draggable ? onDrop : undefined}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={`group overflow-hidden rounded border border-border bg-bg px-2 py-1.5 text-[12px] hover:border-fg-muted ${
+          draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+        }`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-mono text-[10px] text-fg-muted min-w-0 truncate">{ticket.id}</span>
+          <SyncBadge sync={sync} />
+          <span className={`ml-auto text-[9px] uppercase tracking-wide shrink-0 ${PRIORITY[ticket.priority].cls}`}>
+            {PRIORITY[ticket.priority].label}
+          </span>
+          {ticket.url && (
+            <button
+              type="button"
+              aria-label={`Open ${ticket.id} in Linear`}
+              title="Open in Linear"
+              className="flex items-center text-fg-muted hover:text-link opacity-0 group-hover:opacity-100 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                vscode.postMessage({ type: "openLinear", url: ticket.url });
+              }}
+            >
+              <span className="codicon codicon-link-external text-[11px]" />
+            </button>
+          )}
+        </div>
+        <div className="mt-0.5 leading-snug line-clamp-2 break-words">{ticket.title}</div>
       </div>
-      <div className="mt-0.5 leading-snug line-clamp-2">{ticket.title}</div>
+      {open && <TicketModal ticket={ticket} canWrite={canWrite} onClose={() => setOpen(false)} />}
     </div>
   );
 }

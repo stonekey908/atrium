@@ -1,4 +1,4 @@
-import type { Wave } from "./types";
+import { activeTickets, type Wave } from "./types";
 
 export interface Rollup {
   total: number;
@@ -14,7 +14,8 @@ export interface Rollup {
 
 /** Project-wide ticket tally across every wave — the "where am I overall" glance. */
 export function computeRollup(waves: Wave[]): Rollup {
-  const tickets = waves.flatMap((w) => w.tickets);
+  // Canceled/Duplicate tickets don't count toward project progress.
+  const tickets = activeTickets(waves.flatMap((w) => w.tickets));
   const done = tickets.filter((t) => t.state === "done").length;
   const doing = tickets.filter((t) => t.state === "doing").length;
   const review = tickets.filter((t) => t.state === "review").length;

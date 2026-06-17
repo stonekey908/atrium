@@ -8,6 +8,8 @@ import {
   boardFromIssues,
   activityFromComments,
   deriveStage,
+  fullStatus,
+  isCanceled,
   type LinearIssueLite,
   type Ticket,
 } from "./board";
@@ -33,6 +35,14 @@ describe("deriveStage", () => {
 
   it("uses the fallback only for an empty wave", () => {
     expect(deriveStage([], "uat")).toBe("uat");
+  });
+
+  it("ignores canceled tickets when deriving the stage", () => {
+    const canceled: Ticket = { ...ticketIn("todo"), status: "Canceled" };
+    // All active tickets done → release, even alongside a canceled one.
+    expect(deriveStage([ticketIn("done"), canceled], "plan")).toBe("release");
+    // A wave of only canceled tickets falls back (no active work).
+    expect(deriveStage([canceled], "plan")).toBe("plan");
   });
 });
 
@@ -125,6 +135,18 @@ describe("mapState", () => {
   });
 });
 
+describe("fullStatus", () => {
+  it("keeps the exact Linear status, distinguishing Backlog/Todo and Canceled/Duplicate", () => {
+    expect(fullStatus("completed", "Done")).toBe("Done");
+    expect(fullStatus("started", "In Progress")).toBe("In Progress");
+    expect(fullStatus("started", "In Review")).toBe("In Review");
+    expect(fullStatus("backlog", "Backlog")).toBe("Backlog");
+    expect(fullStatus("unstarted", "Todo")).toBe("Todo");
+    expect(fullStatus("canceled", "Canceled")).toBe("Canceled");
+    expect(fullStatus("canceled", "Duplicate")).toBe("Duplicate");
+  });
+});
+
 describe("specFromDescription", () => {
   it("pulls every bullet line, stripped of markers (uncapped since STO-2494)", () => {
     const desc = "intro\n- crit one\n- crit two\n- crit three\n- crit four";
@@ -191,10 +213,14 @@ describe("boardFromIssues", () => {
     expect(b.waves[0].stage).toBe("build");
   });
 
-  it("excludes canceled issues", () => {
-    const ids = board.waves.flatMap((w) => w.tickets.map((t) => t.id));
-    expect(ids).not.toContain("STO-9999");
-    expect(ids).toContain("STO-2468");
+  it("surfaces canceled issues, flagged via status (not dropped)", () => {
+    const all = board.waves.flatMap((w) => w.tickets);
+    const dead = all.find((t) => t.id === "STO-9999");
+    expect(dead).toBeTruthy();
+    expect(dead!.status).toBe("Canceled");
+    expect(isCanceled(dead!)).toBe(true);
+    // The canceled ticket doesn't change its wave's derived stage (still build).
+    expect(board.waves.find((w) => w.name === "Wave 0.7 · Sprint board")!.stage).toBe("build");
   });
 
   it("collects tickets with no recognized wave label into an Unsorted bucket", () => {

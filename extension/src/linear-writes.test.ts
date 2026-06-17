@@ -57,4 +57,19 @@ describe("resolveStateId", () => {
     expect(resolveStateId(started, "done")).toBeNull();
     expect(resolveStateId(started, "todo")).toBeNull();
   });
+
+  it("resolves canceled and duplicate, distinguishing them by name", () => {
+    const withDup: WorkflowState[] = [
+      ...STATES,
+      { id: "s-dup", name: "Duplicate", type: "canceled" },
+    ];
+    expect(resolveStateId(withDup, "canceled")).toBe("s-cancel");
+    expect(resolveStateId(withDup, "duplicate")).toBe("s-dup");
+    // With only one canceled-type state, both targets resolve to it.
+    expect(resolveStateId(STATES, "duplicate")).toBe("s-cancel");
+    expect(resolveStateId(STATES, "canceled")).toBe("s-cancel");
+    // Null when the team has no canceled-type state at all.
+    const noCancel: WorkflowState[] = [{ id: "d", name: "Done", type: "completed" }];
+    expect(resolveStateId(noCancel, "canceled")).toBeNull();
+  });
 });

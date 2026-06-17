@@ -215,6 +215,8 @@ interface InboundMessage {
   linearId?: string;
   fromState?: TicketState;
   toState?: WriteState;
+  /** Modal status picker target (Backlog…Duplicate, mapped to a WriteState). */
+  status?: WriteState;
   sortOrder?: number;
   /** Cross-wave drag (promote into / demote out of the sprint). */
   toWaveLabel?: string;
@@ -245,6 +247,8 @@ function wireMessages(webview: vscode.Webview): void {
       void handleReorderTicket(webview, msg);
     } else if (msg?.type === "moveToWave") {
       void handleMoveToWave(webview, msg);
+    } else if (msg?.type === "setStatus") {
+      void handleSetStatus(webview, msg);
     } else if (msg?.type === "openFile" && msg.path) {
       // Open a design reference in VS Code's own editor (STO-2168).
       void vscode.window.showTextDocument(vscode.Uri.file(msg.path), { preview: true });
@@ -389,6 +393,32 @@ async function handleMoveTicket(webview: vscode.Webview, msg: InboundMessage): P
     }
     const ok = await client.setState(linearId, stateId);
     postMutationResult(webview, { id, ok });
+  } catch (e) {
+    postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/** Modal status picker (any of the 7 Linear statuses, incl. Cancel/Duplicate).
+ *  Unlike the kanban drag this isn't optimistic — it can move a ticket out of the
+ *  active view entirely (cancel) or back in (restore), so we write then refresh. */
+async function handleSetStatus(webview: vscode.Webview, msg: InboundMessage): Promise<void> {
+  const { id, linearId, status } = msg;
+  if (!id || !status) return;
+  const client = getWriteClient();
+  if (!client || !linearId) {
+    postMutationResult(webview, { id, ok: false, error: "No Linear API key set — board is read-only." });
+    return;
+  }
+  try {
+    const current = await client.readIssue(linearId);
+    const stateId = resolveStateId(current.states, status);
+    if (!stateId) {
+      postMutationResult(webview, { id, ok: false, error: `No "${status}" state in this team's workflow.` });
+      return;
+    }
+    const ok = await client.setState(linearId, stateId);
+    postMutationResult(webview, { id, ok });
+    if (ok) refreshAll(); // re-pull so the new status (and any bucket move) shows
   } catch (e) {
     postMutationResult(webview, { id, ok: false, error: e instanceof Error ? e.message : String(e) });
   }

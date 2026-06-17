@@ -1,4 +1,4 @@
-import type { Ticket, TicketState, Wave } from "./types";
+import { activeTickets, isCanceled, type Ticket, type TicketState, type Wave } from "./types";
 
 /** The kanban columns, in board order, with their display labels. */
 export const KANBAN_COLUMNS: { key: TicketState; label: string }[] = [
@@ -21,7 +21,7 @@ export function boardToColumns(wave: Wave): KanbanColumn[] {
   return KANBAN_COLUMNS.map((c) => ({
     ...c,
     tickets: wave.tickets
-      .filter((t) => t.state === c.key)
+      .filter((t) => t.state === c.key && !isCanceled(t)) // canceled never sits in a column
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
   }));
 }
@@ -39,7 +39,11 @@ export function currentSprint(waves: Wave[], override?: string | null): Wave | n
     const pinned = waves.find((w) => w.name === override);
     if (pinned) return pinned;
   }
-  const unfinished = waves.filter((w) => w.tickets.length > 0 && w.tickets.some((t) => t.state !== "done"));
+  // Canceled tickets don't make a wave "unfinished" or "active".
+  const unfinished = waves.filter((w) => {
+    const act = activeTickets(w.tickets);
+    return act.length > 0 && act.some((t) => t.state !== "done");
+  });
   if (unfinished.length === 0) return null;
   const active = unfinished.filter((w) => w.tickets.some((t) => t.state === "doing" || t.state === "review"));
   const pool = active.length > 0 ? active : unfinished;
@@ -70,7 +74,7 @@ export function isCurrentSprint(stage: string | undefined): boolean {
  * in progress, else nothing.
  */
 export function resolveActiveTicket(waves: Wave[], branch: string): Ticket | null {
-  const tickets = waves.flatMap((w) => w.tickets);
+  const tickets = activeTickets(waves.flatMap((w) => w.tickets));
   const b = branch.toLowerCase();
   const matched = tickets.find((t) => b.includes(t.id.toLowerCase()));
   if (matched) return matched;

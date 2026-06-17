@@ -1,8 +1,11 @@
 export type Priority = "urgent" | "high" | "med" | "low";
 export type TicketState = "todo" | "doing" | "review" | "done";
-/** A write target for moves: the four columns plus an explicit `backlog`, used
- *  when demoting a ticket out of the sprint (distinct from the todo column). */
-export type WriteState = TicketState | "backlog";
+/** The exact Linear status set — the status picker's options. `state` collapses
+ *  these to the four kanban columns; `status` keeps Backlog/Canceled/Duplicate. */
+export type FullStatus = "Backlog" | "Todo" | "In Progress" | "In Review" | "Done" | "Canceled" | "Duplicate";
+/** A write target for moves: the four columns, an explicit `backlog` (demote out
+ *  of the sprint), and the two terminal statuses the modal picker can set. */
+export type WriteState = TicketState | "backlog" | "canceled" | "duplicate";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
 /** Per-card write-back status for the sprint kanban (slice 2+). `idle` = no
@@ -29,6 +32,9 @@ export interface Ticket {
   description?: string;
   priority: Priority;
   state: TicketState;
+  /** Exact Linear status (Backlog…Duplicate) — drives the modal status picker and
+   *  marks Canceled/Duplicate tickets. Live pull only; absent in the snapshot. */
+  status?: FullStatus;
   spec: string[];
   tests: TestSummary;
   activity: ActivityItem[];
@@ -114,4 +120,21 @@ export interface InitPayload {
   /** Current auto-refresh cadence (atrium.linear.pollSeconds) — the status
    *  strip exposes a picker for it (STO-2481 finding #2). */
   pollSeconds?: number;
+}
+
+/** Canceled or Duplicate — terminal statuses kept off the kanban and out of
+ *  progress counts, and hidden from the wave lists until the filter reveals them. */
+export function isCanceled(t: Pick<Ticket, "status">): boolean {
+  return t.status === "Canceled" || t.status === "Duplicate";
+}
+
+/** A ticket's active tickets only — the ones that count toward progress/stage. */
+export function activeTickets(tickets: Ticket[]): Ticket[] {
+  return tickets.filter((t) => !isCanceled(t));
+}
+
+/** Fallback FullStatus from the 4-state `state`, for the snapshot/read-only path
+ *  where the exact Linear `status` wasn't pulled. */
+export function statusFromState(state: TicketState): FullStatus {
+  return state === "done" ? "Done" : state === "doing" ? "In Progress" : state === "review" ? "In Review" : "Todo";
 }

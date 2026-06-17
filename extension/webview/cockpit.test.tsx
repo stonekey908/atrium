@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent, within } from "@testing-library/react";
 import type { InitPayload } from "./types";
 
 // Mock the VS Code webview bridge (acquireVsCodeApi is only injected at runtime).
@@ -220,13 +220,80 @@ describe("Atrium cockpit webview", () => {
   it("spotlights the current sprint in the kanban with its four columns", () => {
     render(<App />);
     sendInit(PAYLOAD);
-    // All four kanban columns render.
+    // All four kanban columns render. Scope to the kanban section so the new
+    // filter-bar status chips ("To do"/"Done") don't collide with the query.
+    // The kanban renders above the wave list, so its "Current sprint" header is
+    // the first match (the second is the badge on the wave's list entry).
+    const kanban = within(screen.getAllByText("Current sprint")[0].closest("section")!);
     for (const label of ["To do", "In progress", "In review", "Done"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(kanban.getByText(label)).toBeInTheDocument();
     }
     // The Build-stage ticket shows in the kanban; the horizon wave keeps its own.
     expect(screen.getAllByText("STO-2468").length).toBeGreaterThan(0);
     expect(screen.getByText("STO-2164")).toBeInTheDocument();
+  });
+
+  it("filters the wave ticket lists via the toolbar search, with an empty state", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    const search = screen.getByLabelText("Filter tickets by id or title");
+    expect(screen.getByText("STO-2164")).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "zzz-no-match" } });
+    expect(screen.getByText(/No tickets match/i)).toBeInTheDocument();
+    expect(screen.queryByText("STO-2164")).toBeNull();
+  });
+
+  it("auto-expands a collapsed wave when its ticket matches the filter", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    // The sprint wave (Wave 0.7) is collapsed in the list by default, so its
+    // STO-2468 row isn't rendered there. Searching for it force-expands the wave,
+    // adding exactly one more occurrence of the title (its list row).
+    const before = screen.getAllByText("Read-only sprint kanban").length;
+    fireEvent.change(screen.getByLabelText("Filter tickets by id or title"), {
+      target: { value: "Read-only sprint" },
+    });
+    expect(screen.getAllByText("Read-only sprint kanban")).toHaveLength(before + 1);
+    expect(screen.queryByText("STO-2164")).toBeNull(); // non-matching wave is hidden
+  });
+
+  it("filters the lists by a priority chip", () => {
+    render(<App />);
+    sendInit(PAYLOAD);
+    expect(screen.getByText("STO-2164")).toBeInTheDocument(); // urgent
+    fireEvent.click(screen.getByTitle("Show High priority"));
+    expect(screen.queryByText("STO-2164")).toBeNull(); // urgent drops out under High-only
+  });
+
+  it("hides canceled tickets by default and reveals them via the Canceled chip", () => {
+    const withCanceled: InitPayload = {
+      ...PAYLOAD,
+      waves: [
+        {
+          name: "Wave 1 · CLI bridge",
+          stage: "plan",
+          tickets: [
+            { ...PAYLOAD.waves[1].tickets[0] },
+            {
+              id: "STO-DEAD",
+              title: "Abandoned approach",
+              url: "https://linear.app/x/STO-DEAD",
+              priority: "low",
+              state: "todo",
+              status: "Canceled",
+              spec: [],
+              tests: { passed: 0, failed: 0, missing: 0 },
+              activity: [],
+            },
+          ],
+        },
+      ],
+    };
+    render(<App />);
+    sendInit(withCanceled);
+    expect(screen.queryByText("Abandoned approach")).toBeNull(); // hidden by default
+    fireEvent.click(screen.getByTitle(/Show canceled/i));
+    expect(screen.getByText("Abandoned approach")).toBeInTheDocument(); // revealed
   });
 
   it("pins a horizon wave as the current sprint, then unpins back to auto", () => {

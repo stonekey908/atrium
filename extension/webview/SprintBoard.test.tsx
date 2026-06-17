@@ -93,6 +93,19 @@ describe("SprintBoard drag-to-status", () => {
     expect(onMoveToWave).toHaveBeenCalledWith("STO-9", "uuid-9", "ATR Wave 0.7 · Sprint board", "doing");
   });
 
+  it("opens the ticket detail modal when a card is clicked", () => {
+    const { getByText, queryByRole, getByRole } = render(<SprintBoard wave={WAVE} canWrite onMove={vi.fn()} />);
+    expect(queryByRole("dialog")).toBeNull();
+    fireEvent.click(getByText("Title of STO-1"));
+    expect(getByRole("dialog").getAttribute("aria-label")).toBe("STO-1 details");
+  });
+
+  it("opens the modal in read-only mode too (no live key)", () => {
+    const { getByText, getByRole } = render(<SprintBoard wave={WAVE} canWrite={false} onMove={vi.fn()} />);
+    fireEvent.click(getByText("Title of STO-1"));
+    expect(getByRole("dialog")).toBeTruthy();
+  });
+
   it("is read-only without a key: cards aren't draggable and drops are ignored", () => {
     const onMove = vi.fn();
     const { container, getByText, getAllByText } = render(

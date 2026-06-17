@@ -11,6 +11,10 @@
 
 export type Priority = "urgent" | "high" | "med" | "low";
 export type TicketState = "todo" | "doing" | "review" | "done";
+/** The full Linear status set (the status picker's options). `state` collapses
+ *  these to the four kanban columns; `status` keeps the exact Linear status so
+ *  Backlog/Canceled/Duplicate stay distinct (the kanban only has four columns). */
+export type FullStatus = "Backlog" | "Todo" | "In Progress" | "In Review" | "Done" | "Canceled" | "Duplicate";
 export type ActivityKind = "pickup" | "plan" | "phase" | "close" | "commit";
 
 export interface TestSummary {
@@ -36,6 +40,10 @@ export interface Ticket {
   spec: string[];
   tests: TestSummary;
   activity: ActivityItem[];
+  /** Exact Linear status (Backlog…Duplicate) — drives the modal status picker and
+   *  marks Canceled/Duplicate tickets (which `state` can't represent). Live pull
+   *  only; absent in the committed snapshot, where `state` is the only signal. */
+  status?: FullStatus;
   /** Full Linear description markdown — rendered in the ticket modal (STO-2494).
    *  Live pull only; absent in the committed snapshot. */
   description?: string;
@@ -248,7 +256,23 @@ export function mapPriority(p: number): Priority {
 export function mapState(stateType: string, stateName = ""): TicketState {
   if (stateType === "completed") return "done";
   if (stateType === "started") return /review/i.test(stateName) ? "review" : "doing";
-  return "todo";
+  return "todo"; // backlog / unstarted / canceled / triage all park in the To-do column
+}
+
+/** The exact Linear status, for the modal picker + Canceled/Duplicate marking.
+ *  Linear's "Duplicate" is a `canceled`-type state distinguished only by name. */
+export function fullStatus(stateType: string, stateName = ""): FullStatus {
+  if (stateType === "completed") return "Done";
+  if (stateType === "canceled") return /duplicate/i.test(stateName) ? "Duplicate" : "Canceled";
+  if (stateType === "started") return /review/i.test(stateName) ? "In Review" : "In Progress";
+  if (stateType === "backlog") return "Backlog";
+  return "Todo";
+}
+
+/** Canceled or Duplicate — terminal statuses excluded from the kanban, progress
+ *  counts and (by default) the wave lists. The status picker can restore them. */
+export function isCanceled(t: { status?: FullStatus }): boolean {
+  return t.status === "Canceled" || t.status === "Duplicate";
 }
 
 /** Every bullet line (-, *, or "1.") with its marker stripped. Uncapped since
@@ -298,6 +322,7 @@ function issueToTicket(i: LinearIssueLite): Ticket {
     url: i.url,
     priority: mapPriority(i.priority),
     state: mapState(i.stateType, i.stateName),
+    status: fullStatus(i.stateType, i.stateName),
     spec: specFromDescription(i.description),
     tests: { passed: 0, failed: 0, missing: 0, discovered: false },
     activity: activityFromComments(i.comments),
@@ -314,9 +339,11 @@ function issueToTicket(i: LinearIssueLite): Ticket {
  * Design/UX/UAT stages are conditional and not derived here (STO-2477).
  */
 export function deriveStage(tickets: Ticket[], fallback: string): string {
-  if (tickets.length === 0) return fallback;
-  if (tickets.every((t) => t.state === "done")) return "release";
-  if (tickets.some((t) => t.state === "doing" || t.state === "review")) return "build";
+  // Canceled/Duplicate tickets don't count toward a wave's progress or stage.
+  const active = tickets.filter((t) => !isCanceled(t));
+  if (active.length === 0) return fallback;
+  if (active.every((t) => t.state === "done")) return "release";
+  if (active.some((t) => t.state === "doing" || t.state === "review")) return "build";
   return "plan";
 }
 
@@ -325,14 +352,16 @@ export function deriveStage(tickets: Ticket[], fallback: string): string {
  * Linear** — any label starting with `wavePrefix` (default "ATR Wave") becomes a
  * wave, sorted by its number, named from the label, stage derived from ticket
  * states. No hardcoded wave list, so a new sprint label just shows up — no
- * rebuild. Canceled issues are dropped; issues with no wave label fall into an
- * "Unsorted" bucket so nothing is silently lost. Pure.
+ * rebuild. Canceled/Duplicate issues are kept (flagged via `status`) so the
+ * status picker can restore them and the filter can reveal them — they're hidden
+ * by default and excluded from counts, not dropped. Issues with no wave label
+ * fall into an "Unsorted" bucket so nothing is silently lost. Pure.
  */
 export function boardFromIssues(
   issues: LinearIssueLite[],
   opts: { projectName: string; generatedAt: string; wavePrefix?: string },
 ): Board {
-  const live = issues.filter((i) => i.stateType !== "canceled");
+  const live = issues;
   // Prefix(es) win when present; foreign conventions fall back to the
   // sprint-ish heuristic (STO-2495) over the labels actually in this project.
   const allLabels = Array.from(new Set(live.flatMap((i) => i.labels)));
