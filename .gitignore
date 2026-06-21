@@ -1,28 +1,22 @@
 # macOS
 .DS_Store
+Thumbs.db
 
-# Node
+# Dependencies & build output
 node_modules/
 dist/
 dist-ssr/
 *.vsix
-*.local
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-# Rust / Tauri
-src-tauri/target/
-src-tauri/gen/schemas/
-
-# Env (commit only the example)
+# Env — never commit secrets
 .env
 .env.local
 .env.*.local
-!.env.example
 
 # IDE
 .vscode/*
@@ -30,18 +24,6 @@ src-tauri/gen/schemas/
 .idea/
 *.swp
 *.swo
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# OS / misc
-Thumbs.db
-
-# Repo-specific — historical handoff archive, not part of source
-files.zip
-files/atrium-repo.zip
-
-# Project handoff notes — local working file, not part of the public repo
+# Local working notes, not part of the public repo
 CLAUDE.md

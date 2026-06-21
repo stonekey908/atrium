@@ -39,17 +39,28 @@ tracker** — it never tries to replace it.
 
 ## Install
 
-1. Grab the `.vsix` from the [latest release](../../releases/latest).
-2. Install it:
+**Option A — grab a packaged build.** Download the `.vsix` from the
+[latest release](../../releases/latest), then:
 
-   ```bash
-   code --install-extension atrium-cockpit-<version>.vsix
-   ```
+```bash
+code --install-extension atrium-cockpit-<version>.vsix
+```
 
-   (or in VS Code: Extensions panel → `···` menu → **Install from VSIX…**)
-3. Reload the window. The cockpit opens as an editor tab — or click the Atrium
-   icon in the Activity Bar, the `$(rocket) Atrium` status-bar button, or press
-   `⌘⌥A` / `Ctrl+Alt+A`.
+(or in VS Code: Extensions panel → `···` menu → **Install from VSIX…**)
+
+**Option B — build it yourself** (always current with `main`):
+
+```bash
+cd extension
+bun install
+bun run build
+bunx @vscode/vsce package          # produces atrium-cockpit-<version>.vsix
+code --install-extension atrium-cockpit-*.vsix
+```
+
+Then reload the window. The cockpit opens as an editor tab — or click the Atrium
+icon in the Activity Bar, the `$(rocket) Atrium` status-bar button, or press
+`⌘⌥A` / `Ctrl+Alt+A`.
 
 With no configuration you'll see a bundled **demo board** (a fictional project)
 so you can feel the surface immediately.
@@ -103,16 +114,48 @@ host, built with Bun + Vite + esbuild):
 ```bash
 cd extension
 bun install
-bun run typecheck && bun test   # 160 tests
+bun run typecheck && bun test   # 197 tests
 bun run build
 bunx @vscode/vsce package       # produces the .vsix
 ```
 
-The `src-tauri/` + root `src/` directories are an earlier standalone-app
-prototype, kept for reference; the VS Code extension is the live surface.
-Provider portability (Jira etc.) is designed for: reads go through a
-`BoardSource` seam and writes through a thin client — an adapter for another
-tracker implements those two surfaces.
+## Adapting to another tracker (not Linear)
+
+Atrium talks to Linear today, but it was built to be ported. Reads go through a
+single `BoardSource` seam (`extension/src/linear-source.ts`) and writes through a
+thin client (`extension/src/linear-writes.ts`) — an adapter for Jira, GitHub
+Issues, Asana, etc. only has to reimplement those two surfaces. Everything
+upstream (the board model, wave detection, the React cockpit) stays the same.
+
+This is a great job to hand to an AI coding agent after you clone the repo. Paste
+the briefing below into your assistant (Claude Code, Cursor, etc.) to scope and
+build the adapter:
+
+> **You are adapting the Atrium Cockpit VS Code extension to read/write a
+> different issue tracker instead of Linear.** Work only inside `extension/`.
+>
+> 1. Read `extension/src/linear-source.ts` (the read seam) and
+>    `extension/src/linear-writes.ts` (the write seam) to learn the exact shapes
+>    Atrium expects — the `BoardSource` interface, the ticket/wave/state types in
+>    `extension/src/board.ts` and `extension/webview/types.ts`, and how the demo
+>    snapshot `extension/src/atrium-board.json` is structured.
+> 2. Create a sibling adapter (e.g. `extension/src/jira-source.ts` +
+>    `extension/src/jira-writes.ts`) implementing the **same** interfaces against
+>    the new tracker's API. Map the new tracker's concepts onto Atrium's:
+>    issues → tickets, a label/sprint/field → waves, workflow states → board
+>    columns. Keep the snapshot fallback so the demo board still works with no
+>    API key.
+> 3. Wire the new adapter in wherever `linear-source` is currently selected, and
+>    move the API-key / project settings in `extension/package.json`'s
+>    `contributes.configuration` to the new tracker (keep the names generic, e.g.
+>    `atrium.tracker.apiKey`).
+> 4. Mirror the existing test files (`*.test.ts`) for your adapter and keep
+>    `bun run typecheck && bun test` green. Update `extension/SETUP.md` and the
+>    "Connect your own board" section of the root `README.md` to describe the new
+>    tracker.
+>
+> Do not change the cockpit UI or the board model — the whole point of the seam
+> is that only the source/writes layer is tracker-specific.
 
 ## License
 
