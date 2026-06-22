@@ -40,7 +40,7 @@ automatically. Full setup detail: [SETUP.md](SETUP.md).
 ```bash
 cd extension
 bun install
-bun run typecheck && bun run test   # host + webview, 160 tests
+bun run typecheck && bun run test   # host + webview, 197 tests
 bun run build                       # Vite (webview) + esbuild (host)
 bunx @vscode/vsce package           # produces the .vsix
 ```

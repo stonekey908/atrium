@@ -58,8 +58,7 @@ does useful work when a live API key is set.
   extension, and nothing secret is committed.
 - Live mode currently brings waves, tickets, priorities, states, and acceptance
   criteria. Per-ticket **activity timelines** still come from the snapshot only
-  (live activity is a follow-up); the Tests tab shows "not discovered yet" until
-  test discovery lands.
+  (live activity is a follow-up).
 
 ## Linking PRDs + mockups to waves (optional)
 

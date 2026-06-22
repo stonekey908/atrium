@@ -39,16 +39,8 @@ tracker** — it never tries to replace it.
 
 ## Install
 
-**Option A — grab a packaged build.** Download the `.vsix` from the
-[latest release](../../releases/latest), then:
-
-```bash
-code --install-extension atrium-cockpit-<version>.vsix
-```
-
-(or in VS Code: Extensions panel → `···` menu → **Install from VSIX…**)
-
-**Option B — build it yourself** (always current with `main`):
+**Build it yourself** (works today, always current with `main`). You'll need
+[Bun](https://bun.sh) installed:
 
 ```bash
 cd extension
@@ -57,6 +49,11 @@ bun run build
 bunx @vscode/vsce package          # produces atrium-cockpit-<version>.vsix
 code --install-extension atrium-cockpit-*.vsix
 ```
+
+Once a tagged release is published, you'll also be able to grab a prebuilt
+`.vsix` from the [latest release](../../releases/latest) and skip the build —
+download it, then `code --install-extension atrium-cockpit-<version>.vsix` (or in
+VS Code: Extensions panel → `···` menu → **Install from VSIX…**).
 
 Then reload the window. The cockpit opens as an editor tab — or click the Atrium
 icon in the Activity Bar, the `$(rocket) Atrium` status-bar button, or press
