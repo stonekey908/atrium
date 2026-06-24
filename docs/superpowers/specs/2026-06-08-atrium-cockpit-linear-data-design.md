@@ -72,7 +72,7 @@ extension/webview/Cockpit.tsx (React)  ← renders rollup, active work, waves,
         {
           "id": "STO-2095",
           "title": "AppShell — folder canvas + rails",
-          "url": "https://linear.app/stonekey/issue/STO-2095",
+          "url": "https://linear.app/x/issue/STO-2095",
           "priority": "high",
           "state": "done",               // todo | doing | done
           "spec": ["...acceptance criteria from description..."],

@@ -24,7 +24,7 @@ const PAYLOAD: InitPayload = {
         {
           id: "STO-2468",
           title: "Read-only sprint kanban",
-          url: "https://linear.app/stonekey/issue/STO-2468",
+          url: "https://linear.app/x/issue/STO-2468",
           priority: "high",
           state: "doing",
           spec: ["Spotlight current sprint"],
@@ -43,7 +43,7 @@ const PAYLOAD: InitPayload = {
         {
           id: "STO-2164",
           title: "Conversation strip — stream-json renderer",
-          url: "https://linear.app/stonekey/issue/STO-2164",
+          url: "https://linear.app/x/issue/STO-2164",
           priority: "urgent",
           state: "todo",
           description: "Renders **streaming** assistant text.\n\n- Tool calls as collapsible cards",
@@ -138,7 +138,7 @@ describe("Atrium cockpit webview", () => {
     fireEvent.click(screen.getByRole("button", { name: /open STO-2164 in Linear/i }));
     expect(postMessage).toHaveBeenCalledWith({
       type: "openLinear",
-      url: "https://linear.app/stonekey/issue/STO-2164",
+      url: "https://linear.app/x/issue/STO-2164",
     });
   });
 
@@ -400,7 +400,7 @@ describe("Atrium cockpit webview", () => {
     fireEvent.click(screen.getByRole("button", { name: /open STO-2468 in Linear/i }));
     expect(postMessage).toHaveBeenCalledWith({
       type: "openLinear",
-      url: "https://linear.app/stonekey/issue/STO-2468",
+      url: "https://linear.app/x/issue/STO-2468",
     });
   });
 

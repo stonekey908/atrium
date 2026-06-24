@@ -111,7 +111,7 @@ host, built with Bun + Vite + esbuild):
 ```bash
 cd extension
 bun install
-bun run typecheck && bun test   # 197 tests
+bun run typecheck && bun run test   # 197 tests
 bun run build
 bunx @vscode/vsce package       # produces the .vsix
 ```
@@ -147,7 +147,7 @@ build the adapter:
 >    `contributes.configuration` to the new tracker (keep the names generic, e.g.
 >    `atrium.tracker.apiKey`).
 > 4. Mirror the existing test files (`*.test.ts`) for your adapter and keep
->    `bun run typecheck && bun test` green. Update `extension/SETUP.md` and the
+>    `bun run typecheck && bun run test` green. Update `extension/SETUP.md` and the
 >    "Connect your own board" section of the root `README.md` to describe the new
 >    tracker.
 >

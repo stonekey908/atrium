@@ -62,7 +62,7 @@ const GOOD = {
         {
           id: "STO-2095",
           title: "AppShell — folder canvas + rails",
-          url: "https://linear.app/stonekey/issue/STO-2095",
+          url: "https://linear.app/x/issue/STO-2095",
           priority: "high",
           state: "done",
           spec: ["280px file-tree rail + folder page"],
@@ -292,7 +292,7 @@ describe("boardFromIssues", () => {
 
 import { parsePrefixes, makeWaveLabelMatcher } from "./board";
 
-/** Real labels from the Stonekey workspace — the corpus the heuristic must hold against. */
+/** Representative labels for the wave-detection corpus — what the heuristic must hold against. */
 const CORPUS = {
   sprintish: [
     "CG Phase 3",
