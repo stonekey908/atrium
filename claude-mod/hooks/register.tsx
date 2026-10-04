@@ -8,7 +8,7 @@
  * no API key lives here. Writes (status changes) go the same way.
  */
 import { atom, read, update } from "claude-code";
-import type { EngineInterface, PluginOptions, Register } from "claude-code";
+import type { EngineInterface, PluginOptions, Register, RenderElement, RenderInputOf, RenderSurface } from "claude-code";
 
 import type { AtriumBoard, AtriumFileRef, AtriumFullStatus, AtriumTicket, AtriumView, AtriumWave, AtriumWaveFiles } from "../types";
 import {
@@ -110,6 +110,28 @@ let inflight: Promise<void> | null = null;
 let interactive = false;
 /** The no-project question is asked at most once per session. */
 let asked = false;
+
+/** What `/atrium debug` reports and `.debug.log` beside the mod records: the last open, draw and failure. */
+const diag = { opens: [] as string[], renders: 0, lastRender: null as string | null, lastError: null as string | null };
+
+async function writeDiag($: EngineInterface, extra: string[] = []): Promise<string> {
+  const lines = [
+    `time ${new Date().toISOString()}`,
+    `surfaces ${JSON.stringify(await $.session.surfaces().catch(() => "unavailable"))}`,
+    `panes ${JSON.stringify(await $.ui.panes().catch(() => "unavailable"))}`,
+    `load ${JSON.stringify(await read($, load))}`,
+    `project ${JSON.stringify(await read($, project))}`,
+    `tools ${JSON.stringify(tools)}`,
+    `opens ${JSON.stringify(diag.opens.slice(-5))}`,
+    `renders ${diag.renders}`,
+    `lastRender ${diag.lastRender ?? "-"}`,
+    `lastError ${diag.lastError ?? "-"}`,
+    ...extra,
+  ];
+  const text = lines.join("\n");
+  await $.fs.write(`${$.plugin.root}/.debug.log`, `${text}\n`).catch(() => undefined);
+  return text;
+}
 
 const NOT_NOW = "Not now";
 const createLabel = (name: string) => `Create "${name}"`;
@@ -312,6 +334,7 @@ async function openDoc($: EngineInterface, path: string): Promise<void> {
 
 async function openPane($: EngineInterface, focus: boolean): Promise<{ isPlaced: boolean; reason: string | null }> {
   const r = await $.ui.open(focus ? { id: PANE, title: TITLE, focus: true } : { id: PANE, title: TITLE });
+  diag.opens.push(r.isPlaced ? "placed" : `not placed: ${r.reason}`);
   return r.isPlaced ? { isPlaced: true, reason: null } : { isPlaced: false, reason: r.reason };
 }
 
@@ -329,6 +352,307 @@ async function openOrText($: EngineInterface, opened: string): Promise<{ text: s
   const placed = await openPane($, true);
   if (placed.isPlaced) return { text: opened };
   return { text: await textFallback($, `Atrium: this view places no pane (${placed.reason}). Here is the board as text; /atrium text prints it any time.`) };
+}
+
+/** The pane's tree. Throws are caught by the render hook, which draws the error instead of losing the pane. */
+async function drawPane($: EngineInterface, e: RenderInputOf<"Pane", RenderSurface>): Promise<RenderElement> {
+  const { Box, Text, Button, Link, Markdown } = $.ui.resolve(e);
+  const width = e.props.bodyColumns;
+  const narrow = width < 70;
+
+  const [b, state, current, which, sel, known, allFiles, prdPath, open, names, chosen, doneShown, busy] = await Promise.all([
+    read($, board),
+    read($, load),
+    read($, view),
+    read($, waveSel),
+    read($, selected),
+    read($, descriptions),
+    read($, files),
+    read($, buildPrd),
+    read($, doc),
+    read($, projects),
+    read($, project),
+    read($, showDone),
+    read($, syncing),
+  ]);
+  const gitBranch = await read($, branch);
+
+  const tab = (v: AtriumView, label: string, hotkey: string) => (
+    <Button key={`view:${v}`} label={current === v ? `[${label}]` : label} hotkey={hotkey} plain onPress={() => update($, view, () => v)} />
+  );
+
+  const header = (
+    <Box flexDirection="row" gap={1} justifyContent="space-between">
+      <Box flexDirection="row" gap={1}>
+        <Text bold>Atrium</Text>
+        <Text dimColor wrap="truncate-end">
+          {b ? `· ${b.project}` : chosen ? `· ${chosen}` : ""}
+        </Text>
+      </Box>
+      <Box flexDirection="row" gap={1}>
+        {tab("board", "Board", "b")}
+        {tab("prd", "PRD", "p")}
+        {tab("design", "Design", "d")}
+        <Button key="refresh" label={state.phase === "loading" ? "…" : "↻"} hotkey="r" plain onPress={() => loadBoard($)} />
+      </Box>
+    </Box>
+  );
+
+  const status = (() => {
+    if (state.phase === "loading" && !b) return <Text dimColor>Pulling the board from Linear…</Text>;
+    if (state.phase === "error") return <Text color="red" wrap="wrap">{state.message}</Text>;
+    if (state.phase === "idle" && !b) return <Text dimColor>Not loaded yet. Press ↻ or run /atrium refresh.</Text>;
+    return null;
+  })();
+
+  // No project matched: the picker.
+  const folder = basename(root);
+  const picker =
+    !b && !chosen && state.phase !== "loading" && tools ? (
+      <Box flexDirection="column" marginTop={1}>
+        <Button key="proj:create" label={`Create a Linear project named "${folder}"`} variant="primary" onPress={() => createProjectFor($, folder)} />
+        {names.length > 0 && <Text dimColor>…or pick the project this repo belongs to:</Text>}
+        {names.slice(0, 30).map((name) => (
+          <Button
+            key={`proj:${name}`}
+            label={name}
+            plain
+            onPress={async () => {
+              await update($, project, () => name);
+              if (root) await $.store.set(`project:${root}`, name);
+              await loadBoard($);
+            }}
+          />
+        ))}
+      </Box>
+    ) : null;
+
+  // Working-on strip.
+  const active = b ? resolveActiveTicket(b.waves, gitBranch) : null;
+  const strip = b ? (
+    <Box flexDirection="column" marginTop={1}>
+      {active ? (
+        <Box flexDirection="row" gap={1}>
+          <Text bold color="green">▶</Text>
+          <Text bold>{active.id}</Text>
+          <Text wrap="truncate-end">{active.title}</Text>
+          <Text dimColor>· {active.status}</Text>
+          {!narrow && <Link href={active.url} label="open ↗" />}
+        </Box>
+      ) : (
+        <Text dimColor wrap="truncate-end">
+          ▷ No ticket matches {gitBranch ? `branch ${gitBranch}` : "the current branch"}.
+        </Text>
+      )}
+    </Box>
+  ) : null;
+
+  const waves = b?.waves ?? [];
+  const sprint = b ? currentSprint(waves, which) : null;
+  const pinned = which ? waves.find((w) => w.name === which) : undefined;
+  const shown: AtriumWave | null = sprint ?? pinned ?? waves[0] ?? null;
+  const shownIdx = shown ? waves.indexOf(shown) : -1;
+  const stepWave = (delta: number) => {
+    const next = waves[shownIdx + delta];
+    if (next) void update($, waveSel, () => next.name);
+  };
+
+  const waveHeader = shown ? (
+    <Box flexDirection="row" gap={1} marginTop={1} justifyContent="space-between">
+      <Box flexDirection="row" gap={1}>
+        <Text bold wrap="truncate-end">{shown.name}</Text>
+        {(() => {
+          const r = computeRollup(shown.tickets);
+          return (
+            <Text dimColor>
+              {shown.stage ? `${shown.stage} · ` : ""}
+              {r.done}/{r.total} done{r.doing + r.review > 0 ? ` · ${r.doing + r.review} active` : ""}
+            </Text>
+          );
+        })()}
+        {sprint && shown === currentSprint(waves) && <Text color="cyan">← current</Text>}
+      </Box>
+      <Box flexDirection="row" gap={1}>
+        <Button key="wave:prev" label="◂" hotkey="k" plain dimColor={shownIdx <= 0} onPress={() => stepWave(-1)} />
+        <Text dimColor>
+          {shownIdx + 1}/{waves.length}
+        </Text>
+        <Button key="wave:next" label="▸" hotkey="j" plain dimColor={shownIdx >= waves.length - 1} onPress={() => stepWave(1)} />
+      </Box>
+    </Box>
+  ) : null;
+
+  const ticketRow = (t: AtriumTicket) => {
+    const isSel = sel === t.id;
+    const mark = t.priority === "urgent" ? "‼" : t.priority === "high" ? "!" : " ";
+    const label = `${isSel ? "▾" : "▸"} ${t.id}  ${t.title}`;
+    return (
+      <Box key={`row:${t.id}`} flexDirection="column">
+        <Box flexDirection="row" gap={1}>
+          <Text color={t.priority === "urgent" ? "red" : t.priority === "high" ? "yellow" : undefined}>{mark}</Text>
+          <Button
+            key={`t:${t.id}`}
+            label={label.length > width - 6 ? `${label.slice(0, Math.max(10, width - 9))}…` : label}
+            plain
+            onPress={async () => {
+              const now = (await read($, selected)) === t.id ? null : t.id;
+              await update($, selected, () => now);
+              if (now) await ensureDescription($, now);
+            }}
+          />
+        </Box>
+        {isSel && ticketDetail(t)}
+      </Box>
+    );
+  };
+
+  const ticketDetail = (t: AtriumTicket) => {
+    const text = (known[t.id] ?? t.description ?? "").trim();
+    const next = nextStatus(t.status);
+    return (
+      <Box flexDirection="column" marginLeft={4} marginBottom={1}>
+        <Box flexDirection="row" gap={1} flexWrap="wrap">
+          <Text dimColor>{t.status} · {t.priority}</Text>
+          <Link href={t.url} label="open in Linear ↗" />
+          {busy === t.id && <Text color="yellow">syncing…</Text>}
+        </Box>
+        <Box flexDirection="row" gap={1} flexWrap="wrap">
+          {next && (
+            <Button key={`s:${t.id}:next`} label={`→ ${next}`} variant="primary" onPress={() => moveTicket($, t.id, next)} />
+          )}
+          {STATUS_PICKS.filter((s) => s !== t.status && s !== next).map((s) => (
+            <Button key={`s:${t.id}:${s}`} label={s} plain dimColor onPress={() => moveTicket($, t.id, s)} />
+          ))}
+        </Box>
+        {text ? <Markdown text={truncate(text, 4000)} /> : <Text dimColor>No description.</Text>}
+        {t.branch && <Text dimColor wrap="truncate-end">branch: {t.branch}</Text>}
+      </Box>
+    );
+  };
+
+  const boardView = shown ? (
+    <Box flexDirection="column">
+      {waveHeader}
+      {groupByState(shown).map(({ state: s, tickets }) => {
+        if (tickets.length === 0) return null;
+        const collapsed = s === "done" && !doneShown;
+        const glyph = s === "doing" ? "●" : s === "review" ? "◐" : s === "todo" ? "○" : "✓";
+        return (
+          <Box key={`g:${s}`} flexDirection="column" marginTop={1}>
+            <Box flexDirection="row" gap={1}>
+              <Text bold dimColor={s === "done"}>
+                {glyph} {STATE_LABEL[s]} ({tickets.length})
+              </Text>
+              {s === "done" && (
+                <Button key="done:toggle" label={collapsed ? "show" : "hide"} plain dimColor onPress={() => update($, showDone, (v) => !v)} />
+              )}
+            </Box>
+            {!collapsed && tickets.map(ticketRow)}
+          </Box>
+        );
+      })}
+      {activeTickets(shown.tickets).length === 0 && <Text dimColor>No active tickets in this wave.</Text>}
+      {waves.length > 1 && (
+        <Box marginTop={1}>
+          <Text dimColor wrap="wrap">
+            {waves
+              .filter((w) => w !== shown)
+              .map((w) => {
+                const r = computeRollup(w.tickets);
+                return `${w.name.split(" · ")[0]} ${r.done}/${r.total}`;
+              })
+              .join(" · ")}
+          </Text>
+        </Box>
+      )}
+    </Box>
+  ) : b ? (
+    <Box flexDirection="column" marginTop={1}>
+      <Text dimColor wrap="wrap">{'No tickets with a sprint label yet. Label tickets "Wave 1 · <theme>" (or any sprint-ish label) and they appear here.'}</Text>
+      <Button
+        key="plan"
+        label="Plan the first wave with Claude"
+        variant="primary"
+        onPress={() =>
+          $.prompt.submit({
+            text: `Plan the first wave of work for this repository as tickets in the Linear project "${b.project}", following the project conventions in your instructions: one sprint label "Wave 1 · <theme>" on every ticket, a short one-line description on the label, and a docs/waves/wave-1.md PRD in the repo. Propose the tickets to me before creating them.`,
+          })
+        }
+      />
+    </Box>
+  ) : null;
+
+  const fileButton = (f: AtriumFileRef, prefix: string) => (
+    <Button
+      key={`doc:${f.path}`}
+      label={`${open?.path === f.path ? "▾" : "▸"} ${prefix}${f.name}`}
+      plain
+      onPress={() => (open?.path === f.path ? update($, doc, () => null) : openDoc($, f.path))}
+    />
+  );
+
+  const prdView = b ? (
+    <Box flexDirection="column" marginTop={1}>
+      {prdPath && (
+        <Box flexDirection="column">
+          <Text bold>Build PRD</Text>
+          {fileButton({ name: "docs/PRD.md", path: prdPath, kind: "md" }, "")}
+        </Box>
+      )}
+      {waveHeader}
+      {(() => {
+        const wf = shown ? allFiles[shown.name] : undefined;
+        const list = wf ? [...(wf.prd ? [wf.prd] : []), ...wf.docs] : [];
+        if (!shown) return null;
+        if (list.length === 0) {
+          const n = shown.label || shown.name;
+          return <Text dimColor wrap="wrap">No PRD for this wave. Convention: docs/waves/wave-{n.match(/\d+(\.\d+)?/)?.[0] ?? "<n>"}.md (or map it in .atrium/waves.json).</Text>;
+        }
+        return list.map((f) => fileButton(f, f === wf?.prd ? "PRD · " : "doc · "));
+      })()}
+      {open && (
+        <Box flexDirection="column" marginTop={1} borderStyle="round" paddingX={1}>
+          <Text dimColor wrap="truncate-start">{open.path}</Text>
+          <Markdown text={truncate(open.text, MARKDOWN_MAX)} />
+        </Box>
+      )}
+    </Box>
+  ) : null;
+
+  const designView = b ? (
+    <Box flexDirection="column" marginTop={1}>
+      {waveHeader}
+      {(() => {
+        const wf = shown ? allFiles[shown.name] : undefined;
+        if (!shown) return null;
+        if (!wf || wf.mockups.length === 0) {
+          return <Text dimColor wrap="wrap">No mockups for this wave. Convention: wave-{"<n>"}-{"<name>"}.html or .png in files/, docs/, mockups/ or design/.</Text>;
+        }
+        return (
+          <Box flexDirection="column">
+            <Text dimColor wrap="wrap">The terminal can't render HTML or images — these open in your browser (ctrl/cmd-click).</Text>
+            {wf.mockups.map((m) => (
+              <Box key={`m:${m.path}`} flexDirection="row" gap={1}>
+                <Text dimColor>{m.kind === "html" ? "⌗" : m.kind === "image" ? "▣" : "✎"}</Text>
+                <Link href={fileHref(m.path)} label={m.name} />
+                {!narrow && <Text dimColor wrap="truncate-start">{m.path.startsWith(root) ? m.path.slice(root.length + 1) : m.path}</Text>}
+              </Box>
+            ))}
+          </Box>
+        );
+      })()}
+    </Box>
+  ) : null;
+
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      {header}
+      {status}
+      {picker}
+      {strip}
+      {current === "board" ? boardView : current === "prd" ? prdView : designView}
+    </Box>
+  );
 }
 
 export const register: Register = (on, options) => {
@@ -379,6 +703,8 @@ export const register: Register = (on, options) => {
       }
       case "text":
         return { text: await textFallback($, null) };
+      case "debug":
+        return { text: await writeDiag($) };
       case "board":
       case "prd":
       case "design":
@@ -431,301 +757,29 @@ export const register: Register = (on, options) => {
   // ── The pane ───────────────────────────────────────────────────────────────
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
-    const { Box, Text, Button, Link, Markdown } = $.ui.resolve(e);
-    const width = e.props.bodyColumns;
-    const narrow = width < 70;
-
-    const [b, state, current, which, sel, known, allFiles, prdPath, open, names, chosen, doneShown, busy] = await Promise.all([
-      read($, board),
-      read($, load),
-      read($, view),
-      read($, waveSel),
-      read($, selected),
-      read($, descriptions),
-      read($, files),
-      read($, buildPrd),
-      read($, doc),
-      read($, projects),
-      read($, project),
-      read($, showDone),
-      read($, syncing),
-    ]);
-    const gitBranch = await read($, branch);
-
-    const tab = (v: AtriumView, label: string, hotkey: string) => (
-      <Button key={`view:${v}`} label={current === v ? `[${label}]` : label} hotkey={hotkey} plain onPress={() => update($, view, () => v)} />
-    );
-
-    const header = (
-      <Box flexDirection="row" gap={1} justifyContent="space-between">
-        <Box flexDirection="row" gap={1}>
-          <Text bold>Atrium</Text>
-          <Text dimColor wrap="truncate-end">
-            {b ? `· ${b.project}` : chosen ? `· ${chosen}` : ""}
-          </Text>
-        </Box>
-        <Box flexDirection="row" gap={1}>
-          {tab("board", "Board", "b")}
-          {tab("prd", "PRD", "p")}
-          {tab("design", "Design", "d")}
-          <Button key="refresh" label={state.phase === "loading" ? "…" : "↻"} hotkey="r" plain onPress={() => loadBoard($)} />
-        </Box>
-      </Box>
-    );
-
-    const status = (() => {
-      if (state.phase === "loading" && !b) return <Text dimColor>Pulling the board from Linear…</Text>;
-      if (state.phase === "error") return <Text color="red" wrap="wrap">{state.message}</Text>;
-      if (state.phase === "idle" && !b) return <Text dimColor>Not loaded yet. Press ↻ or run /atrium refresh.</Text>;
-      return null;
-    })();
-
-    // No project matched: the picker.
-    const folder = basename(root);
-    const picker =
-      !b && !chosen && state.phase !== "loading" && tools ? (
-        <Box flexDirection="column" marginTop={1}>
-          <Button key="proj:create" label={`Create a Linear project named "${folder}"`} variant="primary" onPress={() => createProjectFor($, folder)} />
-          {names.length > 0 && <Text dimColor>…or pick the project this repo belongs to:</Text>}
-          {names.slice(0, 30).map((name) => (
-            <Button
-              key={`proj:${name}`}
-              label={name}
-              plain
-              onPress={async () => {
-                await update($, project, () => name);
-                if (root) await $.store.set(`project:${root}`, name);
-                await loadBoard($);
-              }}
-            />
-          ))}
-        </Box>
-      ) : null;
-
-    // Working-on strip.
-    const active = b ? resolveActiveTicket(b.waves, gitBranch) : null;
-    const strip = b ? (
-      <Box flexDirection="column" marginTop={1}>
-        {active ? (
-          <Box flexDirection="row" gap={1}>
-            <Text bold color="green">▶</Text>
-            <Text bold>{active.id}</Text>
-            <Text wrap="truncate-end">{active.title}</Text>
-            <Text dimColor>· {active.status}</Text>
-            {!narrow && <Link href={active.url} label="open ↗" />}
-          </Box>
-        ) : (
-          <Text dimColor wrap="truncate-end">
-            ▷ No ticket matches {gitBranch ? `branch ${gitBranch}` : "the current branch"}.
-          </Text>
-        )}
-      </Box>
-    ) : null;
-
-    const waves = b?.waves ?? [];
-    const sprint = b ? currentSprint(waves, which) : null;
-    const pinned = which ? waves.find((w) => w.name === which) : undefined;
-    const shown: AtriumWave | null = sprint ?? pinned ?? waves[0] ?? null;
-    const shownIdx = shown ? waves.indexOf(shown) : -1;
-    const stepWave = (delta: number) => {
-      const next = waves[shownIdx + delta];
-      if (next) void update($, waveSel, () => next.name);
-    };
-
-    const waveHeader = shown ? (
-      <Box flexDirection="row" gap={1} marginTop={1} justifyContent="space-between">
-        <Box flexDirection="row" gap={1}>
-          <Text bold wrap="truncate-end">{shown.name}</Text>
-          {(() => {
-            const r = computeRollup(shown.tickets);
-            return (
-              <Text dimColor>
-                {shown.stage ? `${shown.stage} · ` : ""}
-                {r.done}/{r.total} done{r.doing + r.review > 0 ? ` · ${r.doing + r.review} active` : ""}
-              </Text>
-            );
-          })()}
-          {sprint && shown === currentSprint(waves) && <Text color="cyan">← current</Text>}
-        </Box>
-        <Box flexDirection="row" gap={1}>
-          <Button key="wave:prev" label="◂" hotkey="k" plain dimColor={shownIdx <= 0} onPress={() => stepWave(-1)} />
-          <Text dimColor>
-            {shownIdx + 1}/{waves.length}
-          </Text>
-          <Button key="wave:next" label="▸" hotkey="j" plain dimColor={shownIdx >= waves.length - 1} onPress={() => stepWave(1)} />
-        </Box>
-      </Box>
-    ) : null;
-
-    const ticketRow = (t: AtriumTicket) => {
-      const isSel = sel === t.id;
-      const mark = t.priority === "urgent" ? "‼" : t.priority === "high" ? "!" : " ";
-      const label = `${isSel ? "▾" : "▸"} ${t.id}  ${t.title}`;
+    try {
+      const tree = await drawPane($, e);
+      diag.renders += 1;
+      diag.lastRender = `${e.surface} ${e.props.placement} ${e.props.bodyColumns}cols ok`;
+      return tree;
+    } catch (err) {
+      diag.lastError = `render threw: ${message(err)}`;
+      void writeDiag($);
+      const { Box, Text } = $.ui.resolve(e);
       return (
-        <Box key={`row:${t.id}`} flexDirection="column">
-          <Box flexDirection="row" gap={1}>
-            <Text color={t.priority === "urgent" ? "red" : t.priority === "high" ? "yellow" : undefined}>{mark}</Text>
-            <Button
-              key={`t:${t.id}`}
-              label={label.length > width - 6 ? `${label.slice(0, Math.max(10, width - 9))}…` : label}
-              plain
-              onPress={async () => {
-                const now = (await read($, selected)) === t.id ? null : t.id;
-                await update($, selected, () => now);
-                if (now) await ensureDescription($, now);
-              }}
-            />
-          </Box>
-          {isSel && ticketDetail(t)}
+        <Box flexDirection="column" paddingX={1}>
+          <Text color="red" wrap="wrap">Atrium pane failed to draw: {message(err)}</Text>
+          <Text dimColor>Run /atrium debug for details, or /atrium text for the board as text.</Text>
         </Box>
       );
-    };
-
-    const ticketDetail = (t: AtriumTicket) => {
-      const text = (known[t.id] ?? t.description ?? "").trim();
-      const next = nextStatus(t.status);
-      return (
-        <Box flexDirection="column" marginLeft={4} marginBottom={1}>
-          <Box flexDirection="row" gap={1} flexWrap="wrap">
-            <Text dimColor>{t.status} · {t.priority}</Text>
-            <Link href={t.url} label="open in Linear ↗" />
-            {busy === t.id && <Text color="yellow">syncing…</Text>}
-          </Box>
-          <Box flexDirection="row" gap={1} flexWrap="wrap">
-            {next && (
-              <Button key={`s:${t.id}:next`} label={`→ ${next}`} variant="primary" onPress={() => moveTicket($, t.id, next)} />
-            )}
-            {STATUS_PICKS.filter((s) => s !== t.status && s !== next).map((s) => (
-              <Button key={`s:${t.id}:${s}`} label={s} plain dimColor onPress={() => moveTicket($, t.id, s)} />
-            ))}
-          </Box>
-          {text ? <Markdown text={truncate(text, 4000)} /> : <Text dimColor>No description.</Text>}
-          {t.branch && <Text dimColor wrap="truncate-end">branch: {t.branch}</Text>}
-        </Box>
-      );
-    };
-
-    const boardView = shown ? (
-      <Box flexDirection="column">
-        {waveHeader}
-        {groupByState(shown).map(({ state: s, tickets }) => {
-          if (tickets.length === 0) return null;
-          const collapsed = s === "done" && !doneShown;
-          const glyph = s === "doing" ? "●" : s === "review" ? "◐" : s === "todo" ? "○" : "✓";
-          return (
-            <Box key={`g:${s}`} flexDirection="column" marginTop={1}>
-              <Box flexDirection="row" gap={1}>
-                <Text bold dimColor={s === "done"}>
-                  {glyph} {STATE_LABEL[s]} ({tickets.length})
-                </Text>
-                {s === "done" && (
-                  <Button key="done:toggle" label={collapsed ? "show" : "hide"} plain dimColor onPress={() => update($, showDone, (v) => !v)} />
-                )}
-              </Box>
-              {!collapsed && tickets.map(ticketRow)}
-            </Box>
-          );
-        })}
-        {activeTickets(shown.tickets).length === 0 && <Text dimColor>No active tickets in this wave.</Text>}
-        {waves.length > 1 && (
-          <Box marginTop={1}>
-            <Text dimColor wrap="wrap">
-              {waves
-                .filter((w) => w !== shown)
-                .map((w) => {
-                  const r = computeRollup(w.tickets);
-                  return `${w.name.split(" · ")[0]} ${r.done}/${r.total}`;
-                })
-                .join(" · ")}
-            </Text>
-          </Box>
-        )}
-      </Box>
-    ) : b ? (
-      <Box flexDirection="column" marginTop={1}>
-        <Text dimColor wrap="wrap">{'No tickets with a sprint label yet. Label tickets "Wave 1 · <theme>" (or any sprint-ish label) and they appear here.'}</Text>
-        <Button
-          key="plan"
-          label="Plan the first wave with Claude"
-          variant="primary"
-          onPress={() =>
-            $.prompt.submit({
-              text: `Plan the first wave of work for this repository as tickets in the Linear project "${b.project}", following the project conventions in your instructions: one sprint label "Wave 1 · <theme>" on every ticket, a short one-line description on the label, and a docs/waves/wave-1.md PRD in the repo. Propose the tickets to me before creating them.`,
-            })
-          }
-        />
-      </Box>
-    ) : null;
-
-    const fileButton = (f: AtriumFileRef, prefix: string) => (
-      <Button
-        key={`doc:${f.path}`}
-        label={`${open?.path === f.path ? "▾" : "▸"} ${prefix}${f.name}`}
-        plain
-        onPress={() => (open?.path === f.path ? update($, doc, () => null) : openDoc($, f.path))}
-      />
-    );
-
-    const prdView = b ? (
-      <Box flexDirection="column" marginTop={1}>
-        {prdPath && (
-          <Box flexDirection="column">
-            <Text bold>Build PRD</Text>
-            {fileButton({ name: "docs/PRD.md", path: prdPath, kind: "md" }, "")}
-          </Box>
-        )}
-        {waveHeader}
-        {(() => {
-          const wf = shown ? allFiles[shown.name] : undefined;
-          const list = wf ? [...(wf.prd ? [wf.prd] : []), ...wf.docs] : [];
-          if (!shown) return null;
-          if (list.length === 0) {
-            const n = shown.label || shown.name;
-            return <Text dimColor wrap="wrap">No PRD for this wave. Convention: docs/waves/wave-{n.match(/\d+(\.\d+)?/)?.[0] ?? "<n>"}.md (or map it in .atrium/waves.json).</Text>;
-          }
-          return list.map((f) => fileButton(f, f === wf?.prd ? "PRD · " : "doc · "));
-        })()}
-        {open && (
-          <Box flexDirection="column" marginTop={1} borderStyle="round" paddingX={1}>
-            <Text dimColor wrap="truncate-start">{open.path}</Text>
-            <Markdown text={truncate(open.text, MARKDOWN_MAX)} />
-          </Box>
-        )}
-      </Box>
-    ) : null;
-
-    const designView = b ? (
-      <Box flexDirection="column" marginTop={1}>
-        {waveHeader}
-        {(() => {
-          const wf = shown ? allFiles[shown.name] : undefined;
-          if (!shown) return null;
-          if (!wf || wf.mockups.length === 0) {
-            return <Text dimColor wrap="wrap">No mockups for this wave. Convention: wave-{"<n>"}-{"<name>"}.html or .png in files/, docs/, mockups/ or design/.</Text>;
-          }
-          return (
-            <Box flexDirection="column">
-              <Text dimColor wrap="wrap">The terminal can't render HTML or images — these open in your browser (ctrl/cmd-click).</Text>
-              {wf.mockups.map((m) => (
-                <Box key={`m:${m.path}`} flexDirection="row" gap={1}>
-                  <Text dimColor>{m.kind === "html" ? "⌗" : m.kind === "image" ? "▣" : "✎"}</Text>
-                  <Link href={fileHref(m.path)} label={m.name} />
-                  {!narrow && <Text dimColor wrap="truncate-start">{m.path.startsWith(root) ? m.path.slice(root.length + 1) : m.path}</Text>}
-                </Box>
-              ))}
-            </Box>
-          );
-        })()}
-      </Box>
-    ) : null;
-
+    }
+  }).catch(($, e, next) => {
+    diag.lastError = `render ${next.error?.kind ?? "failed"}: ${next.error?.message ?? "-"}`;
+    void writeDiag($);
+    const { Box, Text } = $.ui.resolve(e);
     return (
-      <Box flexDirection="column" paddingX={1}>
-        {header}
-        {status}
-        {picker}
-        {strip}
-        {current === "board" ? boardView : current === "prd" ? prdView : designView}
+      <Box paddingX={1}>
+        <Text color="red">Atrium pane timed out while drawing. /atrium debug has details.</Text>
       </Box>
     );
   });

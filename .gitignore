@@ -31,3 +31,4 @@ CLAUDE.md
 
 # Type declarations the Claude Code engine lays beside the mod when it loads
 claude-mod/.claude-plugin/types/
+claude-mod/.debug.log
