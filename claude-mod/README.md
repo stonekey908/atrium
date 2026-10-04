@@ -36,8 +36,8 @@ well), live HTML mockup previews (no iframes in a terminal), and editable PRDs
 
 ## Install
 
-Panes draw in a terminal, in the desktop app's local sessions, in VS Code and
-in the mobile app. A **cloud session viewed from the app has no drawing
+Panes draw where the app attaches a drawing surface: a terminal, the desktop
+app's local sessions, VS Code. A **cloud session viewed from the app has no drawing
 surface**, so there `/atrium` prints the board as text in the transcript
 instead (the same output as `/atrium text`).
 
@@ -45,17 +45,25 @@ You need Claude Code 2.1.289 or newer and the **Linear** connector connected
 (the mod looks for tools named `mcp__<server>__list_issues`; any server whose
 name mentions "linear" is found automatically).
 
-Run a session with the folder as a plugin:
+**Install it once, use it everywhere.** The repo is a plugin marketplace. From a
+local clone (the mod is on the `claude/claude-mod-atrium-w9bek7` branch until it
+is merged):
 
 ```bash
-claude --plugin-dir /path/to/atrium/claude-mod
+git clone https://github.com/stonekey908/atrium && cd atrium
+git checkout claude/claude-mod-atrium-w9bek7        # until merged to main
+claude plugin marketplace add "$PWD"
+claude plugin install atrium@atrium-mods
 ```
 
-Or keep it on permanently:
+Installed plugins live in your user config, so the terminal CLI, local sessions
+in the desktop app and the VS Code extension all pick it up; `/atrium` is then
+in the typeahead in each. The marketplace reads the mod from your clone, so
+edits there show up after `/reload-plugins`. Once the mod is on `main` the
+clone is unnecessary: `claude plugin marketplace add stonekey908/atrium`.
 
-```bash
-export CLAUDE_CODE_PLUGIN_DIRS=/path/to/atrium/claude-mod
-```
+To try it for one session without installing, use
+`claude --plugin-dir ./claude-mod` instead.
 
 Then `/atrium` opens the pane. With no configuration it auto-detects the Linear
 project whose name matches your repo folder. If none does, it asks you once

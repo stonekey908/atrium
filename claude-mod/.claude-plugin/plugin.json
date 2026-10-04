@@ -2,6 +2,9 @@
   "name": "atrium",
   "version": "0.1.0",
   "description": "Atrium cockpit as a Claude Code pane: your Linear sprint, the ticket you're on, wave PRDs and mockup links \u2014 read through the Linear MCP connector, with the project conventions briefed to the model automatically.",
+  "author": {
+    "name": "stonekey908"
+  },
   "types": "./types/index.d.ts",
   "userConfig": {
     "linearServer": {
