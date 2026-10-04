@@ -124,16 +124,18 @@ export function issueFromMcp(raw: unknown): LinearIssueLite | null {
   };
 }
 
-/** Every issue of the project, following the cursor; bounded to 20 pages. */
+/** Every issue of the project, following the cursor; bounded to 40 pages of 50. */
 export async function fetchIssues(call: Call, tool: string, project: string): Promise<LinearIssueLite[]> {
   const out: LinearIssueLite[] = [];
   let cursor: string | undefined;
-  for (let page = 0; page < 20; page++) {
+  for (let page = 0; page < 40; page++) {
+    // Small pages and no description: a project's worth of descriptions overran the
+    // engine's result cap. Descriptions are fetched per ticket (get_issue) on demand.
     const input: Record<string, unknown> = {
       project,
-      limit: 250,
+      limit: 50,
       includeArchived: false,
-      fields: ["id", "uuid", "title", "url", "priority", "status", "statusType", "labels", "description", "gitBranchName"],
+      fields: ["id", "uuid", "title", "url", "priority", "status", "statusType", "labels", "gitBranchName"],
     };
     if (cursor) input.cursor = cursor;
     const data = parseJson(await call(tool, input), "Listing issues");

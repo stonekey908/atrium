@@ -78,11 +78,24 @@ function readSettings(options: PluginOptions): Settings {
 type McpName = `mcp__${string}__${string}`;
 
 /** `$.tool.call` as the adapter wants it: tool name + arguments in, the plain result out. */
+const DIVERTED = /exceeds maximum allowed tokens\. Output has been saved to (\S+?)\.?(?:\s|$)/;
+
 const callOf =
   ($: EngineInterface): Call =>
   async (tool, input) => {
     const r = await $.tool.call({ tool: tool as McpName, ...input });
-    return { text: r.text, isError: r.isError, deny: r.deny, result: r.result };
+    let text = r.text;
+    // A result too large for the model is written to a file and replaced by a notice; the file holds the JSON.
+    const diverted = text ? DIVERTED.exec(text) : null;
+    if (diverted?.[1]) {
+      try {
+        text = await $.fs.read(diverted[1]);
+      } catch (err) {
+        return { text: `${text}\n(and the saved file could not be read: ${message(err)})`, isError: true };
+      }
+      return { text };
+    }
+    return { text, isError: r.isError, deny: r.deny, result: r.result };
   };
 
 const fsOf = ($: EngineInterface) => ({
@@ -283,6 +296,8 @@ async function loadBoard($: EngineInterface): Promise<void> {
       await update($, buildPrd, () => (hasPrd ? prdPath : null));
       await update($, load, () => ({ phase: "ready" as const, message: null, at: now }));
       await updateStatusLine($);
+      const active = resolveActiveTicket(next.waves, await read($, branch));
+      if (active) await ensureDescription($, active.id);
     } catch (err) {
       const text = message(err);
       await update($, load, (s) => ({ ...s, phase: "error" as const, message: text }));
@@ -349,6 +364,11 @@ async function textFallback($: EngineInterface, lead: string | null): Promise<st
 
 /** Opens the pane; where the surface seats none, answers with the board as text instead. */
 async function openOrText($: EngineInterface, opened: string): Promise<{ text: string }> {
+  const surfaces = await $.session.surfaces().catch(() => []);
+  if (surfaces.length === 0) {
+    // A cloud session viewed from the app, or a headless run: nothing here draws panes.
+    return { text: await textFallback($, "Atrium: this view has no drawing surface for panes, so here is the board as text. /atrium text prints it any time; in a terminal or the desktop app's local sessions the pane opens.") };
+  }
   const placed = await openPane($, true);
   if (placed.isPlaced) return { text: opened };
   return { text: await textFallback($, `Atrium: this view places no pane (${placed.reason}). Here is the board as text; /atrium text prints it any time.`) };

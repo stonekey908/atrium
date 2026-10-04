@@ -76,7 +76,8 @@ describe("fetchIssues", () => {
     const issues = await fetchIssues(call, "mcp__Linear__list_issues", "Atrium");
     expect(issues.map((i) => i.identifier)).toEqual(["P-1", "P-2"]);
     expect(calls).toHaveLength(2);
-    expect(calls[0]).toMatchObject({ project: "Atrium", limit: 250 });
+    expect(calls[0]).toMatchObject({ project: "Atrium", limit: 50 });
+    expect((calls[0]?.fields as string[]).includes("description")).toBe(false);
     expect(calls[1]).toMatchObject({ cursor: "c1" });
   });
 });

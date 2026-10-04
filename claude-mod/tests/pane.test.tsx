@@ -21,8 +21,9 @@ type Fs = {
 };
 const EMPTY_FS: Fs = { list: () => [], exists: () => false, read: () => "" };
 
-function world(on: On, writes: Record<string, unknown>[], fs: Fs = EMPTY_FS, root = "/repo/atrium") {
+function world(on: On, writes: Record<string, unknown>[], fs: Fs = EMPTY_FS, root = "/repo/atrium", surfaces: ("terminal" | "desktop")[] = ["terminal"]) {
   mock.clock(on, { now: 1_700_000_000_000 });
+  on("session.surfaces", () => ({ value: surfaces }));
   on("tool.call", { tool: "mcp__Linear__list_teams" }, () => ({ result: {}, text: JSON.stringify({ teams: [{ id: "t1", name: "Stonekey" }], hasNextPage: false }) }));
   on("tool.call", { tool: "mcp__Linear__save_project" }, ($, e) => {
     writes.push({ project: e.name, teams: e.addTeams });
@@ -168,7 +169,7 @@ test("with no matching project the pane offers to create one named after the rep
 });
 
 test("/atrium falls back to the board as text where the surface seats no pane", async ($, on) => {
-  world(on, []);
+  world(on, [], EMPTY_FS, "/repo/atrium", ["desktop"]);
   on("ui.open", () => ({ value: { isPlaced: false, reason: "the attached surface places no panes" } }));
   const { text } = await $.command.run({ ...RUN, command: "atrium", args: "" });
   expect(text).toMatch(/places no pane \(the attached surface places no panes\)/);
@@ -186,4 +187,34 @@ test("/atrium reports the pane opened where the surface seats it", async ($, on)
   on("ui.open", () => ({ value: { isPlaced: true } }));
   const { text } = await $.command.run({ ...RUN, command: "atrium", args: "" });
   expect(text).toBe("Atrium pane opened.");
+});
+
+test("/atrium prints the board as text where no surface draws at all", async ($, on) => {
+  world(on, [], EMPTY_FS, "/repo/atrium", []);
+  const { text } = await $.command.run({ ...RUN, command: "atrium", args: "" });
+  expect(text).toMatch(/no drawing surface for panes/);
+  expect(text).toMatch(/▶ STO-2  Wire the board/);
+});
+
+test("a Linear result the engine diverted to a file is read back from that file", async ($, on) => {
+  const writes: Record<string, unknown>[] = [];
+  const diverted = `Error: result (105,138 characters across 1 line) exceeds maximum allowed tokens. Output has been saved to /tmp/results/mcp-Linear-list_issues-1.txt. Use Read to view it.`;
+  let readTheFile = false;
+  // Registered before world's stub so it answers first.
+  on("tool.call", { tool: "mcp__Linear__list_issues" }, () => ({ result: {}, text: diverted }));
+  world(on, writes, {
+    list: () => [],
+    exists: () => false,
+    read: (path) => {
+      if (path !== "/tmp/results/mcp-Linear-list_issues-1.txt") return "";
+      readTheFile = true;
+      return JSON.stringify({ issues: ISSUES, hasNextPage: false });
+    },
+  });
+  const { text } = await $.command.run({ ...RUN, command: "atrium", args: "refresh" });
+  expect(text).toBe("Atrium board refreshed.");
+  expect(readTheFile, "the diverted file was read").toBe(true);
+  const ui = await $.ui.mount({ plugin: "atrium", surface: "terminal", component: "Pane", requestId: "atrium", props: PANE_PROPS });
+  expect(await ui.find({ key: "t:STO-2" })).toBeDefined();
+  await ui.unmount();
 });

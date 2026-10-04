@@ -36,6 +36,11 @@ well), live HTML mockup previews (no iframes in a terminal), and editable PRDs
 
 ## Install
 
+Panes draw in a terminal, in the desktop app's local sessions, in VS Code and
+in the mobile app. A **cloud session viewed from the app has no drawing
+surface**, so there `/atrium` prints the board as text in the transcript
+instead (the same output as `/atrium text`).
+
 You need Claude Code 2.1.289 or newer and the **Linear** connector connected
 (the mod looks for tools named `mcp__<server>__list_issues`; any server whose
 name mentions "linear" is found automatically).
@@ -105,7 +110,7 @@ on them:
 
 ```bash
 claude plugin validate claude-mod   # what the module hooks and calls; anything the engine would refuse
-claude plugin test claude-mod       # 23 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
+claude plugin test claude-mod       # 25 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
 ```
 
 Layout:
