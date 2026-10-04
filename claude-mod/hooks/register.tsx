@@ -470,7 +470,8 @@ async function drawPane($: EngineInterface, e: RenderInputOf<"Pane", RenderSurfa
   const waves = b?.waves ?? [];
   const sprint = b ? currentSprint(waves, which) : null;
   const pinned = which ? waves.find((w) => w.name === which) : undefined;
-  const shown: AtriumWave | null = sprint ?? pinned ?? waves[0] ?? null;
+  // Everything shipped: show the latest wave rather than the first.
+  const shown: AtriumWave | null = sprint ?? pinned ?? waves[waves.length - 1] ?? null;
   const shownIdx = shown ? waves.indexOf(shown) : -1;
   const stepWave = (delta: number) => {
     const next = waves[shownIdx + delta];
