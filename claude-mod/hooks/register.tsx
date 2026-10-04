@@ -24,7 +24,7 @@ import {
   nextStatus,
   resolveActiveTicket,
 } from "./board";
-import { fetchDescription, fetchIssues, fetchProjectNames, findLinearTools, writeStatus, type Call, type LinearTools } from "./linear";
+import { createProject, fetchDescription, fetchIssues, fetchProjectNames, fetchTeamNames, findLinearTools, writeStatus, type Call, type LinearTools } from "./linear";
 import { AGENT_BRIEFING, workingOnText } from "./briefing";
 import { join, resolveWaveFiles } from "./wave-files";
 
@@ -105,6 +105,18 @@ let settings: Settings = readSettings({});
 let tools: LinearTools | null = null;
 let root = "";
 let inflight: Promise<void> | null = null;
+/** Whether a person is at the prompt (a `-p` run has nobody to ask). */
+let interactive = false;
+/** The no-project question is asked at most once per session. */
+let asked = false;
+
+const NOT_NOW = "Not now";
+const createLabel = (name: string) => `Create "${name}"`;
+
+/** What a project made from this repo opens with. */
+function projectDescription(folder: string): string {
+  return `Planning board for the \`${folder}\` repository, kept in sync by Claude Code through the Atrium mod.\n\nSprints are labels of the form "Wave <n> · <theme>"; one branch per ticket (feat/<TICKET-ID>-<slug>); planning files live in the repo (docs/PRD.md, docs/waves/wave-<n>.md).`;
+}
 
 // ── Loading ────────────────────────────────────────────────────────────────
 
@@ -151,6 +163,69 @@ async function resolveProject($: EngineInterface, call: Call): Promise<string | 
   return chosen;
 }
 
+/** Creates a Linear project for this repo (asking which team when there are several), pins it, reloads. */
+async function createProjectFor($: EngineInterface, name: string): Promise<void> {
+  if (!tools?.saveProject) {
+    $.ui.toast("Atrium: the Linear connector offers no save_project tool here, so create the project in Linear and pick it.");
+    return;
+  }
+  const call = callOf($);
+  try {
+    let team: string | null = null;
+    const teams = tools.listTeams ? await fetchTeamNames(call, tools.listTeams) : [];
+    if (teams.length === 1) team = teams[0] ?? null;
+    else if (teams.length > 1 && interactive) {
+      const picked = await $.ui.ask(`Which Linear team owns the "${name}" project?`, { options: teams.slice(0, 4), header: "Atrium" }).catch(() => "");
+      team = teams.find((t) => t.toLowerCase() === picked.trim().toLowerCase()) ?? null;
+      if (!team) return;
+    } else if (teams.length > 1) team = teams[0] ?? null;
+    if (!team) throw new Error("No Linear team to create the project on.");
+    const made = await createProject(call, tools.saveProject, name, team, projectDescription(basename(root)));
+    await update($, project, () => made);
+    if (root) await $.store.set(`project:${root}`, made);
+    $.ui.toast(`Atrium: created the "${made}" project on ${team}.`);
+  } catch (err) {
+    $.ui.toast(`Atrium: ${message(err)}`, { timeoutMs: 8000 });
+    return;
+  }
+  await loadBoard($);
+}
+
+/**
+ * No project matched the folder: ask the person once per session which it is,
+ * or to create one. "Not now" is remembered per repo, so the next session stays
+ * quiet (the pane's picker is always there). Resolves the project to load, or null.
+ */
+async function askForProject($: EngineInterface, names: string[]): Promise<string | null> {
+  if (!interactive || asked) return null;
+  const skipped = await $.store.get(`skip:${root}`);
+  if (skipped === true) return null;
+  asked = true;
+  const folder = basename(root);
+  const options = [...names.slice(0, 2), createLabel(folder), NOT_NOW];
+  let answer: string;
+  try {
+    answer = (await $.ui.ask(`Atrium: no Linear project matches "${folder}". Which project is this repo?`, { options, header: "Atrium" })).trim();
+  } catch {
+    return null; // dismissed: ask again next session
+  }
+  if (answer === NOT_NOW) {
+    await $.store.set(`skip:${root}`, true);
+    return null;
+  }
+  if (answer === createLabel(folder)) {
+    await createProjectFor($, folder);
+    return null; // createProjectFor loads the board itself
+  }
+  const picked = names.find((n) => n.toLowerCase() === answer.toLowerCase());
+  if (!picked) {
+    $.ui.toast(`Atrium: no project named "${answer}". Pick one in the pane.`);
+    return null;
+  }
+  await $.store.set(`project:${root}`, picked);
+  return picked;
+}
+
 async function loadBoard($: EngineInterface): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
@@ -162,8 +237,12 @@ async function loadBoard($: EngineInterface): Promise<void> {
       if (!tools) {
         throw new Error("No Linear MCP tools are connected (looked for mcp__<server>__list_issues). Connect the Linear connector, then /atrium refresh.");
       }
-      const chosen = await resolveProject($, call);
-      if (!chosen) throw new Error(`No Linear project matches the folder "${basename(root)}". Pick one below, or run /atrium project <name>.`);
+      let chosen = await resolveProject($, call);
+      if (!chosen) {
+        chosen = await askForProject($, await read($, projects));
+        if (chosen) await update($, project, () => chosen);
+      }
+      if (!chosen) throw new Error(`No Linear project matches the folder "${basename(root)}". Pick or create one below, or run /atrium project <name>.`);
 
       const issues = await fetchIssues(call, tools.listIssues, chosen);
       const now = await $.clock.now();
@@ -244,6 +323,8 @@ export const register: Register = (on, options) => {
 
   on("session.start", async ($, e, next) => {
     root = e.cwd;
+    interactive = e.isInteractive;
+    asked = false;
     await $.command.register({
       name: "atrium",
       description: "Open the Atrium cockpit: sprint board, current ticket, wave PRDs and mockups",
@@ -266,7 +347,13 @@ export const register: Register = (on, options) => {
       case "brief":
         return { text: AGENT_BRIEFING };
       case "project": {
-        if (!arg) return { text: `Atrium project: ${(await read($, project)) ?? "(none)"}. Usage: /atrium project <name>` };
+        if (!arg) return { text: `Atrium project: ${(await read($, project)) ?? "(none)"}. Usage: /atrium project <name> | /atrium project create [name]` };
+        if (/^create\b/i.test(arg)) {
+          const name = arg.replace(/^create\s*/i, "").trim() || basename(root);
+          await createProjectFor($, name);
+          const now = await read($, project);
+          return { text: now === name ? `Atrium created and now shows the "${name}" project.` : `Atrium: could not create "${name}" (see the toast).` };
+        }
         await update($, project, () => arg);
         if (root) await $.store.set(`project:${root}`, arg);
         await loadBoard($);
@@ -301,7 +388,8 @@ export const register: Register = (on, options) => {
     await updateStatusLine($);
     const state = await read($, load);
     const now = await $.clock.now();
-    if (state.phase !== "loading" && (state.at === null || now - state.at > STALE_MS)) $.clock.after(0, () => void loadBoard($));
+    const stale = state.phase === "ready" && state.at !== null && now - state.at > STALE_MS;
+    if (state.phase === "idle" || stale) $.clock.after(0, () => void loadBoard($));
     return next(e);
   });
 
@@ -309,14 +397,17 @@ export const register: Register = (on, options) => {
   on("prompt.compose", async ($, e, next) => {
     const composed = await next(e);
     if (!settings.briefModel) return composed;
-    const sections = [...composed.sections, { id: "atrium:conventions", text: AGENT_BRIEFING, scope: "session" as const }];
+    // Only a repo with a board gets briefed: a repo nobody tracks stays quiet.
     const b = await read($, board);
-    if (b) {
-      const current = await read($, branch);
-      const t = resolveActiveTicket(b.waves, current);
-      const full = t ? (await read($, descriptions))[t.id] ?? null : null;
-      sections.push({ id: "atrium:working-on", text: workingOnText(b, t, current, full), scope: "session" as const });
-    }
+    if (!b) return composed;
+    const current = await read($, branch);
+    const t = resolveActiveTicket(b.waves, current);
+    const full = t ? (await read($, descriptions))[t.id] ?? null : null;
+    const sections = [
+      ...composed.sections,
+      { id: "atrium:conventions", text: AGENT_BRIEFING, scope: "session" as const },
+      { id: "atrium:working-on", text: workingOnText(b, t, current, full), scope: "session" as const },
+    ];
     return { sections };
   });
 
@@ -373,10 +464,12 @@ export const register: Register = (on, options) => {
     })();
 
     // No project matched: the picker.
+    const folder = basename(root);
     const picker =
-      !b && names.length > 0 && !chosen ? (
+      !b && !chosen && state.phase !== "loading" && tools ? (
         <Box flexDirection="column" marginTop={1}>
-          <Text dimColor>Pick the Linear project this folder belongs to:</Text>
+          <Button key="proj:create" label={`Create a Linear project named "${folder}"`} variant="primary" onPress={() => createProjectFor($, folder)} />
+          {names.length > 0 && <Text dimColor>…or pick the project this repo belongs to:</Text>}
           {names.slice(0, 30).map((name) => (
             <Button
               key={`proj:${name}`}
@@ -532,7 +625,19 @@ export const register: Register = (on, options) => {
         )}
       </Box>
     ) : b ? (
-      <Text dimColor wrap="wrap">{'No waves yet. Label tickets "Wave 1 · <theme>" (or any sprint-ish label) and they appear here.'}</Text>
+      <Box flexDirection="column" marginTop={1}>
+        <Text dimColor wrap="wrap">{'No tickets with a sprint label yet. Label tickets "Wave 1 · <theme>" (or any sprint-ish label) and they appear here.'}</Text>
+        <Button
+          key="plan"
+          label="Plan the first wave with Claude"
+          variant="primary"
+          onPress={() =>
+            $.prompt.submit({
+              text: `Plan the first wave of work for this repository as tickets in the Linear project "${b.project}", following the project conventions in your instructions: one sprint label "Wave 1 · <theme>" on every ticket, a short one-line description on the label, and a docs/waves/wave-1.md PRD in the repo. Propose the tickets to me before creating them.`,
+            })
+          }
+        />
+      </Box>
     ) : null;
 
     const fileButton = (f: AtriumFileRef, prefix: string) => (

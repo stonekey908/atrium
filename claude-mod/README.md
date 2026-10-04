@@ -18,9 +18,11 @@ in Claude Code. No API key lives in the mod.
 | **Ticket detail** — full description as markdown, one-press advance to the next status, the full status picker, a link out | press a ticket row |
 | **PRD** — the build PRD (`docs/PRD.md`) and each wave's PRD/TRD docs rendered inline | hotkey `p` |
 | **Design** — each wave's mockups as clickable `file://` links (the terminal can't render HTML or images, so they open in your browser) | hotkey `d` |
+| **Empty project** — a "Plan the first wave with Claude" button that asks the model to propose Wave 1 tickets following the conventions | shown when the project has no labelled tickets |
 | **Refresh** — on demand, after any Linear write the model makes, when a turn ends with a stale board, and optionally on a timer | hotkey `r`, `/atrium refresh` |
 
-What the model gets, in its system prompt (switch off with `briefModel`):
+What the model gets, in its system prompt once a board has loaded for the repo
+(switch off with `briefModel`):
 
 - the **project conventions** (sprint labels, branch naming, where planning
   files live) — the same text the extension's "Copy agent briefing" button
@@ -51,8 +53,14 @@ export CLAUDE_CODE_PLUGIN_DIRS=/path/to/atrium/claude-mod
 ```
 
 Then `/atrium` opens the pane. With no configuration it auto-detects the Linear
-project whose name matches your repo folder; if none does, the pane offers a
-picker (your choice is remembered per repo), or run `/atrium project <name>`.
+project whose name matches your repo folder. If none does, it asks you once
+(pick an existing project, create one named after the repo, or "Not now", which
+is remembered per repo); the pane always carries the same picker and a
+**Create a Linear project** button, and `/atrium project <name>` pins one by
+hand. Your choice is kept per repo across sessions.
+
+A repo with no project stays quiet: nothing is briefed to the model and nothing
+is written anywhere until you pick or create one.
 
 ## Commands
 
@@ -62,6 +70,7 @@ picker (your choice is remembered per repo), or run `/atrium project <name>`.
 | `/atrium board` · `prd` · `design` | Open on that view |
 | `/atrium refresh` | Re-pull the board from Linear |
 | `/atrium project <name>` | Pin the Linear project for this repo |
+| `/atrium project create [name]` | Create a Linear project (named after the repo folder by default) and pin it |
 | `/atrium brief` | Print the agent briefing as text |
 
 ## Configuration
@@ -76,7 +85,7 @@ under `pluginConfigs.atrium`:
 | `wavePrefix` | `ATR Wave` | Sprint-label prefix(es), comma-separated; sprint-ish labels (`Wave 3`, `Sprint 12`, `Phase 2`) are detected when nothing matches |
 | `pollSeconds` | `0` | Rolling auto-refresh; `0` = refresh on demand, after Linear writes, and when a turn ends with a board older than two minutes |
 | `openOnStart` | `false` | Open the pane at session start (it waits for a terminal wide enough to dock it) |
-| `briefModel` | `true` | Add the conventions and the current ticket to the system prompt |
+| `briefModel` | `true` | Add the conventions and the current ticket to the system prompt (only for a repo with a board) |
 
 ## Make your repo cockpit-aware
 
@@ -95,7 +104,7 @@ on them:
 
 ```bash
 claude plugin validate claude-mod   # what the module hooks and calls; anything the engine would refuse
-claude plugin test claude-mod       # 20 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
+claude plugin test claude-mod       # 21 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
 ```
 
 Layout:

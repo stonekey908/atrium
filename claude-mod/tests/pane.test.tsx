@@ -7,6 +7,9 @@ const ISSUES = [
   { id: "STO-3", uuid: "u3", title: "Polish the strip", url: "https://linear.app/x/issue/STO-3", priority: { value: 3, name: "Medium" }, status: "Todo", statusType: "unstarted", labels: ["ATR Wave 2 · Cockpit"], description: null },
 ];
 
+/** Issues per project name; a created project starts empty. */
+const ISSUES_BY_PROJECT: Record<string, typeof ISSUES> = { Atrium: ISSUES };
+
 const RUN = { origin: { kind: "composer" as const }, presentation: { isFullscreen: true, columns: 120 } };
 const PANE_PROPS = { title: "Atrium", isFocused: false, bodyColumns: 100, placement: "inline" as const, scroll: { offset: 0, bodyRows: 40 }, view: {} };
 
@@ -18,28 +21,39 @@ type Fs = {
 };
 const EMPTY_FS: Fs = { list: () => [], exists: () => false, read: () => "" };
 
-function world(on: On, writes: Record<string, unknown>[], fs: Fs = EMPTY_FS) {
+function world(on: On, writes: Record<string, unknown>[], fs: Fs = EMPTY_FS, root = "/repo/atrium") {
   mock.clock(on, { now: 1_700_000_000_000 });
+  on("tool.call", { tool: "mcp__Linear__list_teams" }, () => ({ result: {}, text: JSON.stringify({ teams: [{ id: "t1", name: "Stonekey" }], hasNextPage: false }) }));
+  on("tool.call", { tool: "mcp__Linear__save_project" }, ($, e) => {
+    writes.push({ project: e.name, teams: e.addTeams });
+    ISSUES_BY_PROJECT[String(e.name)] = [];
+    return { result: {}, text: JSON.stringify({ id: "P-9", name: e.name, url: "https://linear.app/x/project/p9" }) };
+  });
   on("tool.list", () => ({
     value: [
       { name: "mcp__Linear__list_issues", description: "", mcp: true },
       { name: "mcp__Linear__get_issue", description: "", mcp: true },
       { name: "mcp__Linear__save_issue", description: "", mcp: true },
       { name: "mcp__Linear__list_projects", description: "", mcp: true },
+      { name: "mcp__Linear__save_project", description: "", mcp: true },
+      { name: "mcp__Linear__list_teams", description: "", mcp: true },
     ],
   }));
   on("tool.call", { tool: "mcp__Linear__list_projects" }, () => ({
     result: {},
     text: JSON.stringify({ projects: [{ id: "P-1", name: "Atrium" }, { id: "P-2", name: "Other" }], hasNextPage: false }),
   }));
-  on("tool.call", { tool: "mcp__Linear__list_issues" }, () => ({ result: {}, text: JSON.stringify({ issues: ISSUES, hasNextPage: false }) }));
+  on("tool.call", { tool: "mcp__Linear__list_issues" }, ($, e) => ({
+    result: {},
+    text: JSON.stringify({ issues: ISSUES_BY_PROJECT[String(e.project)] ?? [], hasNextPage: false }),
+  }));
   on("tool.call", { tool: "mcp__Linear__get_issue" }, ($, e) => ({ result: {}, text: JSON.stringify({ id: e.id, description: "# Full description\n\n- draw it\n- ship it" }) }));
   on("tool.call", { tool: "mcp__Linear__save_issue" }, ($, e) => {
     writes.push({ id: e.id, state: e.state });
     return { result: {}, text: JSON.stringify({ id: e.id, status: e.state }) };
   });
   on("process.run", () => ({ value: { exitCode: 0, stdout: "feat/STO-2-wire-the-board\n", stderr: "", isStdoutTruncated: false, isStderrTruncated: false } }));
-  on("session.root", () => ({ value: "/repo/atrium" }));
+  on("session.root", () => ({ value: root }));
   on("fs.list", ($, e) => ({ value: fs.list(e.path) }));
   on("fs.exists", ($, e) => ({ value: fs.exists(e.path) }));
   on("fs.read", ($, e) => ({ value: fs.read(e.path) }));
@@ -107,8 +121,10 @@ test("the PRD and Design views list wave files and link the mockups", async ($, 
   await ui.unmount();
 });
 
-test("the model is briefed with the conventions and the ticket on the branch", async ($, on) => {
+test("the model is briefed only once a board has loaded", async ($, on) => {
   world(on, []);
+  const before = await $.prompt.compose({ model: "m", promptModel: "m", surfaces: ["terminal"], tools: [], outputStyle: null, traits: [] });
+  expect(before.sections).toEqual([]);
   await $.command.run({ ...RUN, command: "atrium", args: "refresh" });
   const { sections } = await $.prompt.compose({ model: "m", promptModel: "m", surfaces: ["terminal"], tools: [], outputStyle: null, traits: [] });
   expect(sections.map((s) => s.id)).toEqual(["atrium:conventions", "atrium:working-on"]);
@@ -129,5 +145,24 @@ test("with no Linear connector the pane says so instead of failing", async ($, o
   expect(text).toMatch(/No Linear MCP tools are connected/);
   const ui = await $.ui.mount({ plugin: "atrium", surface: "terminal", component: "Pane", requestId: "atrium", props: PANE_PROPS });
   expect(await ui.find({ type: "Text", text: /No Linear MCP tools/ })).toBeDefined();
+  await ui.unmount();
+});
+
+test("with no matching project the pane offers to create one named after the repo", async ($, on) => {
+  const writes: Record<string, unknown>[] = [];
+  world(on, writes, EMPTY_FS, "/repo/newthing");
+
+  const { text } = await $.command.run({ ...RUN, command: "atrium", args: "refresh" });
+  expect(text).toMatch(/No Linear project matches the folder "newthing"/);
+
+  const ui = await $.ui.mount({ plugin: "atrium", surface: "terminal", component: "Pane", requestId: "atrium", props: PANE_PROPS });
+  expect(await ui.find({ key: "proj:create" })).toMatchObject({ props: { label: 'Create a Linear project named "newthing"' } });
+  expect(await ui.find({ key: "proj:Atrium" })).toBeDefined();
+
+  await ui.press({ key: "proj:create" });
+  expect(writes.at(-1)).toEqual({ project: "newthing", teams: ["Stonekey"] });
+  // The new, empty project is now the board: no waves yet, and a way to plan the first one.
+  expect(await ui.find({ type: "Text", text: /· newthing/ })).toBeDefined();
+  expect(await ui.find({ key: "plan" })).toBeDefined();
   await ui.unmount();
 });

@@ -13,9 +13,11 @@ export interface LinearTools {
   getIssue: string | null;
   saveIssue: string | null;
   listProjects: string | null;
+  saveProject: string | null;
+  listTeams: string | null;
 }
 
-const TOOL_RE = /^mcp__(.+)__(list_issues|get_issue|save_issue|list_projects)$/;
+const TOOL_RE = /^mcp__(.+)__(list_issues|get_issue|save_issue|list_projects|save_project|list_teams)$/;
 
 /**
  * Finds the Linear MCP server among the connected tools: the configured server
@@ -46,6 +48,8 @@ export function findLinearTools(names: readonly string[], preferredServer?: stri
     getIssue: tools.get("get_issue") ?? null,
     saveIssue: tools.get("save_issue") ?? null,
     listProjects: tools.get("list_projects") ?? null,
+    saveProject: tools.get("save_project") ?? null,
+    listTeams: tools.get("list_teams") ?? null,
   };
 }
 
@@ -171,4 +175,18 @@ export async function fetchDescription(call: Call, tool: string, id: string): Pr
 /** Moves an issue to a status by its name; throws with the tracker's reason. */
 export async function writeStatus(call: Call, tool: string, id: string, status: AtriumFullStatus): Promise<void> {
   parseJson(await call(tool, { id, state: status }), `Moving ${id} to ${status}`);
+}
+
+/** The names of the workspace's teams (a new project needs one). */
+export async function fetchTeamNames(call: Call, tool: string): Promise<string[]> {
+  const data = parseJson(await call(tool, { limit: 50 }), "Listing teams");
+  const list = isObject(data) && Array.isArray(data.teams) ? data.teams : Array.isArray(data) ? data : [];
+  return list.map((t) => (isObject(t) && typeof t.name === "string" ? t.name : null)).filter((n): n is string => n !== null);
+}
+
+/** Creates a project on a team; resolves with the name the tracker gave it. */
+export async function createProject(call: Call, tool: string, name: string, team: string, description: string): Promise<string> {
+  const data = parseJson(await call(tool, { name, addTeams: [team], description }), `Creating project ${name}`);
+  const made = isObject(data) && isObject(data.project) ? data.project : data;
+  return (isObject(made) && str(made.name)) || name;
 }
