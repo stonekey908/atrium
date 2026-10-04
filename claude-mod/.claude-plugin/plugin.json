@@ -1,0 +1,47 @@
+{
+  "name": "atrium",
+  "version": "0.1.0",
+  "description": "Atrium cockpit as a Claude Code pane: your Linear sprint, the ticket you're on, wave PRDs and mockup links \u2014 read through the Linear MCP connector, with the project conventions briefed to the model automatically.",
+  "author": {
+    "name": "stonekey908"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "linearServer": {
+      "type": "string",
+      "title": "Linear MCP server",
+      "description": "Name of the Linear MCP server as it appears in tool names (mcp__<server>__list_issues). Auto-detected when a server name contains 'linear'.",
+      "default": "Linear"
+    },
+    "project": {
+      "type": "string",
+      "title": "Linear project",
+      "description": "Pin a Linear project name. Empty = auto-detect from the repo folder name (or the project you picked in the pane).",
+      "default": ""
+    },
+    "wavePrefix": {
+      "type": "string",
+      "title": "Sprint label prefix",
+      "description": "Sprint-label prefix(es), comma-separated. When no label matches, sprint-ish labels (Wave 3, Sprint 12, Phase 2) are detected automatically.",
+      "default": "ATR Wave"
+    },
+    "pollSeconds": {
+      "type": "number",
+      "title": "Auto-refresh (seconds)",
+      "description": "Rolling auto-refresh of the board, in seconds. 0 = refresh only on /atrium refresh, after Linear writes, and when a turn ends with a stale board.",
+      "default": 0
+    },
+    "openOnStart": {
+      "type": "boolean",
+      "title": "Open pane on start",
+      "description": "Open the Atrium pane when the session starts (it waits until the terminal is wide enough to dock it).",
+      "default": false
+    },
+    "briefModel": {
+      "type": "boolean",
+      "title": "Brief the model",
+      "description": "Add the project conventions and the current ticket to the system prompt so the model labels tickets, names branches and places planning files the way the board expects.",
+      "default": true
+    }
+  }
+}

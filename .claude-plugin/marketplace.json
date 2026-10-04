@@ -1,0 +1,12 @@
+{
+  "name": "atrium-mods",
+  "owner": { "name": "stonekey908" },
+  "metadata": { "description": "Atrium as a Claude Code mod: sprint board, current ticket, wave PRDs and mockup links, with the project conventions briefed to the model." },
+  "plugins": [
+    {
+      "name": "atrium",
+      "source": "./claude-mod",
+      "description": "Atrium cockpit as a Claude Code pane over the Linear MCP connector, plus /atrium text mode and model briefing."
+    }
+  ]
+}
