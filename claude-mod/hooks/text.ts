@@ -18,13 +18,16 @@ export function boardText(board: AtriumBoard, branch: string, files: Record<stri
   const active = resolveActiveTicket(board.waves, branch);
   lines.push(active ? `▶ ${active.id}  ${active.title} · ${active.status}  ${active.url}` : `▷ No ticket matches ${branch ? `branch ${branch}` : "the current branch"}.`);
 
-  const sprint = currentSprint(board.waves, waveName) ?? board.waves[0];
+  const current = currentSprint(board.waves);
+  // Everything shipped: show the latest wave rather than the first.
+  const sprint = currentSprint(board.waves, waveName) ?? board.waves[board.waves.length - 1];
   if (!sprint) {
     lines.push("", 'No tickets with a sprint label yet. Label tickets "Wave 1 · <theme>" and they appear here.');
     return lines.join("\n");
   }
+  if (!current) lines.push("", "All waves shipped.");
   const r = computeRollup(sprint.tickets);
-  lines.push("", `${sprint.name}${sprint.stage ? ` · ${sprint.stage}` : ""} · ${r.done}/${r.total} done${sprint === currentSprint(board.waves) ? "  ← current" : ""}`);
+  lines.push("", `${sprint.name}${sprint.stage ? ` · ${sprint.stage}` : ""} · ${r.done}/${r.total} done${sprint === current ? "  ← current" : ""}`);
   for (const { state, tickets } of groupByState(sprint)) {
     if (tickets.length === 0) continue;
     if (state === "done") {
