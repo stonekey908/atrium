@@ -28,3 +28,6 @@ pnpm-debug.log*
 # Local working notes / archives, not part of the public repo
 CLAUDE.md
 *.zip
+
+# Type declarations the Claude Code engine lays beside the mod when it loads
+claude-mod/.claude-plugin/types/

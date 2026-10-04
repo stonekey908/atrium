@@ -77,6 +77,21 @@ land in a visible "Unsorted" bucket, never lost.
 Full setup detail (including per-workspace pinning and the wave-file
 conventions): [`extension/SETUP.md`](extension/SETUP.md).
 
+## Use it inside Claude Code instead
+
+Prefer the terminal? [`claude-mod/`](claude-mod/) is Atrium as a **Claude Code
+mod**: `/atrium` opens a pane with the current sprint, the ticket your branch is
+on, wave PRDs rendered inline and links to the mockups — reading Linear through
+the Linear MCP connector (no API key) — and it briefs the model with the project
+conventions and the current ticket automatically. No kanban drag-and-drop and no
+live mockup previews (it's a terminal), everything else carries over.
+
+```bash
+claude --plugin-dir ./claude-mod      # then /atrium
+```
+
+Details, commands and configuration: [`claude-mod/README.md`](claude-mod/README.md).
+
 ## Make your repo cockpit-aware
 
 Planning artifacts are plain files in your repo:
