@@ -166,3 +166,24 @@ test("with no matching project the pane offers to create one named after the rep
   expect(await ui.find({ key: "plan" })).toBeDefined();
   await ui.unmount();
 });
+
+test("/atrium falls back to the board as text where the surface seats no pane", async ($, on) => {
+  world(on, []);
+  on("ui.open", () => ({ value: { isPlaced: false, reason: "the attached surface places no panes" } }));
+  const { text } = await $.command.run({ ...RUN, command: "atrium", args: "" });
+  expect(text).toMatch(/places no pane \(the attached surface places no panes\)/);
+  expect(text).toMatch(/▶ STO-2  Wire the board · In Progress/);
+  expect(text).toMatch(/Wave 2 · Cockpit · build · 0\/2 done  ← current/);
+  expect(text).toMatch(/● In progress \(1\)\n  ‼ STO-2  Wire the board/);
+  expect(text).toMatch(/Wave 1 1\/1/);
+
+  const plain = await $.command.run({ ...RUN, command: "atrium", args: "text" });
+  expect(plain.text).toMatch(/^Atrium · Atrium\n▶ STO-2/);
+});
+
+test("/atrium reports the pane opened where the surface seats it", async ($, on) => {
+  world(on, []);
+  on("ui.open", () => ({ value: { isPlaced: true } }));
+  const { text } = await $.command.run({ ...RUN, command: "atrium", args: "" });
+  expect(text).toBe("Atrium pane opened.");
+});

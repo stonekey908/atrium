@@ -69,6 +69,7 @@ is written anywhere until you pick or create one.
 | `/atrium` | Open the pane (focused) |
 | `/atrium board` · `prd` · `design` | Open on that view |
 | `/atrium refresh` | Re-pull the board from Linear |
+| `/atrium text` | Print the board as text in the transcript (also the automatic fallback where a surface seats no pane) |
 | `/atrium project <name>` | Pin the Linear project for this repo |
 | `/atrium project create [name]` | Create a Linear project (named after the repo folder by default) and pin it |
 | `/atrium brief` | Print the agent briefing as text |
@@ -104,7 +105,7 @@ on them:
 
 ```bash
 claude plugin validate claude-mod   # what the module hooks and calls; anything the engine would refuse
-claude plugin test claude-mod       # 21 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
+claude plugin test claude-mod       # 23 tests: the pure model, the MCP adapter, wave files, and the pane on terminal + desktop
 ```
 
 Layout:

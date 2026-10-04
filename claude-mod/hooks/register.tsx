@@ -26,6 +26,7 @@ import {
 } from "./board";
 import { createProject, fetchDescription, fetchIssues, fetchProjectNames, fetchTeamNames, findLinearTools, writeStatus, type Call, type LinearTools } from "./linear";
 import { AGENT_BRIEFING, workingOnText } from "./briefing";
+import { boardText } from "./text";
 import { join, resolveWaveFiles } from "./wave-files";
 
 const PANE = "atrium";
@@ -309,8 +310,25 @@ async function openDoc($: EngineInterface, path: string): Promise<void> {
   }
 }
 
-async function openPane($: EngineInterface, focus: boolean): Promise<void> {
-  await $.ui.open(focus ? { id: PANE, title: TITLE, focus: true } : { id: PANE, title: TITLE });
+async function openPane($: EngineInterface, focus: boolean): Promise<{ isPlaced: boolean; reason: string | null }> {
+  const r = await $.ui.open(focus ? { id: PANE, title: TITLE, focus: true } : { id: PANE, title: TITLE });
+  return r.isPlaced ? { isPlaced: true, reason: null } : { isPlaced: false, reason: r.reason };
+}
+
+/** The board as text for the transcript: the fallback where no pane is seated, and `/atrium text`. */
+async function textFallback($: EngineInterface, lead: string | null): Promise<string> {
+  if ((await read($, board)) === null) await loadBoard($);
+  const [b, state, current, allFiles, which] = await Promise.all([read($, board), read($, load), read($, branch), read($, files), read($, waveSel)]);
+  const head = lead ? [lead, ""] : [];
+  if (!b) return [...head, `Atrium: ${state.message ?? "the board has not loaded yet."}`].join("\n");
+  return [...head, boardText(b, current, allFiles, which)].join("\n");
+}
+
+/** Opens the pane; where the surface seats none, answers with the board as text instead. */
+async function openOrText($: EngineInterface, opened: string): Promise<{ text: string }> {
+  const placed = await openPane($, true);
+  if (placed.isPlaced) return { text: opened };
+  return { text: await textFallback($, `Atrium: this view places no pane (${placed.reason}). Here is the board as text; /atrium text prints it any time.`) };
 }
 
 export const register: Register = (on, options) => {
@@ -328,7 +346,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: "atrium",
       description: "Open the Atrium cockpit: sprint board, current ticket, wave PRDs and mockups",
-      argumentHint: "[refresh | board | prd | design | brief | project <name>]",
+      argumentHint: "[refresh | text | board | prd | design | brief | project <name>]",
     });
     if (settings.openOnStart && e.surface !== null) void openPane($, false);
     // The board load outlives this dispatch: hand it to the clock.
@@ -357,21 +375,20 @@ export const register: Register = (on, options) => {
         await update($, project, () => arg);
         if (root) await $.store.set(`project:${root}`, arg);
         await loadBoard($);
-        await openPane($, true);
-        return { text: `Atrium now shows the "${arg}" project.` };
+        return openOrText($, `Atrium now shows the "${arg}" project.`);
       }
+      case "text":
+        return { text: await textFallback($, null) };
       case "board":
       case "prd":
       case "design":
         await update($, view, () => verb.toLowerCase() as AtriumView);
-        await openPane($, true);
-        return { text: `Atrium pane opened on ${verb.toLowerCase()}.` };
+        return openOrText($, `Atrium pane opened on ${verb.toLowerCase()}.`);
       case "":
-        await openPane($, true);
         if ((await read($, board)) === null) $.clock.after(0, () => void loadBoard($));
-        return { text: "Atrium pane opened." };
+        return openOrText($, "Atrium pane opened.");
       default:
-        return { text: "Usage: /atrium [refresh | board | prd | design | brief | project <name>]" };
+        return { text: "Usage: /atrium [refresh | text | board | prd | design | brief | project <name>]" };
     }
   });
 
